@@ -131,6 +131,7 @@ docker compose up -d --build --wait
 |---|---|
 | Web | http://localhost:3000 |
 | API liveness / readiness (DB) | http://localhost:5080/health/live · http://localhost:5080/health/ready |
+| API docs (Scalar, not in production) | http://localhost:5080/scalar |
 | Storage console | http://localhost:9001/rustfs/console/ |
 | PostgreSQL | `localhost:5432` |
 

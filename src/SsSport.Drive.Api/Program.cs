@@ -1,32 +1,31 @@
 using DotNetEnv;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using SsSport.Drive.Api;
+using SsSport.Drive.Api.Endpoints;
+using SsSport.Drive.Api.ErrorHandling;
 using SsSport.Drive.Infrastructure;
 
 // Local runs: load the git-ignored .env from the repository root. Real environment variables always win,
 // and containers get their settings from Docker, so a missing .env is fine.
 Env.NoClobber().TraversePath().Load();
 
-const string ReadyTag = "ready";
-
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddInfrastructure();
 builder.Services.AddWebCors();
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<DomainExceptionHandler>();
+builder.Services.AddApiDocumentation();
 builder.Services.AddHealthChecks()
-    .AddCheck<PostgreSqlHealthCheck>("database", tags: [ReadyTag]);
+    .AddCheck<PostgreSqlHealthCheck>("database", tags: [HealthEndpoints.ReadyTag]);
 
 var app = builder.Build();
 
+// Unhandled exceptions become ProblemDetails: 422 for broken business rules, a generic 500 otherwise.
+app.UseExceptionHandler();
 app.UseCors(WebCors.PolicyName);
 
-// Liveness probe for Docker and the reverse proxy: answers as soon as the process serves HTTP.
-app.MapGet("/health/live", () => Results.Ok())
-    .ExcludeFromDescription();
-
-// Readiness probe: the API can reach its dependencies (PostgreSQL).
-app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains(ReadyTag) })
-    .ExcludeFromDescription();
+app.MapApiDocumentation();
+app.MapHealthEndpoints();
 
 await app.RunAsync();
 

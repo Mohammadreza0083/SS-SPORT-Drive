@@ -2,6 +2,8 @@
   <!-- HTTP API host: endpoints, OpenAPI/Scalar, auth. Composition root for the web process. -->
   <ItemGroup>
     <PackageReference Include="DotNetEnv" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Scalar.AspNetCore" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SsSport.Drive.Application\SsSport.Drive.Application.csproj" />

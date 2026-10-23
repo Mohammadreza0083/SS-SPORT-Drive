@@ -76,6 +76,16 @@ Last updated: 2026-10-23
     - The Application layer depends only on the core package (no EF Core). Infrastructure evaluates specifications with `Ardalis.Specification.EntityFrameworkCore`.
     - The repository offers `FirstOrDefaultAsync`, `ListAsync`, `CountAsync` and `AnyAsync` taking a specification. Count and Any apply only the criteria and ignore paging.
     - Aggregates loaded this way are tracked, like `GetByIdAsync`.
+- **API docs & errors (D-2c, 2026-10-24):**
+  - The OpenAPI document is served at `/openapi/v1.json` (`Microsoft.AspNetCore.OpenApi`) and rendered by **Scalar** at `/scalar`.
+  - Both are mapped in **every environment except Production**. In production they stay off until admin sign-in exists (A-1); then they go behind admin auth.
+  - Local `dotnet run` gets `ASPNETCORE_ENVIRONMENT=Development` from `.env`.
+  - **Every endpoint** carries a name (operationId), a summary, a description, a tag and all its responses. Minimal-API handlers are named methods, not inline lambdas, so XML docs apply.
+  - **Errors are RFC 9457 ProblemDetails** (`AddProblemDetails` + `UseExceptionHandler`).
+    - A `DomainException` becomes **422** with its stable `code` extension; the exception message is never sent.
+    - Any other exception becomes a generic **500**.
+    - Validation errors become 400 (D-3).
+  - **Auth schemes are added to the document with the auth features themselves** (admin magic-link session A-1, viewer session, Telegram webhook secret T-1). Nothing is authenticated yet, so none are documented today.
   - **There is one `AppDbContext` per request scope**, shared by the repositories and the unit of work. It uses the shared `NpgsqlDataSource`.
   - Entity mappings are `IEntityTypeConfiguration` classes, picked up automatically (D-8).
   - Domain events are never mapped as data. They are dispatched after saving once the MediatR pipeline exists (D-3).
