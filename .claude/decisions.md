@@ -64,6 +64,11 @@ Last updated: 2026-10-23
   - The AutoMapper configuration is validated in tests.
 - **Commands** go through repositories and the Unit of Work.
 - **Queries read directly:** EF Core `AsNoTracking()` projections to DTOs, with no repository on the read side.
+- **Domain building blocks (D-1, 2026-10-24):** they live in `SsSport.Drive.Domain.Primitives`.
+  - `Entity<TId>`: equal when the type and `Id` match.
+  - `AggregateRoot<TId>`: collects `IDomainEvent`s until they are dispatched after saving. Events are plain records; the Domain layer has no MediatR dependency.
+  - **Value objects are C# `record`s.** There is no `ValueObject` base class, because records already give value equality (brief: DDD without over-engineering).
+  - **A broken domain rule throws `DomainException`** with a stable code such as `player.too_many_positions`. The API maps that code to a ProblemDetails response; there is no Result type in the domain.
 - Stack as in the brief: ASP.NET Core on .NET 10, MediatR, AutoMapper, FluentValidation, Hangfire on PostgreSQL storage, PostgreSQL with EF Core, Cloudflare R2, ffmpeg, a Cloudflare Worker at the edge, and Next.js front-ends (re-confirmed by the owner, 2026-10-23).
 - Tests use xUnit, FluentAssertions, NSubstitute, Testcontainers (PostgreSQL) and Playwright.
   - xUnit v3 on Microsoft Testing Platform (required by the .NET 10 SDK).
