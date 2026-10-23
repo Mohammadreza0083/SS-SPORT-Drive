@@ -5,7 +5,7 @@ namespace SsSport.Drive.Domain.Primitives;
 /// entity that repositories load and save. It collects the domain events it raises until they are dispatched.
 /// </summary>
 /// <typeparam name="TId">The identifier type.</typeparam>
-public abstract class AggregateRoot<TId> : Entity<TId>
+public abstract class AggregateRoot<TId> : Entity<TId>, IHasDomainEvents
     where TId : notnull
 {
     /// <summary>The events raised since the aggregate was loaded or last cleared.</summary>

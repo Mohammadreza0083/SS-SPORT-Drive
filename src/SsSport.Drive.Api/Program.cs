@@ -1,7 +1,11 @@
 using DotNetEnv;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using SsSport.Drive.Api;
+using SsSport.Drive.Api.Authentication;
 using SsSport.Drive.Api.Endpoints;
 using SsSport.Drive.Api.ErrorHandling;
+using SsSport.Drive.Application;
+using SsSport.Drive.Application.Abstractions.Authentication;
 using SsSport.Drive.Infrastructure;
 
 // Local runs: load the git-ignored .env from the repository root. Real environment variables always win,
@@ -10,9 +14,13 @@ Env.NoClobber().TraversePath().Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddApplication();
 builder.Services.AddInfrastructure();
+builder.Services.AddHttpContextAccessor();
+builder.Services.Replace(ServiceDescriptor.Scoped<ICurrentUser, HttpContextCurrentUser>());
 builder.Services.AddWebCors();
 builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<ApplicationExceptionHandler>();
 builder.Services.AddExceptionHandler<DomainExceptionHandler>();
 builder.Services.AddApiDocumentation();
 builder.Services.AddHealthChecks()
@@ -20,7 +28,7 @@ builder.Services.AddHealthChecks()
 
 var app = builder.Build();
 
-// Unhandled exceptions become ProblemDetails: 422 for broken business rules, a generic 500 otherwise.
+// Unhandled exceptions become ProblemDetails: 400 validation, 401/403 access, 422 broken business rules, a generic 500 otherwise.
 app.UseExceptionHandler();
 app.UseCors(WebCors.PolicyName);
 
