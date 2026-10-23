@@ -1,0 +1,88 @@
+# ---------------------------------------------------------------
+# SS-SPORT Drive — repository ignore rules
+# ---------------------------------------------------------------
+
+# --- Secrets & local configuration --------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+secrets/
+**/service-account*.json
+appsettings.*.local.json
+appsettings.Local.json
+.dev.vars
+.claude/settings.local.json
+
+# --- .NET ---------------------------------------------------------
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+artifacts/
+TestResults/
+*.trx
+coverage/
+coverage*.xml
+coverage*.json
+*.coverage
+*.coveragexml
+*.user
+*.suo
+*.userprefs
+*.rsuser
+*.nupkg
+*.snupkg
+.nuget/packages/
+project.lock.json
+
+# --- Node / Next.js / Cloudflare Workers --------------------------
+node_modules/
+.pnpm-store/
+.next/
+out/
+dist/
+build/
+.turbo/
+.vercel/
+.wrangler/
+*.tsbuildinfo
+next-env.d.ts
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --- Playwright / test output -------------------------------------
+playwright-report/
+test-results/
+blob-report/
+playwright/.cache/
+
+# --- Media produced while developing (never committed) -----------
+*.m3u8
+*.ts.seg
+/media-local/
+/minio-data/
+
+# --- IDEs & editors -----------------------------------------------
+.vs/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+
+# --- OS -----------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Tools --------------------------------------------------------
+graphify-out/
+k6-results/

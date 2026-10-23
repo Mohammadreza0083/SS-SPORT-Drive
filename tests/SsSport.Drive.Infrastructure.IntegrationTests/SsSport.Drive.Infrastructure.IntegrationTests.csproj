@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Integration tests against real dependencies started with Testcontainers (Docker required). -->
+  <ItemGroup>
+    <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="Npgsql" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SsSport.Drive.Infrastructure\SsSport.Drive.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

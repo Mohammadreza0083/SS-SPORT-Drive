@@ -1,0 +1,16 @@
+# Docker build context ignore rules for the Next.js image.
+node_modules
+.next
+out
+coverage
+test-results
+playwright-report
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+*.pem
+.git
+.vscode
+.idea
+npm-debug.log*

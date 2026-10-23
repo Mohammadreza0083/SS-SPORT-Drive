@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+  <!-- Background worker host: Hangfire jobs (ingest, transcode, sync, email). Composition root for the worker process. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SsSport.Drive.Application\SsSport.Drive.Application.csproj" />
+    <ProjectReference Include="..\SsSport.Drive.Infrastructure\SsSport.Drive.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

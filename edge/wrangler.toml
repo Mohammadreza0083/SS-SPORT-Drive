@@ -1,0 +1,5 @@
+# Cloudflare Worker for the SS-SPORT Drive edge: short links and HLS token validation (backlog V-5).
+# Routes, R2 bindings and secrets are added when the Cloudflare account is set up (backlog S-2).
+name = "ss-sport-drive-edge"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"

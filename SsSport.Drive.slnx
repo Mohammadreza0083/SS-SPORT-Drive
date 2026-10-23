@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SsSport.Drive.Api/SsSport.Drive.Api.csproj" />
+    <Project Path="src/SsSport.Drive.Application/SsSport.Drive.Application.csproj" />
+    <Project Path="src/SsSport.Drive.Domain/SsSport.Drive.Domain.csproj" />
+    <Project Path="src/SsSport.Drive.Infrastructure/SsSport.Drive.Infrastructure.csproj" />
+    <Project Path="src/SsSport.Drive.Workers/SsSport.Drive.Workers.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SsSport.Drive.Api.IntegrationTests/SsSport.Drive.Api.IntegrationTests.csproj" />
+    <Project Path="tests/SsSport.Drive.Application.UnitTests/SsSport.Drive.Application.UnitTests.csproj" />
+    <Project Path="tests/SsSport.Drive.ArchitectureTests/SsSport.Drive.ArchitectureTests.csproj" />
+    <Project Path="tests/SsSport.Drive.Domain.UnitTests/SsSport.Drive.Domain.UnitTests.csproj" />
+    <Project Path="tests/SsSport.Drive.Infrastructure.IntegrationTests/SsSport.Drive.Infrastructure.IntegrationTests.csproj" />
+  </Folder>
+</Solution>

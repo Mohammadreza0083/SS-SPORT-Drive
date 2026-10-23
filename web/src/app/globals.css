@@ -1,0 +1,6 @@
+/* Global styles. Brand tokens, fonts and the motion system arrive with backlog V-1. */
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
