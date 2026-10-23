@@ -29,6 +29,23 @@ internal sealed class Note : AggregateRoot<Guid>
     }
 }
 
+/// <summary>Records every domain event the unit of work dispatches, in order.</summary>
+internal sealed class RecordingDomainEventDispatcher : SsSport.Drive.Application.Abstractions.Events.IDomainEventDispatcher
+{
+    /// <summary>Gets the dispatched events.</summary>
+    public List<IDomainEvent> Dispatched { get; } = [];
+
+    /// <summary>Records the events.</summary>
+    /// <param name="domainEvents">The events.</param>
+    /// <param name="cancellationToken">Unused.</param>
+    /// <returns>A completed task.</returns>
+    public Task DispatchAsync(IEnumerable<IDomainEvent> domainEvents, CancellationToken cancellationToken = default)
+    {
+        Dispatched.AddRange(domainEvents);
+        return Task.CompletedTask;
+    }
+}
+
 /// <summary>A test-only EF Core context that maps <see cref="Note"/> the way production contexts map aggregates.</summary>
 /// <param name="options">The context options.</param>
 internal sealed class TestDbContext(DbContextOptions<TestDbContext> options) : DbContext(options)

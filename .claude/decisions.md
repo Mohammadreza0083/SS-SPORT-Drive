@@ -86,6 +86,16 @@ Last updated: 2026-10-23
     - Any other exception becomes a generic **500**.
     - Validation errors become 400 (D-3).
   - **Auth schemes are added to the document with the auth features themselves** (admin magic-link session A-1, viewer session, Telegram webhook secret T-1). Nothing is authenticated yet, so none are documented today.
+- **MediatR pipeline (D-3, 2026-10-24):**
+  - **Contracts:** `ICommand` / `ICommand<T>` change state; `IQuery<T>` only reads. There are matching handler interfaces.
+  - **Behaviour order:** logging → authorization → validation → transaction → handler. Authorization runs before validation, so anonymous callers learn nothing about a request's rules.
+  - **Logging:** request type name and duration only, as structured properties. **Request data is never logged** (emails, OTP codes).
+  - **Authorization:** a request that implements `IAuthorizedRequest` needs a signed-in caller (otherwise 401) with one of its `RequiredRoles` (otherwise 403). The caller comes from `ICurrentUser`.
+    - The API reads it from the request's principal. Hosts without users see an anonymous caller.
+    - Real sign-in arrives with A-1 and the viewer sign-in.
+  - **Validation:** FluentValidation validators run before the handler. Failures become 400 ValidationProblemDetails, with errors per field.
+  - **Transaction:** commands are committed by the unit of work after a successful handler. Handlers never call `SaveChangesAsync`, and queries never write.
+  - **Domain events:** after a successful save, the unit of work dispatches the events of every tracked aggregate (in raise order) to `IDomainEventHandler<TEvent>`s and clears them. A failed save dispatches nothing. MediatR is not used for domain events, so the Domain layer stays framework-free.
   - **There is one `AppDbContext` per request scope**, shared by the repositories and the unit of work. It uses the shared `NpgsqlDataSource`.
   - Entity mappings are `IEntityTypeConfiguration` classes, picked up automatically (D-8).
   - Domain events are never mapped as data. They are dispatched after saving once the MediatR pipeline exists (D-3).
@@ -93,6 +103,11 @@ Last updated: 2026-10-23
 - Tests use xUnit, FluentAssertions, NSubstitute, Testcontainers (PostgreSQL) and Playwright.
   - xUnit v3 on Microsoft Testing Platform (required by the .NET 10 SDK).
   - FluentAssertions is pinned to **7.x** (Apache-2.0). Version 8+ needs a paid commercial licence.
+- **MediatR and AutoMapper are pinned to their last free versions (owner, 2026-10-24):**
+  - **MediatR 12.5.0** (Apache-2.0) and **AutoMapper 14.0.0** (MIT).
+  - MediatR 13+ and AutoMapper 15+ are commercial (a Community licence needs registration and a key). The owner chose to stay on the free line rather than register or switch libraries.
+  - Never upgrade either past these versions without asking.
+  - FluentValidation stays on the latest version (Apache-2.0).
   - Front-end and worker unit tests use Vitest.
 - **One Next.js app** (`/web`) with route groups for the public site, viewer pages, the admin console and the Telegram Mini App, not separate apps (owner approved, 2026-10-23).
 - **Repository layout:** `src/` (Domain, Application, Infrastructure, Api, Workers), `tests/`, `web/`, `edge/`, `deploy/`. Layer boundaries are enforced by architecture tests (NetArchTest).

@@ -1,12 +1,13 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using SsSport.Drive.Application;
 using SsSport.Drive.Application.Abstractions.Persistence;
 using SsSport.Drive.Infrastructure.Persistence;
 
 namespace SsSport.Drive.Infrastructure.IntegrationTests.Persistence;
 
 /// <summary>
-/// <c>AddInfrastructure</c> wires the Application persistence ports to their EF Core implementations, one per request scope.
+/// <c>AddApplication</c> + <c>AddInfrastructure</c> (as in the hosts) wire the Application persistence ports to their EF Core implementations, one per request scope.
 /// </summary>
 public sealed class PersistenceRegistrationTests
 {
@@ -22,6 +23,7 @@ public sealed class PersistenceRegistrationTests
             .Build();
         using var provider = new ServiceCollection()
             .AddSingleton<IConfiguration>(configuration)
+            .AddApplication()
             .AddInfrastructure()
             .BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
         using var scope = provider.CreateScope();

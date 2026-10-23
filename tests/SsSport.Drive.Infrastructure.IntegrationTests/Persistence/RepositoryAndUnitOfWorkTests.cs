@@ -36,7 +36,7 @@ public sealed class RepositoryAndUnitOfWorkTests : IAsyncLifetime
         await using (var context = CreateContext())
         {
             new Repository<Note, Guid>(context).Add(note);
-            var written = await new UnitOfWork(context).SaveChangesAsync(cancellationToken);
+            var written = await new UnitOfWork(context, new RecordingDomainEventDispatcher()).SaveChangesAsync(cancellationToken);
             written.Should().Be(1);
         }
 
@@ -68,7 +68,7 @@ public sealed class RepositoryAndUnitOfWorkTests : IAsyncLifetime
         {
             var note = await new Repository<Note, Guid>(context).GetByIdAsync(id, cancellationToken);
             note!.Rename("Full match (renamed)");
-            await new UnitOfWork(context).SaveChangesAsync(cancellationToken);
+            await new UnitOfWork(context, new RecordingDomainEventDispatcher()).SaveChangesAsync(cancellationToken);
         }
 
         await using var reader = CreateContext();
@@ -87,7 +87,7 @@ public sealed class RepositoryAndUnitOfWorkTests : IAsyncLifetime
         {
             var repository = new Repository<Note, Guid>(context);
             repository.Remove((await repository.GetByIdAsync(id, cancellationToken))!);
-            await new UnitOfWork(context).SaveChangesAsync(cancellationToken);
+            await new UnitOfWork(context, new RecordingDomainEventDispatcher()).SaveChangesAsync(cancellationToken);
         }
 
         await using var reader = CreateContext();
@@ -121,10 +121,46 @@ public sealed class RepositoryAndUnitOfWorkTests : IAsyncLifetime
         await using var context = CreateContext();
         new Repository<Note, Guid>(context).Add(note);
 
-        var save = async () => await new UnitOfWork(context).SaveChangesAsync(cancellationToken);
+        var save = async () => await new UnitOfWork(context, new RecordingDomainEventDispatcher()).SaveChangesAsync(cancellationToken);
 
         await save.Should().NotThrowAsync();
         context.Model.FindEntityType(typeof(Note))!.GetNavigations().Should().BeEmpty();
+    }
+
+    /// <summary>After a successful save, the raised events are dispatched in order and cleared from the aggregate.</summary>
+    [Fact]
+    public async Task Saved_domain_events_are_dispatched_and_cleared()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var note = new Note(Guid.NewGuid(), "One");
+        note.Rename("Two");
+        note.Rename("Three");
+        var dispatcher = new RecordingDomainEventDispatcher();
+
+        await using var context = CreateContext();
+        new Repository<Note, Guid>(context).Add(note);
+        await new UnitOfWork(context, dispatcher).SaveChangesAsync(cancellationToken);
+
+        dispatcher.Dispatched.Should().Equal(new NoteRenamed(note.Id), new NoteRenamed(note.Id));
+        note.DomainEvents.Should().BeEmpty();
+    }
+
+    /// <summary>When the save fails, nothing is dispatched: handlers only react to changes that really happened.</summary>
+    [Fact]
+    public async Task Events_are_not_dispatched_when_the_save_fails()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var id = await SeedAsync("Existing");
+        var duplicate = new Note(id, "Duplicate");
+        duplicate.Rename("Duplicate (renamed)");
+        var dispatcher = new RecordingDomainEventDispatcher();
+
+        await using var context = CreateContext();
+        new Repository<Note, Guid>(context).Add(duplicate);
+        var save = () => new UnitOfWork(context, dispatcher).SaveChangesAsync(cancellationToken);
+
+        await save.Should().ThrowAsync<DbUpdateException>();
+        dispatcher.Dispatched.Should().BeEmpty();
     }
 
     /// <summary>Saves one note in its own context and returns its id.</summary>

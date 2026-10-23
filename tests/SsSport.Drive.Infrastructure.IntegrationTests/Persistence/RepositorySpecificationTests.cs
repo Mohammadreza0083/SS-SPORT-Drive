@@ -79,7 +79,7 @@ public sealed class RepositorySpecificationTests(PostgreSqlFixture database) : I
         {
             var note = await new Repository<Note, Guid>(context).FirstOrDefaultAsync(new NotesByTitlePrefixSpec(_prefix), cancellationToken);
             note!.Rename($"{_prefix}renamed");
-            await new UnitOfWork(context).SaveChangesAsync(cancellationToken);
+            await new UnitOfWork(context, new RecordingDomainEventDispatcher()).SaveChangesAsync(cancellationToken);
         }
 
         var titles = (await Repository().ListAsync(new NotesByTitlePrefixSpec(_prefix), cancellationToken)).Select(note => note.Title);
@@ -112,6 +112,6 @@ public sealed class RepositorySpecificationTests(PostgreSqlFixture database) : I
             repository.Add(new Note(Guid.NewGuid(), title));
         }
 
-        await new UnitOfWork(context).SaveChangesAsync(TestContext.Current.CancellationToken);
+        await new UnitOfWork(context, new RecordingDomainEventDispatcher()).SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 }
