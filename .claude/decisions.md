@@ -102,9 +102,9 @@ Last updated: 2026-10-23
   - The real folder layout is in §4a.
   - Local development never writes to `ssdrivebackup`: the apps' `Storage__*` settings point at local RustFS, and the real bucket is kept separately under `R2__*`.
 - **Email sending domain (owner, 2026-10-23):** `ss-sport.co` is verified in both **Resend** and **Brevo**. Their API keys are in `.env` (S-5 / SSD-24).
-- **Brevo deferred (owner, 2026-10-24):** the Brevo key is rejected ("API Key is not enabled", also through a VPN), and fixing it is postponed (S-15 / SSD-102).
-  - Until then, OTP mail goes through **Resend only**, with no fallback.
-  - The Brevo failover stays in the design and is switched on once the key works.
+- **Brevo enabled (2026-10-24):** OTP is Resend first with **Brevo as the fallback**, as originally decided (S-15 / SSD-102 done).
+  - The `SS-SPORT` key had been switched off in Brevo and was reactivated.
+  - At the owner's choice, Brevo's "block unauthorized IPs" setting is **off** for API keys. Turning it on again with the VPS IP authorized is a good hardening step at deploy time (O-1).
 - **Network note (2026-10-24):** from inside Iran, Gmail SMTP, Resend and Telegram are only reachable through a proxy or VPN. This affects local development only; the VPS outside Iran doesn't need one.
 - **Telegram bot (owner, 2026-10-23):** the bot is **`@sssportdrive_bot`** (not `@SSSportDriveBot`). The first admin is identified by `Telegram__AdminUserId`.
 
