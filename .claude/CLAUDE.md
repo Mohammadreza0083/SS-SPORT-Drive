@@ -52,6 +52,8 @@ Branded, trackable volleyball player video pages built from Google Drive folders
 ## Keep up to date (check on every commit)
 - `.gitignore`: covers every new tool, build output, secret or local file introduced.
 - `.dockerignore`: every Docker context excludes tests output, `node_modules`, `bin/obj`, `.git`, secrets and local env files.
+- `README.md`: always present and polished (centered header, badges, architecture diagram, stack, quick start, structure, conventions, roadmap). Update it whenever a feature changes setup, structure, stack or status.
+- `LICENSE`: always present. The project is **proprietary, all rights reserved (SS-SPORT)**; never add an open-source license.
 - `.claude/decisions.md`: any new owner decision is recorded the same day.
 - XML docs present on every new method.
 - Scalar/OpenAPI docs complete for every new or changed endpoint.
