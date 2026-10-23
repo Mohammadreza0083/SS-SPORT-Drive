@@ -83,7 +83,11 @@ Last updated: 2026-10-23
 - **Cloudflare & R2 (owner, 2026-10-23):**
   - `ss-sport.co` is on Cloudflare and the R2 bucket **`ssdrivebackup`** exists.
   - The owner is copying the Google Shared Drive into it as a backup with a sync tool.
-  - The R2 API token (access key + secret) is still to be created (S-2 / SSD-13).
+  - The R2 API token (Object Read & Write, scoped to `ssdrivebackup`) is in `.env`. Read access was verified on 2026-10-23 (S-2 / SSD-13 done).
+  - **Observed backup layout (to confirm before ingest, EPIC 3):**
+    - Player folders sit under a category folder: `Men Volleyball/`.
+    - Folder names carry more than §4 assumed, e.g. `SS-SPORT  Ivan Valeev／ OH`: a double space, a full-width slash `／` and a position suffix.
+    - Some files sit loose at the bucket root, e.g. `InShot_….mp4`.
   - Local development never writes to `ssdrivebackup`: the apps' `Storage__*` settings point at local RustFS, and the real bucket is kept separately under `R2__*`.
 - **Email sending domain (owner, 2026-10-23):** `ss-sport.co` is verified in both **Resend** and **Brevo**. Their API keys are in `.env` (S-5 / SSD-24).
 - **Telegram bot (owner, 2026-10-23):** the bot is **`@sssportdrive_bot`** (not `@SSSportDriveBot`). The first admin is identified by `Telegram__AdminUserId`.
