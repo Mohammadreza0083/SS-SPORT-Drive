@@ -22,6 +22,7 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | S-12 | `.gitignore` + `.dockerignore` baselines (.NET, Node/Next.js, IDEs, secrets, env files) | Claude | Files committed |
 | S-13 | Branching + commit conventions (`feature/<area>-<name>`, PR into main, protected main) | Both | Rules active on the repo |
 | S-14 | Configuration: root `.env` loaded by DotNetEnv, CORS lockdown to the web origin, PostgreSQL connection + `/health/ready` | Claude | Tests green, stack reads `.env` |
+| S-15 | Fix the Brevo API key (OTP fallback); deferred by the owner, OTP uses Resend only until then | Owner | Read-only Brevo check returns 200 |
 | S-11 | Finalise watermark size/opacity and the overlay interval on real full-match footage | Both | Sample clip approved |
 
 ## EPIC 1 — Core domain & persistence
