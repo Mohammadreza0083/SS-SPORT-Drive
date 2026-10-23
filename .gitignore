@@ -12,7 +12,9 @@
 *.p12
 secrets/
 **/service-account*.json
-appsettings.*.local.json
+# Every environment-specific appsettings file (Development, Staging, Production, Local, ...).
+# Only the secret-free base appsettings.json is committed; real settings live in .env.
+appsettings.*.json
 appsettings.Local.json
 .dev.vars
 .claude/settings.local.json

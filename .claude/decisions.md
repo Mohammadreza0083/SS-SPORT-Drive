@@ -80,7 +80,28 @@ Last updated: 2026-10-23
 - **Cloudflare** runs the viewer site edge, the short links, HLS token validation and R2 delivery.
 - Cloudflare Workers can NOT replace the VPS: they can't run .NET, ffmpeg or Hangfire. Cloudflare Containers was considered and rejected as more complex.
 - **Local stack uses RustFS instead of MinIO** as the S3-compatible R2 stand-in (2026-10-23): MinIO no longer publishes Docker images. RustFS is Apache-2.0 with the same S3 API. The local compose also runs the web app.
-- **Cloudflare & R2 (owner, 2026-10-23):** the Cloudflare account and the R2 bucket exist. The owner is copying the Google Shared Drive into R2 as a backup with a sync tool. The R2 API token is still to be created (S-2 / SSD-13).
+- **Cloudflare & R2 (owner, 2026-10-23):**
+  - `ss-sport.co` is on Cloudflare and the R2 bucket **`ssdrivebackup`** exists.
+  - The owner is copying the Google Shared Drive into it as a backup with a sync tool.
+  - The R2 API token (Object Read & Write, scoped to `ssdrivebackup`) is in `.env`. Read access was verified on 2026-10-23 (S-2 / SSD-13 done).
+  - The real folder layout is in §4a.
+  - Local development never writes to `ssdrivebackup`: the apps' `Storage__*` settings point at local RustFS, and the real bucket is kept separately under `R2__*`.
+- **Email sending domain (owner, 2026-10-23):** `ss-sport.co` is verified in both **Resend** and **Brevo**. Their API keys are in `.env` (S-5 / SSD-24).
+- **Telegram bot (owner, 2026-10-23):** the bot is **`@sssportdrive_bot`** (not `@SSSportDriveBot`). The first admin is identified by `Telegram__AdminUserId`.
+
+## 3a. Configuration & secrets (owner, 2026-10-23)
+
+- **One git-ignored `.env` at the repository root** holds every setting and secret. `.env.example` is the committed template.
+  - Docker Compose reads it (`env_file`).
+  - The API and workers load it with **DotNetEnv** for local `dotnet run`. Real environment variables always win.
+  - The web app loads it in `next.config.ts`.
+- .NET keys use `__` nesting (`Telegram__BotToken`, `Email__Resend__ApiKey`, `ConnectionStrings__DefaultConnection`), so they bind straight to configuration sections. This replaces the owner's flat sample names (`BREVO_API_KEY`, ...).
+- **Every environment-specific `appsettings.*.json` is git-ignored.** Only the secret-free base `appsettings.json` stays in git, because the build and Docker need it.
+- **Database: PostgreSQL**, as already decided, even though the owner's `.env` sample used SQL Server variables.
+  - Same variable shape as the sample: `DB_SERVER`, `DB_PORT`, `DB_NAME=ss_sport_drive`, `DB_USER`, `DB_PASSWORD`, `ConnectionStrings__DefaultConnection`.
+  - The API exposes `/health/ready`, which checks the database.
+- **CORS lockdown:** browsers may call the API only from the origins in `Cors__AllowedOrigins` (comma-separated; locally `http://localhost:3000`). Every other origin is refused.
+- **Local ports are bound to 127.0.0.1 only.** The API's host port is **5080**, because 8080 is often taken on developer machines.
 
 ## 4. Google Drive & archive
 
@@ -91,6 +112,41 @@ Last updated: 2026-10-23
   - **The tag comes from the subfolder name first.** File-name keywords (brief §4) are only the fallback.
   - The player name is suggested from the folder name by stripping the `SS-SPORT ` prefix.
 - **No multi-player folders exist.** No split or "Event page" feature is needed.
+
+## 4a. Real archive layout (read from the R2 backup, 2026-10-23)
+
+About 200 files in total. Ingest (EPIC 3) must handle all of the following.
+
+- **Category folders on top:** `Men Volleyball/` and `Women Volleyball/`, with the player folders inside.
+  - **Owner decision:** the category is stored as a **player field** (Men / Women), taken from the parent folder. It shows in the admin console and on the player.
+  - It is **not** a filter in the public search.
+- **Player folder name pattern:** `<prefix> <Full Name>／<position>`.
+  - **Prefix variants:** `SS-SPORT `, `SS-SPORT - `, `SS-Sport `, and a typo `SS-SPRT `. Match case-insensitively and tolerate typos.
+  - **Separator:** a full-width slash `／` (U+FF0F), with or without spaces around it. Extra inner spaces occur too (`SS-SPORT  Ivan Valeev`).
+  - **Position suffix:**
+    - `OH`, `OPP`, `MB`, `Setter` (= S) and `Libero` (= L).
+    - Two positions joined by `-` (`OH-OPP`): the first one is primary.
+    - Some folders have **no position** (e.g. `SS-SPORT Aref Moradi`). Those players go to the waiting list.
+  - The parsed name and positions are only **suggestions** for the admin. Every player still goes through the waiting list (§5).
+- **Subfolder names vary widely.** Tag rules normalise them case-insensitively, ignoring trailing spaces:
+  - **Full match:** `Full matches`, `FULL MATCHES `, `Full Match`, `FULLMATCH`, `FULL Matchs`, `<Name> full games`.
+  - **Highlights:** `Highlights`, `Highlight`, `HIGHLIGHTS `, `Highlights NT`, `Highlights 2025／2026`, `<Name> highlights`.
+  - **Stats:** `STATS`.
+  - **Nested folders:** full matches can sit one level deeper, one folder per match (e.g. `Full matches/LEMESOS VS AEL/…`, or a `Russian Superleague 25-26/` folder). The match folder name can serve as the video title hint.
+  - Files can also sit **directly in the player folder**. The tag then comes from the file-name fallback.
+- **File types found:**
+  - **Videos:** `.mp4`, `.MP4`, `.MOV`.
+  - **Documents:** `.pdf`.
+  - **Stat screenshots:** `.png`, `.PNG`, `.jpg`.
+    - **Owner decision:** shown **as documents**, view-only in the Documents section next to the PDFs.
+    - The no-download protection applies to them too.
+  - **DataVolley scout files:** `.dvw`, usually next to the full match they belong to (same base name, prefixed `&`).
+    - **Owner decision:** viewers must be able to **see and read** them.
+    - They get an in-page, view-only DataVolley viewer: no download, the same rules as PDFs.
+    - Backlog V-8 covers the viewer. What exactly it shows (raw scout lines vs. parsed stats per match and per skill) is to be designed with the owner before it is built.
+- **Junk to skip:**
+  - Loose files at the bucket root (e.g. `InShot_….mp4`).
+  - Zero-byte folder markers with no extension.
 
 ## 5. Players & positions
 
@@ -170,6 +226,7 @@ Last updated: 2026-10-23
   - It fails over Resend → Brevo for OTP.
   - The queue is always visible to admins (an "Email queue" page in the console).
 - **Contact address** shown to viewers: `info@ss-sport.co`.
+- **Google SMTP sends from `info@ss-sport.co`** with an app password (owner, 2026-10-23), not `drive@ss-sport.co`.
 
 ## 9. Viewer site design
 
@@ -198,7 +255,7 @@ Last updated: 2026-10-23
 | 10 | Video player | **Resolved:** Media Chrome + hls-video-element |
 | 11 | Hosting | **Resolved:** VPS outside Iran + Cloudflare edge. Provider picked and bought only when the site is ready to deploy |
 
-**Still open (small):** the VPS provider; the exact watermark size and opacity; the overlay move interval (proposed: 5 s); the sender address for Google SMTP mail (proposed: `drive@ss-sport.co`).
+**Still open (small):** the VPS provider; the exact watermark size and opacity; the overlay move interval (proposed: 5 s). *(Google SMTP sender resolved 2026-10-23: `info@ss-sport.co`, owner decision.)*
 
 ## 11. Design canvas contents
 

@@ -2,6 +2,7 @@
   <!-- Background worker host: Hangfire jobs (ingest, transcode, sync, email). Composition root for the worker process. -->
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="DotNetEnv" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SsSport.Drive.Application\SsSport.Drive.Application.csproj" />

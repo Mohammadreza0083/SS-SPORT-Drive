@@ -111,23 +111,31 @@ cd web && npm ci && npm run dev        # http://localhost:3000
 cd edge && npm ci && npm test
 ```
 
+### Configuration (.env)
+
+All settings live in one git-ignored `.env` at the repository root. Docker Compose, the API and workers ([DotNetEnv](https://github.com/tonerdo/dotnet-env)) and the web app (`web/next.config.ts`) all read it. `.env.example` lists every key.
+
+```bash
+cp .env.example .env   # then fill in the secrets
+```
+
 ### Whole stack in Docker
 
 Runs PostgreSQL, RustFS (S3-compatible stand-in for R2), the API, the workers and the web app. Only Docker is needed.
 
 ```bash
-cp deploy/.env.example deploy/.env
-docker compose -f deploy/docker-compose.yml up -d --build --wait
+docker compose up -d --build --wait
 ```
 
 | Service | URL |
 |---|---|
 | Web | http://localhost:3000 |
-| API health | http://localhost:8080/health/live |
+| API liveness / readiness (DB) | http://localhost:5080/health/live · http://localhost:5080/health/ready |
 | Storage console | http://localhost:9001/rustfs/console/ |
 | PostgreSQL | `localhost:5432` |
 
-Stop with `docker compose -f deploy/docker-compose.yml down` (add `--volumes` to wipe the data).
+Every port is bound to `127.0.0.1` only. The API answers browsers only from the origins in `Cors__AllowedOrigins`.
+Stop with `docker compose down` (add `--volumes` to wipe the data).
 
 ## Project structure
 
@@ -142,7 +150,9 @@ SS-SPORT Drive/
 ├── tests/                              # Unit, architecture & integration tests
 ├── web/                                # Next.js front-end
 ├── edge/                               # Cloudflare Worker
-├── deploy/                             # Docker Compose, deployment & operations
+├── deploy/                             # Staging/production deployment & operations
+├── docker-compose.yml                  # Local stack (reads the root .env)
+├── .env.example                        # Every setting; copy to .env
 └── .github/workflows/                  # CI pipeline
 ```
 
