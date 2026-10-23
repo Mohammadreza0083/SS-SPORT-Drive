@@ -200,6 +200,16 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
   - Nothing is published and **no link can be created** until an admin fills every field and presses **Publish**.
   - Publish starts transcoding with the watermark and notifies the analyst on Telegram.
   - Players without a Volleybox link are **never** published without one. The team adds them manually.
+- **Player aggregate (D-4, 2026-10-24):**
+  - **A player starts with only its category** (Men/Women, from the archive folder). Name, nationality, positions and Volleybox can be filled in later, in any order, which is what the waiting list needs. The completeness check and Publish are D-5. Photo and status come with D-5/D-6.
+  - **Name:** Latin letters only (accented Latin like `á`, `ğ`, `ł` allowed), plus spaces, hyphens and apostrophes. At most 100 characters. Stored Title Cased (`jean-luc o'neil` → `Jean-Luc O'Neil`).
+  - **Nationality:** an ISO 3166-1 alpha-2 code from an embedded list, because the app runs with invariant globalization. `XK` (Kosovo) is accepted as well.
+  - **Positions:** 1–2 distinct positions, primary first. Folder spellings like `Setter`, `Libero` and `Outside Hitter` are recognised.
+  - **Volleybox:** the id is parsed from `…-p12345` (any `*.volleybox.net` host). The URL is normalised to `https://<host>/<name>-p<id>`. Team pages (`-t…`) are rejected with their own error code.
+  - **Slug:** lower-case ASCII built from the name, with accents folded by table. Collisions get `-2`, `-3`…
+    - Uniqueness of slugs and Volleybox ids is enforced by the Application layer plus unique database indexes (D-8).
+    - There is **no slug history**, because public `/p/{slug}` pages were dropped (§7).
+  - Ids are time-ordered GUIDs (v7). Every change raises `PlayerDetailsChanged`, and an unchanged value raises nothing.
 
 ## 6. Video watermark & media protection
 
