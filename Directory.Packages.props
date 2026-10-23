@@ -15,6 +15,8 @@
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <PackageVersion Include="Ardalis.Specification" Version="9.3.1" />
     <PackageVersion Include="Ardalis.Specification.EntityFrameworkCore" Version="9.3.1" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.13" />
+    <PackageVersion Include="Scalar.AspNetCore" Version="2.18.3" />
     <!-- Loads the git-ignored root .env into environment variables for local runs. -->
     <PackageVersion Include="DotNetEnv" Version="3.2.0" />
   </ItemGroup>
