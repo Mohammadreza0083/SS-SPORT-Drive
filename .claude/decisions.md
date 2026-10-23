@@ -69,6 +69,13 @@ Last updated: 2026-10-23
   - `AggregateRoot<TId>`: collects `IDomainEvent`s until they are dispatched after saving. Events are plain records; the Domain layer has no MediatR dependency.
   - **Value objects are C# `record`s.** There is no `ValueObject` base class, because records already give value equality (brief: DDD without over-engineering).
   - **A broken domain rule throws `DomainException`** with a stable code such as `player.too_many_positions`. The API maps that code to a ProblemDetails response; there is no Result type in the domain.
+- **Persistence ports (D-2, 2026-10-24):**
+  - `IRepository<TAggregate, TId>` and `IUnitOfWork` live in `Application/Abstractions/Persistence`. The EF Core implementations live in `Infrastructure/Persistence`.
+  - **Repositories only stage changes** (`GetByIdAsync`, `Add`, `Remove`). Edits to a loaded aggregate are tracked, so there is no `Update`. Only `IUnitOfWork.SaveChangesAsync` writes, as one transaction.
+  - Specification-based lookups are added to the repository in D-2b.
+  - **There is one `AppDbContext` per request scope**, shared by the repositories and the unit of work. It uses the shared `NpgsqlDataSource`.
+  - Entity mappings are `IEntityTypeConfiguration` classes, picked up automatically (D-8).
+  - Domain events are never mapped as data. They are dispatched after saving once the MediatR pipeline exists (D-3).
 - Stack as in the brief: ASP.NET Core on .NET 10, MediatR, AutoMapper, FluentValidation, Hangfire on PostgreSQL storage, PostgreSQL with EF Core, Cloudflare R2, ffmpeg, a Cloudflare Worker at the edge, and Next.js front-ends (re-confirmed by the owner, 2026-10-23).
 - Tests use xUnit, FluentAssertions, NSubstitute, Testcontainers (PostgreSQL) and Playwright.
   - xUnit v3 on Microsoft Testing Platform (required by the .NET 10 SDK).

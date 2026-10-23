@@ -1,0 +1,41 @@
+using Microsoft.EntityFrameworkCore;
+using SsSport.Drive.Domain.Primitives;
+
+namespace SsSport.Drive.Infrastructure.Persistence;
+
+/// <summary>EF Core model conventions shared by every SS-SPORT Drive context.</summary>
+public static class ModelBuilderExtensions
+{
+    /// <summary>
+    /// Keeps <see cref="AggregateRoot{TId}.DomainEvents"/> out of the database model. Call it after every entity is configured.
+    /// </summary>
+    /// <param name="modelBuilder">The model builder.</param>
+    /// <returns>The same model builder, for chaining.</returns>
+    public static ModelBuilder IgnoreDomainEvents(this ModelBuilder modelBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(modelBuilder);
+
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes().Where(type => IsAggregateRoot(type.ClrType)).ToList())
+        {
+            modelBuilder.Entity(entityType.ClrType).Ignore(nameof(AggregateRoot<int>.DomainEvents));
+        }
+
+        return modelBuilder;
+    }
+
+    /// <summary>Checks whether a type derives from <see cref="AggregateRoot{TId}"/> for any identifier type.</summary>
+    /// <param name="type">The CLR type to check.</param>
+    /// <returns><see langword="true"/> for aggregate roots.</returns>
+    private static bool IsAggregateRoot(Type type)
+    {
+        for (var current = type.BaseType; current is not null; current = current.BaseType)
+        {
+            if (current.IsGenericType && current.GetGenericTypeDefinition() == typeof(AggregateRoot<>))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
