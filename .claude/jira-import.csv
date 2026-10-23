@@ -1,0 +1,447 @@
+Issue Id,Issue Type,Summary,Description,Labels,Parent
+1,Epic,Epic 0 — Setup & accounts,,ss-sport-drive,
+2,Task,"S-1 Pick and buy the VPS outside Iran (≈4 vCPU / 8 GB, Ubuntu LTS)","Backlog key: S-1
+Assignee: Owner
+Done when: SSH access shared
+
+See .claude/decisions.md for all owner decisions.",owner-owner,1
+3,Task,"S-2 Cloudflare: add `ss-sport.co`, create R2 bucket + API token","Backlog key: S-2
+Assignee: Owner
+Done when: Keys stored in the secret manager
+
+See .claude/decisions.md for all owner decisions.",owner-owner,1
+4,Task,S-3 Google Cloud service account with Viewer access to the Shared Drive,"Backlog key: S-3
+Assignee: Owner
+Done when: Service-account JSON + Shared Drive ID available
+
+See .claude/decisions.md for all owner decisions.",owner-owner,1
+5,Task,S-4 Create the Telegram bot with BotFather (`@SSSportDriveBot`),"Backlog key: S-4
+Assignee: Owner
+Done when: Bot token available
+
+See .claude/decisions.md for all owner decisions.",owner-owner,1
+6,Task,"S-5 Resend + Brevo accounts, verify the `ss-sport.co` sending domain (SPF/DKIM/DMARC)","Backlog key: S-5
+Assignee: Owner
+Done when: Test OTP mail lands in inbox
+
+See .claude/decisions.md for all owner decisions.",owner-owner,1
+7,Task,S-6 Google SMTP app password for `drive@ss-sport.co`,"Backlog key: S-6
+Assignee: Owner
+Done when: Test mail sent
+
+See .claude/decisions.md for all owner decisions.",owner-owner,1
+8,Task,S-7 Cloudflare Turnstile site key,"Backlog key: S-7
+Assignee: Owner
+Done when: Site + secret key available
+
+See .claude/decisions.md for all owner decisions.",owner-owner,1
+9,Task,S-8 Hand over brand files (logo variants) to `brand/`,"Backlog key: S-8
+Assignee: Owner
+Done when: Files in repo
+
+See .claude/decisions.md for all owner decisions.",owner-owner,1
+10,Task,"S-9 Create the Git repo, solution layout (Domain / Application / Infrastructure / Api / Workers + tests, `/web`, `/edge`, `/deploy`)","Backlog key: S-9
+Assignee: Claude
+Done when: Solution builds, CI runs empty test suites
+
+See .claude/decisions.md for all owner decisions.",owner-claude,1
+11,Task,"S-10 docker-compose for local: PostgreSQL, MinIO (R2 stand-in), API, workers","Backlog key: S-10
+Assignee: Claude
+Done when: `docker compose up` works
+
+See .claude/decisions.md for all owner decisions.",owner-claude,1
+12,Task,"S-12 `.gitignore` + `.dockerignore` baselines (.NET, Node/Next.js, IDEs, secrets, env files)","Backlog key: S-12
+Assignee: Claude
+Done when: Files committed
+
+See .claude/decisions.md for all owner decisions.",owner-claude,1
+13,Task,"S-13 Branching + commit conventions (`feature/<area>-<name>`, PR into main, protected main)","Backlog key: S-13
+Assignee: Both
+Done when: Rules active on the repo
+
+See .claude/decisions.md for all owner decisions.",owner-both,1
+14,Task,S-11 Finalise watermark size/opacity and the overlay interval on real full-match footage,"Backlog key: S-11
+Assignee: Both
+Done when: Sample clip approved
+
+See .claude/decisions.md for all owner decisions.",owner-both,1
+15,Epic,Epic 1 — Core domain & persistence,,ss-sport-drive,
+16,Task,"D-1 Base building blocks: Entity, AggregateRoot, domain events, value objects","Backlog key: D-1
+Assignee: Both
+Done when: Unit tests green
+
+See .claude/decisions.md for all owner decisions.",owner-both,15
+17,Task,D-2 Unit of Work + generic `IRepository<T>` (EF Core),"Backlog key: D-2
+Assignee: Both
+Done when: Integration tests (Testcontainers) green
+
+See .claude/decisions.md for all owner decisions.",owner-both,15
+18,Task,D-2b Specification pattern base + evaluator wired into the generic repository,"Backlog key: D-2b
+Assignee: Both
+Done when: Tests green
+
+See .claude/decisions.md for all owner decisions.",owner-both,15
+19,Task,"D-2c OpenAPI + Scalar setup at `/scalar` (XML docs included, ProblemDetails, auth schemes, admin-only in production)","Backlog key: D-2c
+Assignee: Claude
+Done when: Scalar shows every endpoint with examples
+
+See .claude/decisions.md for all owner decisions.",owner-claude,15
+20,Task,"D-3 MediatR pipeline: validation, authorization, logging, transaction behaviours","Backlog key: D-3
+Assignee: Claude
+Done when: Tests green
+
+See .claude/decisions.md for all owner decisions.",owner-claude,15
+21,Task,"D-4 Player aggregate: name rules, ISO nationality, positions (S/OH/OPP/MB/L/DS, max 2), Volleybox ID parsing, slug","Backlog key: D-4
+Assignee: Claude
+Done when: Tests green
+
+See .claude/decisions.md for all owner decisions.",owner-claude,15
+22,Task,D-5 Waiting-list state: completeness rules; Publish allowed only when complete,"Backlog key: D-5
+Assignee: Claude
+Done when: Tests green
+
+See .claude/decisions.md for all owner decisions.",owner-claude,15
+23,Task,"D-6 DriveFolder, Asset (tags from subfolder first, then file name), Rendition","Backlog key: D-6
+Assignee: Claude
+Done when: Tests green
+
+See .claude/decisions.md for all owner decisions.",owner-claude,15
+24,Task,"D-7 User + roles (Analyst, Admin, extensible) + AuditLog","Backlog key: D-7
+Assignee: Claude
+Done when: Tests green
+
+See .claude/decisions.md for all owner decisions.",owner-claude,15
+25,Task,D-8 EF Core mappings + migrations,"Backlog key: D-8
+Assignee: Claude
+Done when: Migration applies on clean DB
+
+See .claude/decisions.md for all owner decisions.",owner-claude,15
+26,Task,"D-9 DTO pattern: request/response DTOs per endpoint, AutoMapper profiles, entities never exposed","Backlog key: D-9
+Assignee: Claude
+Done when: Mapping tests green (AutoMapper configuration valid)
+
+See .claude/decisions.md for all owner decisions.",owner-claude,15
+27,Epic,Epic 2 — Telegram bot & Mini App,,ss-sport-drive,
+28,Task,T-1 Webhook endpoint + secret validation,"Backlog key: T-1
+Assignee: Claude
+Done when: Tests green
+
+See .claude/decisions.md for all owner decisions.",owner-claude,27
+29,Task,T-2 Access flow: request → admins approve/decline → welcome,"Backlog key: T-2
+Assignee: Claude
+Done when: E2E on test bot
+
+See .claude/decisions.md for all owner decisions.",owner-claude,27
+30,Task,T-3 Mini App auth (initData signature),"Backlog key: T-3
+Assignee: Claude
+Done when: Tests green
+
+See .claude/decisions.md for all owner decisions.",owner-claude,27
+31,Task,"T-4 New player form (photo, name, nationality, positions incl. DS, Volleybox, Drive link) with live validation","Backlog key: T-4
+Assignee: Claude
+Done when: Works in Telegram
+
+See .claude/decisions.md for all owner decisions.",owner-claude,27
+32,Task,T-5 Update-player mode for a known Volleybox ID,"Backlog key: T-5
+Assignee: Claude
+Done when: Tests green
+
+See .claude/decisions.md for all owner decisions.",owner-claude,27
+33,Task,T-6 One edited progress message + result card + QR,"Backlog key: T-6
+Assignee: Claude
+Done when: Demo
+
+See .claude/decisions.md for all owner decisions.",owner-claude,27
+34,Task,"T-7 My players list, player detail, edit video sheet","Backlog key: T-7
+Assignee: Claude
+Done when: Demo
+
+See .claude/decisions.md for all owner decisions.",owner-claude,27
+35,Task,"T-8 Notification rules: grouping, 10-min throttle, quiet hours 23:00–08:00 Tehran","Backlog key: T-8
+Assignee: Claude
+Done when: Tests green
+
+See .claude/decisions.md for all owner decisions.",owner-claude,27
+36,Epic,"Epic 3 — Ingest, transcode & sync",,ss-sport-drive,
+37,Task,I-1 Drive reader: recursive listing of `SS-SPORT <Name>` folders and subfolders,"Backlog key: I-1
+Assignee: Claude
+Done when: Tests on fixtures
+
+See .claude/decisions.md for all owner decisions.",owner-claude,36
+38,Task,I-2 Copy originals to R2 (reuse by md5),"Backlog key: I-2
+Assignee: Claude
+Done when: Tests green
+
+See .claude/decisions.md for all owner decisions.",owner-claude,36
+39,Task,"I-3 ffmpeg HLS 360/720/1080, 6 s segments, burned-in watermark (logo top-left, slogan bottom-right)","Backlog key: I-3
+Assignee: Claude
+Done when: Sample approved (S-11)
+
+See .claude/decisions.md for all owner decisions.",owner-claude,36
+40,Task,"I-4 Thumbnails, sprite, poster; PDF page count + preview images","Backlog key: I-4
+Assignee: Claude
+Done when: Tests green
+
+See .claude/decisions.md for all owner decisions.",owner-claude,36
+41,Task,"I-5 Player card render (Barlow Condensed name, brand template)","Backlog key: I-5
+Assignee: Both
+Done when: Card approved
+
+See .claude/decisions.md for all owner decisions.",owner-both,36
+42,Task,I-6 Sync poller every 10 min: new / renamed / replaced / removed / lost access,"Backlog key: I-6
+Assignee: Claude
+Done when: Tests per rule
+
+See .claude/decisions.md for all owner decisions.",owner-claude,36
+43,Task,I-7 Background removal for player photos,"Backlog key: I-7
+Assignee: Claude
+Done when: Demo
+
+See .claude/decisions.md for all owner decisions.",owner-claude,36
+44,Epic,Epic 4 — Viewer site & media protection,,ss-sport-drive,
+45,Task,"V-1 Next.js viewer app shell, fonts (Barlow Condensed / Geist / Geist Mono), brand tokens, motion system","Backlog key: V-1
+Assignee: Claude
+Done when: Matches canvas
+
+See .claude/decisions.md for all owner decisions.",owner-claude,44
+46,Task,V-2 Player page (desktop / tablet / mobile) per canvas,"Backlog key: V-2
+Assignee: Claude
+Done when: Playwright visual pass
+
+See .claude/decisions.md for all owner decisions.",owner-claude,44
+47,Task,"V-3 Media Chrome + hls-video-element player: speed, quality, frame step, no download, no context menu","Backlog key: V-3
+Assignee: Claude
+Done when: Demo
+
+See .claude/decisions.md for all owner decisions.",owner-claude,44
+48,Task,"V-4 Moving viewer-email overlay (20 %, small, repositions every few seconds)","Backlog key: V-4
+Assignee: Claude
+Done when: Demo
+
+See .claude/decisions.md for all owner decisions.",owner-claude,44
+49,Task,"V-5 Cloudflare Worker: short links, HMAC HLS tokens (30 min) + background refresh while watching","Backlog key: V-5
+Assignee: Claude
+Done when: Copying the m3u8 elsewhere fails
+
+See .claude/decisions.md for all owner decisions.",owner-claude,44
+50,Task,"V-6 View-only PDF viewer (rendered pages, no file download)","Backlog key: V-6
+Assignee: Claude
+Done when: Demo
+
+See .claude/decisions.md for all owner decisions.",owner-claude,44
+51,Task,V-7 Email-only contact CTA (`info@ss-sport.co`),"Backlog key: V-7
+Assignee: Claude
+Done when: Done
+
+See .claude/decisions.md for all owner decisions.",owner-claude,44
+52,Epic,"Epic 5 — Personal links, OTP & tracking",,ss-sport-drive,
+53,Task,"L-1 Recipients + `/r/{code}` share links (expiry, pause, revoke)","Backlog key: L-1
+Assignee: Claude
+Done when: Tests green
+
+See .claude/decisions.md for all owner decisions.",owner-claude,52
+54,Task,"L-2 Device binding + email gate + OTP (6 digits, 10 min, 5 tries)","Backlog key: L-2
+Assignee: Claude
+Done when: Tests green
+
+See .claude/decisions.md for all owner decisions.",owner-claude,52
+55,Task,"L-3 Forwarding: any OTP-verified email, LinkForwarded alert, Keep/Block","Backlog key: L-3
+Assignee: Claude
+Done when: Tests green
+
+See .claude/decisions.md for all owner decisions.",owner-claude,52
+56,Task,"L-4 Email queue on Hangfire: Resend → Brevo failover for OTP, Google SMTP for the rest, retries, admin view","Backlog key: L-4
+Assignee: Claude
+Done when: Failover test green
+
+See .claude/decisions.md for all owner decisions.",owner-claude,52
+57,Task,L-5 Tracking events + heartbeats + sessions,"Backlog key: L-5
+Assignee: Claude
+Done when: Tests green
+
+See .claude/decisions.md for all owner decisions.",owner-claude,52
+58,Task,"L-6 Metrics: unique watched (range merge), watch time, plays, hotspots, completion","Backlog key: L-6
+Assignee: Claude
+Done when: Unit test per metric
+
+See .claude/decisions.md for all owner decisions.",owner-claude,52
+59,Task,L-7 Admin bot alerts + daily digest 09:00 Tehran,"Backlog key: L-7
+Assignee: Claude
+Done when: Demo
+
+See .claude/decisions.md for all owner decisions.",owner-claude,52
+60,Epic,Epic 6 — Public search & access requests,,ss-sport-drive,
+61,Task,P-1 Public home: player search + position filter,"Backlog key: P-1
+Assignee: Claude
+Done when: Matches canvas
+
+See .claude/decisions.md for all owner decisions.",owner-claude,60
+62,Task,"P-2 Locked player page: blurred / locked media, no real media URLs sent","Backlog key: P-2
+Assignee: Claude
+Done when: Security test green
+
+See .claude/decisions.md for all owner decisions.",owner-claude,60
+63,Task,"P-3 Request-access flow: email + description, OTP, Turnstile, rate limits","Backlog key: P-3
+Assignee: Claude
+Done when: Tests green
+
+See .claude/decisions.md for all owner decisions.",owner-claude,60
+64,Task,P-4 Admin access-request inbox (console + bot): approve → auto personal link + approval email,"Backlog key: P-4
+Assignee: Claude
+Done when: E2E green
+
+See .claude/decisions.md for all owner decisions.",owner-claude,60
+65,Task,P-5 Viewer login by email magic link (1-day session),"Backlog key: P-5
+Assignee: Claude
+Done when: Tests green
+
+See .claude/decisions.md for all owner decisions.",owner-claude,60
+66,Task,P-7 Home page login button; signed-in viewers request access without email/OTP,"Backlog key: P-7
+Assignee: Claude
+Done when: Tests green
+
+See .claude/decisions.md for all owner decisions.",owner-claude,60
+67,Epic,Epic 7 — Admin console,,ss-sport-drive,
+68,Task,A-1 Admin login by email magic link (7-day session) + CSRF,"Backlog key: A-1
+Assignee: Claude
+Done when: Tests green
+
+See .claude/decisions.md for all owner decisions.",owner-claude,67
+69,Task,"A-2 Dashboard (KPIs, live activity, needs attention, top players)","Backlog key: A-2
+Assignee: Claude
+Done when: Demo
+
+See .claude/decisions.md for all owner decisions.",owner-claude,67
+70,Task,A-3 Players list + search + filters in URL + CSV export,"Backlog key: A-3
+Assignee: Claude
+Done when: Demo
+
+See .claude/decisions.md for all owner decisions.",owner-claude,67
+71,Task,"A-4 Player detail: files (order, hero, visibility, retry), folders, links","Backlog key: A-4
+Assignee: Claude
+Done when: Demo
+
+See .claude/decisions.md for all owner decisions.",owner-claude,67
+72,Task,"A-5 Waiting list: complete-details drawer, Publish disabled until complete","Backlog key: A-5
+Assignee: Claude
+Done when: Matches canvas
+
+See .claude/decisions.md for all owner decisions.",owner-claude,67
+73,Task,A-6 New share link modal (no download toggle),"Backlog key: A-6
+Assignee: Claude
+Done when: Demo
+
+See .claude/decisions.md for all owner decisions.",owner-claude,67
+74,Task,A-7 Viewer profile + replay heatmap,"Backlog key: A-7
+Assignee: Claude
+Done when: Demo
+
+See .claude/decisions.md for all owner decisions.",owner-claude,67
+75,Task,A-8 Users & roles + audit log,"Backlog key: A-8
+Assignee: Claude
+Done when: Demo
+
+See .claude/decisions.md for all owner decisions.",owner-claude,67
+76,Task,A-9 Sync & jobs + Email queue pages,"Backlog key: A-9
+Assignee: Claude
+Done when: Demo
+
+See .claude/decisions.md for all owner decisions.",owner-claude,67
+77,Task,"A-10 Settings (contact email, digest time, quiet hours, link expiry default)","Backlog key: A-10
+Assignee: Claude
+Done when: Demo
+
+See .claude/decisions.md for all owner decisions.",owner-claude,67
+78,Task,"A-11 Viewer access & watch log: per viewer players accessible, plays, minutes, last seen, expiry, per-video detail","Backlog key: A-11
+Assignee: Claude
+Done when: Matches canvas
+
+See .claude/decisions.md for all owner decisions.",owner-claude,67
+79,Epic,Epic 8 — Archive migration,,ss-sport-drive,
+80,Task,"M-1 Scan the Shared Drive (~100 GB), match to the R2 backup by md5","Backlog key: M-1
+Assignee: Claude
+Done when: Report generated
+
+See .claude/decisions.md for all owner decisions.",owner-claude,79
+81,Task,M-2 Suggestions from folder names (`SS-SPORT <Name>`) and subfolders; incomplete players go to the waiting list,"Backlog key: M-2
+Assignee: Claude
+Done when: Tests green
+
+See .claude/decisions.md for all owner decisions.",owner-claude,79
+82,Task,M-3 CSV export/import round-trip,"Backlog key: M-3
+Assignee: Claude
+Done when: Demo
+
+See .claude/decisions.md for all owner decisions.",owner-claude,79
+83,Task,M-4 Throttled transcode queue (new uploads first),"Backlog key: M-4
+Assignee: Claude
+Done when: Demo
+
+See .claude/decisions.md for all owner decisions.",owner-claude,79
+84,Task,M-5 Fill in missing Volleybox links / photos for the archive,"Backlog key: M-5
+Assignee: Owner
+Done when: Waiting list empty
+
+See .claude/decisions.md for all owner decisions.",owner-owner,79
+85,Epic,Epic 9 — Deploy & operations,,ss-sport-drive,
+86,Task,"O-1 VPS provisioning: Docker, firewall, TLS, backups for PostgreSQL","Backlog key: O-1
+Assignee: Both
+Done when: Runbook written
+
+See .claude/decisions.md for all owner decisions.",owner-both,85
+87,Task,"O-2 CI pipeline: build, lint, unit + integration tests (Testcontainers), Docker image build on every PR","Backlog key: O-2
+Assignee: Claude
+Done when: PR checks required on main
+
+See .claude/decisions.md for all owner decisions.",owner-claude,85
+88,Task,O-3 CD pipeline: auto-deploy main to staging; tagged release to production with approval; migrations step; rollback,"Backlog key: O-3
+Assignee: Claude
+Done when: One-click deploy + documented rollback
+
+See .claude/decisions.md for all owner decisions.",owner-claude,85
+89,Task,"O-4 Serilog structured logging + enrichers (correlation ID, user, player) with redaction of secrets, OTPs and emails","Backlog key: O-4
+Assignee: Claude
+Done when: Tests on redaction green
+
+See .claude/decisions.md for all owner decisions.",owner-claude,85
+90,Task,"O-5 Grafana Loki + Grafana on the VPS; ship API, worker and bot logs; base dashboards + alerts","Backlog key: O-5
+Assignee: Both
+Done when: Dashboards live
+
+See .claude/decisions.md for all owner decisions.",owner-both,85
+91,Task,"O-6 Health checks, failed-job alerts to admins via the bot","Backlog key: O-6
+Assignee: Claude
+Done when: Demo
+
+See .claude/decisions.md for all owner decisions.",owner-claude,85
+92,Task,O-7 Security checklist pass (brief §12),"Backlog key: O-7
+Assignee: Both
+Done when: Checklist signed off
+
+See .claude/decisions.md for all owner decisions.",owner-both,85
+93,Epic,Epic 10 — Performance (k6),,ss-sport-drive,
+94,Task,K-1 k6 project setup + smoke test in CI against staging,"Backlog key: K-1
+Assignee: Claude
+Done when: Smoke runs on every deploy
+
+See .claude/decisions.md for all owner decisions.",owner-claude,93
+95,Task,K-2 Benchmark the viewer player page + HLS token refresh,"Backlog key: K-2
+Assignee: Both
+Done when: Report reviewed
+
+See .claude/decisions.md for all owner decisions.",owner-both,93
+96,Task,K-3 Benchmark the tracking heartbeat ingest,"Backlog key: K-3
+Assignee: Both
+Done when: Report reviewed
+
+See .claude/decisions.md for all owner decisions.",owner-both,93
+97,Task,K-4 Benchmark the public search + request-access OTP endpoints,"Backlog key: K-4
+Assignee: Both
+Done when: Report reviewed
+
+See .claude/decisions.md for all owner decisions.",owner-both,93
+98,Task,"K-5 Benchmark the admin console APIs (players list, viewer analytics)","Backlog key: K-5
+Assignee: Both
+Done when: Report reviewed
+
+See .claude/decisions.md for all owner decisions.",owner-both,93

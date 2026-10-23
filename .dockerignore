@@ -1,0 +1,55 @@
+# Docker build context ignore rules (repository root context).
+# Keep in sync with .gitignore; anything secret or generated stays out of images.
+
+# VCS & tooling
+.git
+.gitignore
+.gitattributes
+.github
+.claude
+.vs
+.vscode
+.idea
+graphify-out
+
+# Secrets & local env
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+secrets
+**/service-account*.json
+**/appsettings.*.local.json
+**/appsettings.Local.json
+**/.dev.vars
+
+# .NET build output & test results
+**/bin
+**/obj
+**/TestResults
+**/*.trx
+**/coverage
+artifacts
+
+# Node / Next.js / Workers
+**/node_modules
+**/.next
+**/out
+**/dist
+**/.turbo
+**/.wrangler
+**/*.tsbuildinfo
+**/playwright-report
+**/test-results
+
+# Docs & misc not needed at build time
+**/*.md
+!**/README.md
+k6-results
+media-local
+minio-data
+**/.DS_Store
+**/Thumbs.db

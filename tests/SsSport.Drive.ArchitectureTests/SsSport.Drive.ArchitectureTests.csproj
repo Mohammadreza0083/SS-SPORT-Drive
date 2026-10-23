@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Enforces Clean Architecture layer boundaries. -->
+  <ItemGroup>
+    <PackageReference Include="NetArchTest.Rules" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SsSport.Drive.Domain\SsSport.Drive.Domain.csproj" />
+    <ProjectReference Include="..\..\src\SsSport.Drive.Application\SsSport.Drive.Application.csproj" />
+    <ProjectReference Include="..\..\src\SsSport.Drive.Infrastructure\SsSport.Drive.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\SsSport.Drive.Api\SsSport.Drive.Api.csproj" />
+    <ProjectReference Include="..\..\src\SsSport.Drive.Workers\SsSport.Drive.Workers.csproj" />
+  </ItemGroup>
+</Project>

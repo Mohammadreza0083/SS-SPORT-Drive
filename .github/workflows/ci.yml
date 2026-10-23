@@ -1,0 +1,74 @@
+# Continuous integration: runs on every pull request and on every push to main.
+# Image builds, staging deploy and k6 smoke tests are added in backlog O-2 / O-3 / K-1.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  dotnet:
+    name: .NET build, format & tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+      - name: Restore
+        run: dotnet restore SsSport.Drive.slnx
+      - name: Format check
+        run: dotnet format SsSport.Drive.slnx --verify-no-changes --no-restore
+      - name: Build
+        run: dotnet build SsSport.Drive.slnx --configuration Release --no-restore
+      - name: Test (unit, architecture, integration with Testcontainers)
+        run: dotnet test --solution SsSport.Drive.slnx --configuration Release --no-build
+
+  web:
+    name: Web lint, typecheck, tests & build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  edge:
+    name: Edge typecheck & tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: edge
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: edge/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test

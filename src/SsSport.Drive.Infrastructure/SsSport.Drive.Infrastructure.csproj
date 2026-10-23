@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Infrastructure layer: EF Core, Unit of Work, repositories, R2, Drive, email, ffmpeg adapters. -->
+  <ItemGroup>
+    <ProjectReference Include="..\SsSport.Drive.Application\SsSport.Drive.Application.csproj" />
+  </ItemGroup>
+</Project>

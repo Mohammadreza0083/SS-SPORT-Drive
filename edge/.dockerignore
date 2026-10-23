@@ -1,0 +1,13 @@
+# Docker build context ignore rules for the edge worker tooling.
+node_modules
+coverage
+.wrangler
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+*.pem
+.git
+.vscode
+.idea
+npm-debug.log*
