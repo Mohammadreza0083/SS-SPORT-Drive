@@ -85,6 +85,7 @@ Last updated: 2026-10-23
   - The owner is copying the Google Shared Drive into it as a backup with a sync tool.
   - The R2 API token (access key + secret) is still to be created (S-2 / SSD-13).
   - Local development never writes to `ssdrivebackup`: the apps' `Storage__*` settings point at local RustFS, and the real bucket is kept separately under `R2__*`.
+- **Email sending domain (owner, 2026-10-23):** `ss-sport.co` is verified in both **Resend** and **Brevo**. Their API keys are in `.env` (S-5 / SSD-24).
 - **Telegram bot (owner, 2026-10-23):** the bot is **`@sssportdrive_bot`** (not `@SSSportDriveBot`). The first admin is identified by `Telegram__AdminUserId`.
 
 ## 3a. Configuration & secrets (owner, 2026-10-23)
