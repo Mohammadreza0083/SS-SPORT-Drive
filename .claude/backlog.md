@@ -72,6 +72,7 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | V-5 | Cloudflare Worker: short links, HMAC HLS tokens (30 min) + background refresh while watching | Claude | Copying the m3u8 elsewhere fails |
 | V-6 | View-only PDF viewer (rendered pages, no file download) | Claude | Demo |
 | V-7 | Email-only contact CTA (`info@ss-sport.co`) | Claude | Done |
+| V-8 | DataVolley (`.dvw`) viewer: in-page, view-only, no download (what it shows is designed with the owner first) | Claude | Viewers can read a match's scout file; tests green |
 
 ## EPIC 5 — Personal links, OTP & tracking
 | Key | Task | Assignee | Done when |

@@ -84,10 +84,7 @@ Last updated: 2026-10-23
   - `ss-sport.co` is on Cloudflare and the R2 bucket **`ssdrivebackup`** exists.
   - The owner is copying the Google Shared Drive into it as a backup with a sync tool.
   - The R2 API token (Object Read & Write, scoped to `ssdrivebackup`) is in `.env`. Read access was verified on 2026-10-23 (S-2 / SSD-13 done).
-  - **Observed backup layout (to confirm before ingest, EPIC 3):**
-    - Player folders sit under a category folder: `Men Volleyball/`.
-    - Folder names carry more than §4 assumed, e.g. `SS-SPORT  Ivan Valeev／ OH`: a double space, a full-width slash `／` and a position suffix.
-    - Some files sit loose at the bucket root, e.g. `InShot_….mp4`.
+  - The real folder layout is in §4a.
   - Local development never writes to `ssdrivebackup`: the apps' `Storage__*` settings point at local RustFS, and the real bucket is kept separately under `R2__*`.
 - **Email sending domain (owner, 2026-10-23):** `ss-sport.co` is verified in both **Resend** and **Brevo**. Their API keys are in `.env` (S-5 / SSD-24).
 - **Telegram bot (owner, 2026-10-23):** the bot is **`@sssportdrive_bot`** (not `@SSSportDriveBot`). The first admin is identified by `Telegram__AdminUserId`.
@@ -115,6 +112,41 @@ Last updated: 2026-10-23
   - **The tag comes from the subfolder name first.** File-name keywords (brief §4) are only the fallback.
   - The player name is suggested from the folder name by stripping the `SS-SPORT ` prefix.
 - **No multi-player folders exist.** No split or "Event page" feature is needed.
+
+## 4a. Real archive layout (read from the R2 backup, 2026-10-23)
+
+About 200 files in total. Ingest (EPIC 3) must handle all of the following.
+
+- **Category folders on top:** `Men Volleyball/` and `Women Volleyball/`, with the player folders inside.
+  - **Owner decision:** the category is stored as a **player field** (Men / Women), taken from the parent folder. It shows in the admin console and on the player.
+  - It is **not** a filter in the public search.
+- **Player folder name pattern:** `<prefix> <Full Name>／<position>`.
+  - **Prefix variants:** `SS-SPORT `, `SS-SPORT - `, `SS-Sport `, and a typo `SS-SPRT `. Match case-insensitively and tolerate typos.
+  - **Separator:** a full-width slash `／` (U+FF0F), with or without spaces around it. Extra inner spaces occur too (`SS-SPORT  Ivan Valeev`).
+  - **Position suffix:**
+    - `OH`, `OPP`, `MB`, `Setter` (= S) and `Libero` (= L).
+    - Two positions joined by `-` (`OH-OPP`): the first one is primary.
+    - Some folders have **no position** (e.g. `SS-SPORT Aref Moradi`). Those players go to the waiting list.
+  - The parsed name and positions are only **suggestions** for the admin. Every player still goes through the waiting list (§5).
+- **Subfolder names vary widely.** Tag rules normalise them case-insensitively, ignoring trailing spaces:
+  - **Full match:** `Full matches`, `FULL MATCHES `, `Full Match`, `FULLMATCH`, `FULL Matchs`, `<Name> full games`.
+  - **Highlights:** `Highlights`, `Highlight`, `HIGHLIGHTS `, `Highlights NT`, `Highlights 2025／2026`, `<Name> highlights`.
+  - **Stats:** `STATS`.
+  - **Nested folders:** full matches can sit one level deeper, one folder per match (e.g. `Full matches/LEMESOS VS AEL/…`, or a `Russian Superleague 25-26/` folder). The match folder name can serve as the video title hint.
+  - Files can also sit **directly in the player folder**. The tag then comes from the file-name fallback.
+- **File types found:**
+  - **Videos:** `.mp4`, `.MP4`, `.MOV`.
+  - **Documents:** `.pdf`.
+  - **Stat screenshots:** `.png`, `.PNG`, `.jpg`.
+    - **Owner decision:** shown **as documents**, view-only in the Documents section next to the PDFs.
+    - The no-download protection applies to them too.
+  - **DataVolley scout files:** `.dvw`, usually next to the full match they belong to (same base name, prefixed `&`).
+    - **Owner decision:** viewers must be able to **see and read** them.
+    - They get an in-page, view-only DataVolley viewer: no download, the same rules as PDFs.
+    - Backlog V-8 covers the viewer. What exactly it shows (raw scout lines vs. parsed stats per match and per skill) is to be designed with the owner before it is built.
+- **Junk to skip:**
+  - Loose files at the bucket root (e.g. `InShot_….mp4`).
+  - Zero-byte folder markers with no extension.
 
 ## 5. Players & positions
 
