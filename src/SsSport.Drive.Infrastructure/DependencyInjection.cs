@@ -1,6 +1,9 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
+using SsSport.Drive.Application.Abstractions.Persistence;
+using SsSport.Drive.Infrastructure.Persistence;
 
 namespace SsSport.Drive.Infrastructure;
 
@@ -13,8 +16,9 @@ public static class DependencyInjection
     public const string ConnectionStringName = "DefaultConnection";
 
     /// <summary>
-    /// Adds the shared PostgreSQL data source. The connection string is read lazily from configuration,
-    /// so hosts and tests can supply it from any configuration source.
+    /// Adds the shared PostgreSQL data source, the EF Core context and the persistence ports
+    /// (unit of work + generic repository, one per request scope). The connection string is read lazily
+    /// from configuration, so hosts and tests can supply it from any configuration source.
     /// </summary>
     /// <param name="services">The service collection to add to.</param>
     /// <returns>The same service collection, for chaining.</returns>
@@ -22,6 +26,11 @@ public static class DependencyInjection
     {
         services.AddSingleton(provider => NpgsqlDataSource.Create(ReadConnectionString(provider.GetRequiredService<IConfiguration>())));
         services.AddSingleton<PostgreSqlHealthCheck>();
+
+        services.AddDbContext<AppDbContext>((provider, options) => options.UseNpgsql(provider.GetRequiredService<NpgsqlDataSource>()));
+        services.AddScoped<DbContext>(provider => provider.GetRequiredService<AppDbContext>());
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped(typeof(IRepository<,>), typeof(Repository<,>));
         return services;
     }
 
