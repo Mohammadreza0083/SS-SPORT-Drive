@@ -226,6 +226,7 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
   - It fails over Resend → Brevo for OTP.
   - The queue is always visible to admins (an "Email queue" page in the console).
 - **Contact address** shown to viewers: `info@ss-sport.co`.
+- **Google SMTP sends from `info@ss-sport.co`** with an app password (owner, 2026-10-23), not `drive@ss-sport.co`.
 
 ## 9. Viewer site design
 
@@ -254,7 +255,7 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
 | 10 | Video player | **Resolved:** Media Chrome + hls-video-element |
 | 11 | Hosting | **Resolved:** VPS outside Iran + Cloudflare edge. Provider picked and bought only when the site is ready to deploy |
 
-**Still open (small):** the VPS provider; the exact watermark size and opacity; the overlay move interval (proposed: 5 s); the sender address for Google SMTP mail (proposed: `drive@ss-sport.co`).
+**Still open (small):** the VPS provider; the exact watermark size and opacity; the overlay move interval (proposed: 5 s). *(Google SMTP sender resolved 2026-10-23: `info@ss-sport.co`, owner decision.)*
 
 ## 11. Design canvas contents
 

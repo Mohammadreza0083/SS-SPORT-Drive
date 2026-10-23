@@ -14,7 +14,7 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | S-3 | Google Cloud service account with Viewer access to the Shared Drive | Owner | Service-account JSON + Shared Drive ID available |
 | S-4 | Create the Telegram bot with BotFather (`@sssportdrive_bot`) | Owner | Bot token available |
 | S-5 | Resend + Brevo accounts, verify the `ss-sport.co` sending domain (SPF/DKIM/DMARC) | Owner | Test OTP mail lands in inbox |
-| S-6 | Google SMTP app password for `drive@ss-sport.co` | Owner | Test mail sent |
+| S-6 | Google SMTP app password for `info@ss-sport.co` | Owner | Test mail sent |
 | S-7 | Cloudflare Turnstile site key | Owner | Site + secret key available |
 | S-8 | Hand over brand files (logo variants) to `brand/` | Owner | Files in repo |
 | S-9 | Create the Git repo, solution layout (Domain / Application / Infrastructure / Api / Workers + tests, `/web`, `/edge`, `/deploy`) | Claude | Solution builds, CI runs empty test suites |
