@@ -72,7 +72,10 @@ Last updated: 2026-10-23
 - **Persistence ports (D-2, 2026-10-24):**
   - `IRepository<TAggregate, TId>` and `IUnitOfWork` live in `Application/Abstractions/Persistence`. The EF Core implementations live in `Infrastructure/Persistence`.
   - **Repositories only stage changes** (`GetByIdAsync`, `Add`, `Remove`). Edits to a loaded aggregate are tracked, so there is no `Update`. Only `IUnitOfWork.SaveChangesAsync` writes, as one transaction.
-  - Specification-based lookups are added to the repository in D-2b.
+  - **Specifications (D-2b, 2026-10-24):** they use the **Ardalis.Specification** library itself (MIT), not a home-grown copy.
+    - The Application layer depends only on the core package (no EF Core). Infrastructure evaluates specifications with `Ardalis.Specification.EntityFrameworkCore`.
+    - The repository offers `FirstOrDefaultAsync`, `ListAsync`, `CountAsync` and `AnyAsync` taking a specification. Count and Any apply only the criteria and ignore paging.
+    - Aggregates loaded this way are tracked, like `GetByIdAsync`.
   - **There is one `AppDbContext` per request scope**, shared by the repositories and the unit of work. It uses the shared `NpgsqlDataSource`.
   - Entity mappings are `IEntityTypeConfiguration` classes, picked up automatically (D-8).
   - Domain events are never mapped as data. They are dispatched after saving once the MediatR pipeline exists (D-3).

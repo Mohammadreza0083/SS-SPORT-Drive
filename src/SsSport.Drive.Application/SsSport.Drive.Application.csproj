@@ -1,6 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- Application layer: MediatR commands/queries, DTOs, specifications, abstractions. Depends only on Domain. -->
   <ItemGroup>
+    <PackageReference Include="Ardalis.Specification" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\SsSport.Drive.Domain\SsSport.Drive.Domain.csproj" />
   </ItemGroup>
 </Project>
