@@ -79,6 +79,8 @@ Last updated: 2026-10-23
 - **Everything is always Dockerized**, so the project can move to any host without changes (owner decision, 2026-10-23).
 - **Cloudflare** runs the viewer site edge, the short links, HLS token validation and R2 delivery.
 - Cloudflare Workers can NOT replace the VPS: they can't run .NET, ffmpeg or Hangfire. Cloudflare Containers was considered and rejected as more complex.
+- **Local stack uses RustFS instead of MinIO** as the S3-compatible R2 stand-in (2026-10-23): MinIO no longer publishes Docker images. RustFS is Apache-2.0 with the same S3 API. The local compose also runs the web app.
+- **Cloudflare & R2 (owner, 2026-10-23):** the Cloudflare account and the R2 bucket exist. The owner is copying the Google Shared Drive into R2 as a backup with a sync tool. The R2 API token is still to be created (S-2 / SSD-13).
 
 ## 4. Google Drive & archive
 
