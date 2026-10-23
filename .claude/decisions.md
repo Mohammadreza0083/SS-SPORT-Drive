@@ -80,7 +80,26 @@ Last updated: 2026-10-23
 - **Cloudflare** runs the viewer site edge, the short links, HLS token validation and R2 delivery.
 - Cloudflare Workers can NOT replace the VPS: they can't run .NET, ffmpeg or Hangfire. Cloudflare Containers was considered and rejected as more complex.
 - **Local stack uses RustFS instead of MinIO** as the S3-compatible R2 stand-in (2026-10-23): MinIO no longer publishes Docker images. RustFS is Apache-2.0 with the same S3 API. The local compose also runs the web app.
-- **Cloudflare & R2 (owner, 2026-10-23):** the Cloudflare account and the R2 bucket exist. The owner is copying the Google Shared Drive into R2 as a backup with a sync tool. The R2 API token is still to be created (S-2 / SSD-13).
+- **Cloudflare & R2 (owner, 2026-10-23):**
+  - `ss-sport.co` is on Cloudflare and the R2 bucket **`ssdrivebackup`** exists.
+  - The owner is copying the Google Shared Drive into it as a backup with a sync tool.
+  - The R2 API token (access key + secret) is still to be created (S-2 / SSD-13).
+  - Local development never writes to `ssdrivebackup`: the apps' `Storage__*` settings point at local RustFS, and the real bucket is kept separately under `R2__*`.
+- **Telegram bot (owner, 2026-10-23):** the bot is **`@sssportdrive_bot`** (not `@SSSportDriveBot`). The first admin is identified by `Telegram__AdminUserId`.
+
+## 3a. Configuration & secrets (owner, 2026-10-23)
+
+- **One git-ignored `.env` at the repository root** holds every setting and secret. `.env.example` is the committed template.
+  - Docker Compose reads it (`env_file`).
+  - The API and workers load it with **DotNetEnv** for local `dotnet run`. Real environment variables always win.
+  - The web app loads it in `next.config.ts`.
+- .NET keys use `__` nesting (`Telegram__BotToken`, `Email__Resend__ApiKey`, `ConnectionStrings__DefaultConnection`), so they bind straight to configuration sections. This replaces the owner's flat sample names (`BREVO_API_KEY`, ...).
+- **Every environment-specific `appsettings.*.json` is git-ignored.** Only the secret-free base `appsettings.json` stays in git, because the build and Docker need it.
+- **Database: PostgreSQL**, as already decided, even though the owner's `.env` sample used SQL Server variables.
+  - Same variable shape as the sample: `DB_SERVER`, `DB_PORT`, `DB_NAME=ss_sport_drive`, `DB_USER`, `DB_PASSWORD`, `ConnectionStrings__DefaultConnection`.
+  - The API exposes `/health/ready`, which checks the database.
+- **CORS lockdown:** browsers may call the API only from the origins in `Cors__AllowedOrigins` (comma-separated; locally `http://localhost:3000`). Every other origin is refused.
+- **Local ports are bound to 127.0.0.1 only.** The API's host port is **5080**, because 8080 is often taken on developer machines.
 
 ## 4. Google Drive & archive
 

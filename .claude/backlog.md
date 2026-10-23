@@ -12,7 +12,7 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | S-1 | Pick and buy the VPS outside Iran (≈4 vCPU / 8 GB, Ubuntu LTS) | Owner | SSH access shared |
 | S-2 | Cloudflare: add `ss-sport.co`, create R2 bucket + API token | Owner | Keys stored in the secret manager |
 | S-3 | Google Cloud service account with Viewer access to the Shared Drive | Owner | Service-account JSON + Shared Drive ID available |
-| S-4 | Create the Telegram bot with BotFather (`@SSSportDriveBot`) | Owner | Bot token available |
+| S-4 | Create the Telegram bot with BotFather (`@sssportdrive_bot`) | Owner | Bot token available |
 | S-5 | Resend + Brevo accounts, verify the `ss-sport.co` sending domain (SPF/DKIM/DMARC) | Owner | Test OTP mail lands in inbox |
 | S-6 | Google SMTP app password for `drive@ss-sport.co` | Owner | Test mail sent |
 | S-7 | Cloudflare Turnstile site key | Owner | Site + secret key available |
@@ -21,6 +21,7 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | S-10 | docker-compose for local: PostgreSQL, RustFS (R2 stand-in; MinIO images are gone), API, workers, web | Claude | `docker compose up` works |
 | S-12 | `.gitignore` + `.dockerignore` baselines (.NET, Node/Next.js, IDEs, secrets, env files) | Claude | Files committed |
 | S-13 | Branching + commit conventions (`feature/<area>-<name>`, PR into main, protected main) | Both | Rules active on the repo |
+| S-14 | Configuration: root `.env` loaded by DotNetEnv, CORS lockdown to the web origin, PostgreSQL connection + `/health/ready` | Claude | Tests green, stack reads `.env` |
 | S-11 | Finalise watermark size/opacity and the overlay interval on real full-match footage | Both | Sample clip approved |
 
 ## EPIC 1 — Core domain & persistence

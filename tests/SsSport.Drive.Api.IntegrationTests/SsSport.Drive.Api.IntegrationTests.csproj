@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- In-memory HTTP tests of the API host via WebApplicationFactory. -->
+  <!-- In-memory HTTP tests of the API host via WebApplicationFactory; PostgreSQL via Testcontainers. -->
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\SsSport.Drive.Api\SsSport.Drive.Api.csproj" />

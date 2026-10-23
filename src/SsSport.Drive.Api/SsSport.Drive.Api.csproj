@@ -1,6 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <!-- HTTP API host: endpoints, OpenAPI/Scalar, auth. Composition root for the web process. -->
   <ItemGroup>
+    <PackageReference Include="DotNetEnv" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\SsSport.Drive.Application\SsSport.Drive.Application.csproj" />
     <ProjectReference Include="..\SsSport.Drive.Infrastructure\SsSport.Drive.Infrastructure.csproj" />
   </ItemGroup>
