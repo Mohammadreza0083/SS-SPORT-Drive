@@ -18,7 +18,7 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | S-7 | Cloudflare Turnstile site key | Owner | Site + secret key available |
 | S-8 | Hand over brand files (logo variants) to `brand/` | Owner | Files in repo |
 | S-9 | Create the Git repo, solution layout (Domain / Application / Infrastructure / Api / Workers + tests, `/web`, `/edge`, `/deploy`) | Claude | Solution builds, CI runs empty test suites |
-| S-10 | docker-compose for local: PostgreSQL, MinIO (R2 stand-in), API, workers | Claude | `docker compose up` works |
+| S-10 | docker-compose for local: PostgreSQL, RustFS (R2 stand-in; MinIO images are gone), API, workers, web | Claude | `docker compose up` works |
 | S-12 | `.gitignore` + `.dockerignore` baselines (.NET, Node/Next.js, IDEs, secrets, env files) | Claude | Files committed |
 | S-13 | Branching + commit conventions (`feature/<area>-<name>`, PR into main, protected main) | Both | Rules active on the repo |
 | S-11 | Finalise watermark size/opacity and the overlay interval on real full-match footage | Both | Sample clip approved |

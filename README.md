@@ -111,7 +111,23 @@ cd web && npm ci && npm run dev        # http://localhost:3000
 cd edge && npm ci && npm test
 ```
 
-> Local Docker Compose (PostgreSQL, MinIO, API, workers) arrives with backlog **S-10**.
+### Whole stack in Docker
+
+Runs PostgreSQL, RustFS (S3-compatible stand-in for R2), the API, the workers and the web app. Only Docker is needed.
+
+```bash
+cp deploy/.env.example deploy/.env
+docker compose -f deploy/docker-compose.yml up -d --build --wait
+```
+
+| Service | URL |
+|---|---|
+| Web | http://localhost:3000 |
+| API health | http://localhost:8080/health/live |
+| Storage console | http://localhost:9001/rustfs/console/ |
+| PostgreSQL | `localhost:5432` |
+
+Stop with `docker compose -f deploy/docker-compose.yml down` (add `--volumes` to wipe the data).
 
 ## Project structure
 
