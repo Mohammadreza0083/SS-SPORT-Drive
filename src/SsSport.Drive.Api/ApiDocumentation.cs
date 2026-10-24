@@ -26,6 +26,15 @@ public static class ApiDocumentation
                     "Errors are returned as RFC 9457 ProblemDetails; broken business rules use status 422 with a stable `code`.",
                 Contact = new OpenApiContact { Name = "SS-SPORT", Email = "info@ss-sport.co" },
             };
+            document.Components ??= new OpenApiComponents();
+            document.Components.SecuritySchemes ??= new Dictionary<string, IOpenApiSecurityScheme>();
+            document.Components.SecuritySchemes[Telegram.TelegramWebhookEndpoints.SecuritySchemeName] = new OpenApiSecurityScheme
+            {
+                Type = SecuritySchemeType.ApiKey,
+                In = ParameterLocation.Header,
+                Name = Telegram.TelegramWebhookEndpoints.SecretHeader,
+                Description = "The secret token registered with Telegram's setWebhook (Telegram__WebhookSecret). Used only by Telegram.",
+            };
             return Task.CompletedTask;
         }));
 

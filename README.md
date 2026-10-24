@@ -149,6 +149,8 @@ dotnet tool restore
 dotnet ef migrations add <Name> --project src/SsSport.Drive.Infrastructure --output-dir Persistence/Migrations
 ```
 
+After a deploy, `dotnet SsSport.Drive.Api.dll telegram-set-webhook` registers the bot's webhook (`Telegram__WebhookUrl`, `Telegram__WebhookSecret`). Where Telegram needs a VPN, set `Telegram__Proxy`.
+
 To apply migrations by hand, run `dotnet run --project src/SsSport.Drive.Api -- migrate` (reads `ConnectionStrings__DefaultConnection`). An integration test fails if the model changes without a migration.
 
 ## Project structure
@@ -190,8 +192,8 @@ SS-SPORT Drive/
 | # | Epic | Status |
 |---|---|---|
 | 0 | Setup & accounts | 🚧 In progress |
-| 1 | Core domain & persistence | 🚧 In progress |
-| 2 | Telegram bot & Mini App | ⏳ Planned |
+| 1 | Core domain & persistence | ✅ Done |
+| 2 | Telegram bot & Mini App | 🚧 In progress |
 | 3 | Ingest, transcode & sync | ⏳ Planned |
 | 4 | Viewer site & media protection | ⏳ Planned |
 | 5 | Personal links, OTP & tracking | ⏳ Planned |

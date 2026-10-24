@@ -45,7 +45,7 @@ public sealed class LayerDependencyTests
             Layers.WorkersNamespace);
     }
 
-    /// <summary>The Application layer must not reach for EF Core, ASP.NET Core or Hangfire directly.</summary>
+    /// <summary>The Application layer must not reach for ASP.NET Core, Hangfire, Npgsql or the Telegram Bot API directly.</summary>
     [Fact]
     public void Application_does_not_depend_on_infrastructure_frameworks()
     {
@@ -53,7 +53,8 @@ public sealed class LayerDependencyTests
             Layers.Application,
             "Microsoft.AspNetCore",
             "Hangfire",
-            "Npgsql");
+            "Npgsql",
+            "Telegram.Bot");
     }
 
     /// <summary>Infrastructure must not depend on either host.</summary>

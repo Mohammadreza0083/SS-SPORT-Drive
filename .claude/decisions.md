@@ -191,6 +191,18 @@ Last updated: 2026-10-23
   - Docker Compose reads it (`env_file`).
   - The API and workers load it with **DotNetEnv** for local `dotnet run`. Real environment variables always win.
   - The web app loads it in `next.config.ts`.
+- **Telegram webhook (T-1, owner-approved 2026-10-25):**
+  - **`POST /telegram/webhook`** accepts only calls whose `X-Telegram-Bot-Api-Secret-Token` header matches `Telegram__WebhookSecret`.
+    - The comparison is constant-time, on SHA-256 hashes, so neither the value nor the length leaks.
+    - **An empty secret disables the webhook:** every call gets 401 (fail closed). The local stack and CI run without Telegram settings, and a set secret is format-checked at start-up.
+  - **Authenticated updates are always answered 200,** even when processing fails (the error is logged). A non-2xx would make Telegram re-deliver in a loop. A body that is not an update gets 400.
+  - **Re-deliveries are skipped:** each `update_id` is recorded in **`telegram_updates`** with `INSERT … ON CONFLICT DO NOTHING`, which is safe under concurrency. Old rows get a clean-up job later.
+  - **The update becomes `HandleTelegramUpdateCommand`** (update id, kind, sender id) through MediatR. **Message text is never put in the command or the logs.** Routing to features starts with T-2.
+  - **`Telegram.Bot` 22.10.3.3** (MIT) stays in Infrastructure and the API; an architecture test keeps it out of the Application layer.
+  - **Registration is a separate step:** `dotnet SsSport.Drive.Api.dll telegram-set-webhook` calls `setWebhook` (HTTPS URL, secret, updates `message`, `callback_query`, `my_chat_member`; pending updates kept) and exits. It never runs on start-up. There is no IP allow-list; the secret is enough.
+  - **Local development has no webhook:** there is no public URL, and Telegram is blocked in Iran without a VPN. Tests use synthetic updates.
+  - **Proxy (owner, 2026-10-25):** the owner's VPN (v2rayN) exposes a mixed HTTP/SOCKS proxy at **`127.0.0.1:10808`**. `Telegram__Proxy` (e.g. `http://127.0.0.1:10808`, or `http://host.docker.internal:10808` inside Docker) routes Bot API calls through it. It stays empty on the VPS.
+  - The webhook is documented in Scalar under the "Telegram" tag, with an `apiKey`-in-header security scheme (`TelegramWebhookSecret`), an example update and its 200/400/401 responses.
 - .NET keys use `__` nesting (`Telegram__BotToken`, `Email__Resend__ApiKey`, `ConnectionStrings__DefaultConnection`), so they bind straight to configuration sections. This replaces the owner's flat sample names (`BREVO_API_KEY`, ...).
 - **Every environment-specific `appsettings.*.json` is git-ignored.** Only the secret-free base `appsettings.json` stays in git, because the build and Docker need it.
 - **Database: PostgreSQL**, as already decided, even though the owner's `.env` sample used SQL Server variables.
