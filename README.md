@@ -166,14 +166,14 @@ SS-SPORT Drive/
 - 📚 **API docs:** every endpoint is fully described in OpenAPI and rendered with Scalar.
 - 🔒 **No secrets in git:** configuration comes from environment variables and secrets only.
 - 🌐 **English** in code, comments, logs and commits.
-- 📦 **NuGet versions** live only in `Directory.Packages.props`.
+- 📦 **NuGet versions** live only in `Directory.Packages.props`; `nuget.config` pins packages and the vulnerability audit to nuget.org, so builds stay warning-free.
 
 ## Roadmap
 
 | # | Epic | Status |
 |---|---|---|
 | 0 | Setup & accounts | 🚧 In progress |
-| 1 | Core domain & persistence | ⏳ Planned |
+| 1 | Core domain & persistence | 🚧 In progress |
 | 2 | Telegram bot & Mini App | ⏳ Planned |
 | 3 | Ingest, transcode & sync | ⏳ Planned |
 | 4 | Viewer site & media protection | ⏳ Planned |

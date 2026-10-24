@@ -201,7 +201,7 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
   - Publish starts transcoding with the watermark and notifies the analyst on Telegram.
   - Players without a Volleybox link are **never** published without one. The team adds them manually.
 - **Player aggregate (D-4, 2026-10-24):**
-  - **A player starts with only its category** (Men/Women, from the archive folder). Name, nationality, positions and Volleybox can be filled in later, in any order, which is what the waiting list needs. The completeness check and Publish are D-5. Photo and status come with D-5/D-6.
+  - **A player starts with only its category** (Men/Women, from the archive folder). Name, nationality, positions and Volleybox can be filled in later, in any order, which is what the waiting list needs. The completeness check, photo and status came with D-5 (below).
   - **Name:** Latin letters only (accented Latin like `á`, `ğ`, `ł` allowed), plus spaces, hyphens and apostrophes. At most 100 characters. Stored Title Cased (`jean-luc o'neil` → `Jean-Luc O'Neil`).
   - **Nationality:** an ISO 3166-1 alpha-2 code from an embedded list, because the app runs with invariant globalization. `XK` (Kosovo) is accepted as well.
   - **Positions:** 1–2 distinct positions, primary first. Folder spellings like `Setter`, `Libero` and `Outside Hitter` are recognised.
@@ -210,6 +210,13 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
     - Uniqueness of slugs and Volleybox ids is enforced by the Application layer plus unique database indexes (D-8).
     - There is **no slug history**, because public `/p/{slug}` pages were dropped (§7).
   - Ids are time-ordered GUIDs (v7). Every change raises `PlayerDetailsChanged`, and an unchanged value raises nothing.
+- **Waiting list & Publish (D-5, 2026-10-24):**
+  - A player is `Waiting` or `Published`. Every new player starts `Waiting`.
+  - **Complete** means name, nationality, positions, Volleybox and photo are all set. The category is always set, so it is not part of the check. `MissingDetails()` lists what is still missing, in that order, for the waiting-list drawer (A-5).
+  - **Photo** is only a reference to the object key in R2 (e.g. `players/{id}/photo.webp`). Upload and background removal are I-7.
+  - `Publish` fails with `player.incomplete` while anything is missing. On success it records `PublishedAt` and raises `PlayerPublished`; transcoding (I-3) and the analyst's Telegram notice (T-8) hook onto that event. Publishing again changes nothing.
+  - Share links may only be created for published players (`IsPublished`); the check itself is added with L-1.
+  - **No unpublish** for now, and no detail can be cleared, so a published player always stays complete.
 
 ## 6. Video watermark & media protection
 
