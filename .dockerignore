@@ -53,3 +53,7 @@ media-local
 minio-data
 **/.DS_Store
 **/Thumbs.db
+
+# Brand tooling & previews (not needed in images)
+tools
+brand/previews
