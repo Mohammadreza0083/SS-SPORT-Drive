@@ -77,6 +77,25 @@ public sealed class PlayerTests
         player.DomainEvents.Should().BeEmpty();
     }
 
+    /// <summary>The hero video can be chosen and cleared; choosing the same one again raises nothing.</summary>
+    [Fact]
+    public void Hero_can_be_set_and_cleared()
+    {
+        var player = Player.Create(PlayerCategory.Men, _now);
+        var assetId = Guid.CreateVersion7(_now);
+        player.ClearDomainEvents();
+
+        player.SetHero(assetId);
+        player.SetHero(assetId);
+
+        player.HeroAssetId.Should().Be(assetId);
+        player.DomainEvents.Should().ContainSingle().Which.Should().Be(new PlayerDetailsChanged(player.Id));
+
+        player.ClearHero();
+
+        player.HeroAssetId.Should().BeNull();
+    }
+
     /// <summary>The category can be corrected (for example a folder moved between Men and Women).</summary>
     [Fact]
     public void Category_can_be_corrected()
