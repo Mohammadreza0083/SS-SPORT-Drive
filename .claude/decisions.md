@@ -61,9 +61,29 @@ Last updated: 2026-10-23
 - A **generic repository** `IRepository<T>` for most aggregates. Specific repositories only when an aggregate needs queries or invariants the generic one can't express. *(This overrides the brief's "no generic repository".)*
 - **Specification pattern** encapsulates query criteria, includes, ordering and paging, so the generic repository stays generic.
 - **DTO pattern:**
-  - Every endpoint takes a request DTO and returns a response DTO, with AutoMapper profiles mapping between them.
-  - Domain entities never cross the API boundary.
-  - The AutoMapper configuration is validated in tests.
+  - Every endpoint takes a request DTO and returns a response DTO.
+  - **Mapping uses Mapperly** (`Riok.Mapperly`, Apache-2.0), a compile-time source generator. It replaced AutoMapper on 2026-10-25 (owner; see D-9 below).
+  - Domain entities never cross the API boundary. Architecture tests enforce it: `*Dto` types reference no Domain type, and the API references no Domain model namespace (only `DomainException`).
+- **DTOs (D-9, owner-approved 2026-10-25):**
+  - **Response DTOs** exist for players (summary + details), assets + renditions, Drive folders, users and audit entries. Each has one `[Mapper]` static class next to it (`player.ToDetailsDto()`, `asset.ToDto()`…).
+  - **Request DTOs** come with each endpoint.
+  - **Values are flattened:**
+    - name, slug and photo key as text;
+    - nationality as `NationalityCode` + `NationalityName`;
+    - positions as codes, primary first;
+    - Volleybox as `VolleyboxId` + `VolleyboxUrl`;
+    - tags as names;
+    - rendition quality as its height;
+    - enums as their names.
+  - API JSON also writes any enum by name (`JsonStringEnumConverter`).
+  - `UserDto` carries the **full email**: it is admin-only, and emails are masked only in logs.
+  - **Mappers are strict:** a DTO member without a mapping is a **build error** (Mapperly `RMG012`), so there is no runtime "configuration valid" test.
+  - **Read side:** queries load with `AsNoTracking()` and map with these mappers. Value objects stored through converters cannot be projected member-by-member in SQL.
+- **Why not AutoMapper:**
+  - AutoMapper 14.0.0, the last MIT version, has a **high-severity DoS advisory (GHSA-rvv3-g6hj-g44x)**: unbounded recursion on deeply nested graphs.
+  - Only the commercial 15.1.1+/16.1.1 fix it.
+  - The re-enabled NuGet audit fails the build on it.
+  - The owner chose Mapperly (2026-10-25).
 - **Commands** go through repositories and the Unit of Work.
 - **Queries read directly:** EF Core `AsNoTracking()` projections to DTOs, with no repository on the read side.
 - **Domain building blocks (D-1, 2026-10-24):** they live in `SsSport.Drive.Domain.Primitives`.
@@ -101,14 +121,14 @@ Last updated: 2026-10-23
   - **There is one `AppDbContext` per request scope**, shared by the repositories and the unit of work. It uses the shared `NpgsqlDataSource`.
   - Entity mappings are `IEntityTypeConfiguration` classes, picked up automatically (D-8).
   - Domain events are never mapped as data. They are dispatched after saving once the MediatR pipeline exists (D-3).
-- Stack as in the brief: ASP.NET Core on .NET 10, MediatR, AutoMapper, FluentValidation, Hangfire on PostgreSQL storage, PostgreSQL with EF Core, Cloudflare R2, ffmpeg, a Cloudflare Worker at the edge, and Next.js front-ends (re-confirmed by the owner, 2026-10-23).
+- Stack as in the brief: ASP.NET Core on .NET 10, MediatR, Mapperly (replaced AutoMapper, 2026-10-25), FluentValidation, Hangfire on PostgreSQL storage, PostgreSQL with EF Core, Cloudflare R2, ffmpeg, a Cloudflare Worker at the edge, and Next.js front-ends (re-confirmed by the owner, 2026-10-23).
 - Tests use xUnit, FluentAssertions, NSubstitute, Testcontainers (PostgreSQL) and Playwright.
   - xUnit v3 on Microsoft Testing Platform (required by the .NET 10 SDK).
   - FluentAssertions is pinned to **7.x** (Apache-2.0). Version 8+ needs a paid commercial licence.
-- **MediatR and AutoMapper are pinned to their last free versions (owner, 2026-10-24):**
-  - **MediatR 12.5.0** (Apache-2.0) and **AutoMapper 14.0.0** (MIT).
-  - MediatR 13+ and AutoMapper 15+ are commercial (a Community licence needs registration and a key). The owner chose to stay on the free line rather than register or switch libraries.
-  - Never upgrade either past these versions without asking.
+- **MediatR is pinned to its last free version (owner, 2026-10-24):**
+  - **MediatR 12.5.0** (Apache-2.0). MediatR 13+ is commercial: a Community licence needs registration and a key.
+  - Never upgrade it past this version without asking.
+  - AutoMapper was pinned to 14.0.0 the same way and has since been **replaced by Mapperly** (see DTO pattern above).
   - FluentValidation stays on the latest version (Apache-2.0).
   - Front-end and worker unit tests use Vitest.
 - **One Next.js app** (`/web`) with route groups for the public site, viewer pages, the admin console and the Telegram Mini App, not separate apps (owner approved, 2026-10-23).

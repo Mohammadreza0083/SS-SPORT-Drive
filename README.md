@@ -85,7 +85,7 @@ Api / Workers  →  Infrastructure  →  Application  →  Domain
 
 | Area | Technology |
 |---|---|
-| Backend | .NET 10, ASP.NET Core, MediatR, AutoMapper, FluentValidation, EF Core |
+| Backend | .NET 10, ASP.NET Core, MediatR, Mapperly, FluentValidation, EF Core |
 | Data | PostgreSQL, Unit of Work + generic repository, Specification pattern, `AsNoTracking` read projections |
 | Jobs | Hangfire (PostgreSQL storage), ffmpeg |
 | Front-end | Next.js 16, TypeScript, Media Chrome + hls-video-element |

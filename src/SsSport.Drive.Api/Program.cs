@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using DotNetEnv;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using SsSport.Drive.Api;
@@ -21,6 +22,8 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.Replace(ServiceDescriptor.Scoped<ICurrentUser, HttpContextCurrentUser>());
 builder.Services.AddWebCors();
 builder.Services.AddProblemDetails();
+// Enums are written by name ("Waiting", not 0), so responses and Scalar stay readable.
+builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddExceptionHandler<ApplicationExceptionHandler>();
 builder.Services.AddExceptionHandler<DomainExceptionHandler>();
 builder.Services.AddApiDocumentation();
