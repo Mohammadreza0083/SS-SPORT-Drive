@@ -97,6 +97,9 @@ public sealed class Player : AggregateRoot<Guid>
     /// <summary>Gets the analyst (team user) responsible for the player, or <see langword="null"/> for archive players.</summary>
     public Guid? AnalystId { get; private set; }
 
+    /// <summary>Gets the storage key of the player's QR code image (I-8), or <see langword="null"/> before it is generated.</summary>
+    public StorageKey? QrCode { get; private set; }
+
     /// <summary>Gets the hero video that autoplays at the top of the page, or <see langword="null"/> when none is chosen.</summary>
     public Guid? HeroAssetId { get; private set; }
 
@@ -208,6 +211,14 @@ public sealed class Player : AggregateRoot<Guid>
 
         AnalystId = analystId;
         DetailsChanged();
+    }
+
+    /// <summary>Stores where the generated QR code image is. It is derived output, so no event is raised.</summary>
+    /// <param name="qrCode">The key of the QR code PNG.</param>
+    public void SetQrCode(StorageKey qrCode)
+    {
+        ArgumentNullException.ThrowIfNull(qrCode);
+        QrCode = qrCode;
     }
 
     /// <summary>Chooses the hero video. The caller ensures the asset is a ready video of this player.</summary>

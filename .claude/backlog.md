@@ -62,6 +62,7 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | I-5 | Player card render (Barlow Condensed name, brand template) | Both | Card approved |
 | I-6 | Sync poller every 10 min: new / renamed / replaced / removed / lost access | Claude | Tests per rule |
 | I-7 | Background removal for player photos | Claude | Demo |
+| I-8 | Player QR code: free in-house generation (QRCoder), SS-SPORT mark in the centre, PNG in R2, key on the player; opens the home search prefilled with the player's name | Claude | Every published player has a QR; tests green |
 
 ## EPIC 4 — Viewer site & media protection
 | Key | Task | Assignee | Done when |

@@ -7,6 +7,7 @@ using SsSport.Drive.Api.ErrorHandling;
 using SsSport.Drive.Application;
 using SsSport.Drive.Application.Abstractions.Authentication;
 using SsSport.Drive.Infrastructure;
+using SsSport.Drive.Infrastructure.Persistence;
 
 // Local runs: load the git-ignored .env from the repository root. Real environment variables always win,
 // and containers get their settings from Docker, so a missing .env is fine.
@@ -27,6 +28,13 @@ builder.Services.AddHealthChecks()
     .AddCheck<PostgreSqlHealthCheck>("database", tags: [HealthEndpoints.ReadyTag]);
 
 var app = builder.Build();
+
+// `dotnet SsSport.Drive.Api.dll migrate` applies the database migrations and exits (one-shot job / pipeline step).
+if (args is ["migrate"])
+{
+    await DatabaseMigrator.MigrateAsync(app.Services);
+    return;
+}
 
 // Unhandled exceptions become ProblemDetails: 400 validation, 401/403 access, 422 broken business rules, a generic 500 otherwise.
 app.UseExceptionHandler();
