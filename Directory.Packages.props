@@ -11,6 +11,7 @@
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.13" />
     <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" Version="10.0.13" />
     <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.13" />
     <!-- Telegram Bot API types and client (MIT). -->
     <PackageVersion Include="Telegram.Bot" Version="22.10.3.3" />
     <PackageVersion Include="Npgsql" Version="10.0.3" />

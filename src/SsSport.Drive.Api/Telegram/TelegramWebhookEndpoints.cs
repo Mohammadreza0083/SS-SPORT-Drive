@@ -6,7 +6,6 @@ using MediatR;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
-using SsSport.Drive.Application.Telegram;
 using SsSport.Drive.Infrastructure.Telegram;
 using Telegram.Bot;
 using Telegram.Bot.Types;
@@ -117,7 +116,7 @@ public static partial class TelegramWebhookEndpoints
 
         try
         {
-            await sender.Send(new HandleTelegramUpdateCommand(update.Id, update.Type.ToString(), SenderId(update)), cancellationToken);
+            await sender.Send(TelegramUpdateMapper.ToCommand(update), cancellationToken);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -140,11 +139,6 @@ public static partial class TelegramWebhookEndpoints
         && received is { Length: > 0 }
         && CryptographicOperations.FixedTimeEquals(SHA256.HashData(Encoding.UTF8.GetBytes(configured)), SHA256.HashData(Encoding.UTF8.GetBytes(received)));
 
-    /// <summary>Finds the Telegram user who caused the update, if any.</summary>
-    /// <param name="update">The update.</param>
-    /// <returns>The user id, or <see langword="null"/>.</returns>
-    private static long? SenderId(Update update) =>
-        update.Message?.From?.Id ?? update.CallbackQuery?.From.Id ?? update.MyChatMember?.From.Id;
 
     /// <summary>Logs a call without the right secret.</summary>
     /// <param name="logger">The logger.</param>

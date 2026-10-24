@@ -51,9 +51,12 @@ public sealed class HandleTelegramUpdateTests
         validator.Validate(new HandleTelegramUpdateCommand(1, "Message", null)).IsValid.Should().BeTrue();
     }
 
-    /// <summary>Builds the handler under test.</summary>
+    /// <summary>
+    /// Builds the handler under test. These updates carry no sender, so routing (and therefore the sender and the
+    /// messenger) is never reached; the access flow itself is covered end to end in the API integration tests.
+    /// </summary>
     /// <returns>The handler.</returns>
-    private HandleTelegramUpdateCommandHandler Handler() => new(_inbox, TimeProvider.System, _logger);
+    private HandleTelegramUpdateCommandHandler Handler() => new(_inbox, null!, null!, TimeProvider.System, _logger);
 
     /// <summary>An in-memory inbox that records ids once.</summary>
     private sealed class InMemoryInbox : ITelegramUpdateInbox

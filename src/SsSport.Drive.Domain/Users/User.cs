@@ -54,6 +54,9 @@ public sealed class User : AggregateRoot<Guid>
     /// <summary>The longest Telegram username.</summary>
     private const int MaxUsernameLength = 64;
 
+    /// <summary>How long a declined user waits before asking again.</summary>
+    public static readonly TimeSpan RequestAgainCooldown = TimeSpan.FromHours(24);
+
     /// <summary>Initializes a user; use <see cref="RequestAccess"/> or <see cref="CreateFirstAdmin"/>.</summary>
     /// <param name="id">The identifier.</param>
     /// <param name="telegramId">The Telegram user id.</param>
@@ -90,6 +93,12 @@ public sealed class User : AggregateRoot<Guid>
 
     /// <summary>Gets when the user was last active (UTC), or <see langword="null"/>.</summary>
     public DateTimeOffset? LastActiveAt { get; private set; }
+
+    /// <summary>Gets when the last request was declined (UTC), or <see langword="null"/> while not declined.</summary>
+    public DateTimeOffset? DeclinedAt { get; private set; }
+
+    /// <summary>Gets when a declined user may ask again (24 hours after the decline), or <see langword="null"/> when there is no wait.</summary>
+    public DateTimeOffset? CanRequestAgainAt => Status == UserStatus.Declined && DeclinedAt is { } declinedAt ? declinedAt + RequestAgainCooldown : null;
 
     /// <summary>Gets a value indicating whether the user is active.</summary>
     public bool IsActive => Status == UserStatus.Active;
@@ -143,14 +152,17 @@ public sealed class User : AggregateRoot<Guid>
         EnsureEmailFor(role, Email);
         Role = role;
         Status = UserStatus.Active;
+        DeclinedAt = null;
         RaiseDomainEvent(new UserApproved(Id, role.Name));
     }
 
-    /// <summary>Declines a pending user and raises <see cref="UserDeclined"/>.</summary>
-    public void Decline()
+    /// <summary>Declines a pending user and raises <see cref="UserDeclined"/>; they may ask again after 24 hours.</summary>
+    /// <param name="declinedAt">The current time (UTC).</param>
+    public void Decline(DateTimeOffset declinedAt)
     {
         EnsureStatus(UserStatus.Pending);
         Status = UserStatus.Declined;
+        DeclinedAt = declinedAt;
         RaiseDomainEvent(new UserDeclined(Id));
     }
 
@@ -162,13 +174,22 @@ public sealed class User : AggregateRoot<Guid>
         RaiseDomainEvent(new UserRemoved(Id));
     }
 
-    /// <summary>Puts a declined or removed user back on the pending list when they write to the bot again.</summary>
+    /// <summary>
+    /// Puts a declined or removed user back on the pending list when they ask again. A declined user must wait
+    /// <see cref="RequestAgainCooldown"/>; pending and active users are left as they are.
+    /// </summary>
     /// <param name="requestedAt">The current time (UTC).</param>
+    /// <exception cref="DomainException"><c>user.request_too_soon</c> within 24 hours of a decline.</exception>
     public void RequestAgain(DateTimeOffset requestedAt)
     {
         if (Status is not (UserStatus.Declined or UserStatus.Removed))
         {
             return;
+        }
+
+        if (CanRequestAgainAt is { } allowedAt && requestedAt < allowedAt)
+        {
+            throw new DomainException("user.request_too_soon", "A declined request can be sent again 24 hours after the decline.");
         }
 
         Status = UserStatus.Pending;

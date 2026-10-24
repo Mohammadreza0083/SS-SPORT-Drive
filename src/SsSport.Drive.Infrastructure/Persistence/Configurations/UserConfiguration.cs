@@ -29,5 +29,6 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
 
         builder.Ignore(user => user.IsActive);
         builder.Ignore(user => user.IsAdmin);
+        builder.Ignore(user => user.CanRequestAgainAt);
     }
 }

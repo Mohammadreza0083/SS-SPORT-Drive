@@ -149,6 +149,8 @@ dotnet tool restore
 dotnet ef migrations add <Name> --project src/SsSport.Drive.Infrastructure --output-dir Persistence/Migrations
 ```
 
+To chat with the bot on your machine, set `Telegram__Mode=Polling` (plus `Telegram__Proxy` where Telegram needs a VPN). The API then fetches updates itself, so no public URL is needed.
+
 After a deploy, `dotnet SsSport.Drive.Api.dll telegram-set-webhook` registers the bot's webhook (`Telegram__WebhookUrl`, `Telegram__WebhookSecret`). Where Telegram needs a VPN, set `Telegram__Proxy`.
 
 To apply migrations by hand, run `dotnet run --project src/SsSport.Drive.Api -- migrate` (reads `ConnectionStrings__DefaultConnection`). An integration test fails if the model changes without a migration.

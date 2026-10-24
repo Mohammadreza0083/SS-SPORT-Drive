@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Telegram.Bot;
 using Telegram.Bot.Requests;
+using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 
 namespace SsSport.Drive.Infrastructure.Telegram;
@@ -15,6 +16,17 @@ public static partial class TelegramWebhookRegistrar
 {
     /// <summary>The update types the bot handles: messages, button presses, and being blocked or unblocked.</summary>
     public static readonly IReadOnlyList<UpdateType> AllowedUpdates = [UpdateType.Message, UpdateType.CallbackQuery, UpdateType.MyChatMember];
+
+    /// <summary>Builds the <c>setMyCommands</c> request: the commands everyone sees in Telegram's menu.</summary>
+    /// <returns>The request.</returns>
+    public static SetMyCommandsRequest BuildCommandsRequest() => new()
+    {
+        Commands =
+        [
+            new BotCommand { Command = "start", Description = "Open the menu or ask for access" },
+            new BotCommand { Command = "help", Description = "How the bot works" },
+        ],
+    };
 
     /// <summary>Builds the <c>setWebhook</c> request from the settings.</summary>
     /// <param name="options">The Telegram settings.</param>
@@ -47,7 +59,7 @@ public static partial class TelegramWebhookRegistrar
         };
     }
 
-    /// <summary>Calls <c>setWebhook</c> with the configured URL, secret and update types.</summary>
+    /// <summary>Calls <c>setWebhook</c> with the configured URL, secret and update types, then <c>setMyCommands</c>.</summary>
     /// <param name="services">The root service provider of a host that called <c>AddInfrastructure</c>.</param>
     /// <param name="cancellationToken">Cancels the call.</param>
     /// <returns>A task that completes when Telegram has accepted the webhook.</returns>
@@ -60,6 +72,7 @@ public static partial class TelegramWebhookRegistrar
         var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(TelegramWebhookRegistrar));
 
         await client.SendRequest(request, cancellationToken);
+        await client.SendRequest(BuildCommandsRequest(), cancellationToken);
         LogRegistered(logger, new Uri(request.Url).Host, string.Join(",", AllowedUpdates));
     }
 
