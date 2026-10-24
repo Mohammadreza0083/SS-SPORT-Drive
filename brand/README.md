@@ -21,7 +21,7 @@ Built by [`tools/brand/build_brand_assets.py`](../tools/brand/build_brand_assets
 | `svg/` | Traced vectors for `logo_horizontal`, `logo_vertical` and `mark` (the infinity mark alone, wordmark removed), each in three variants |
 | `png/` | The same nine assets rendered large (lockups 2048 px wide, mark 1024 px) |
 | `icons/` | `favicon.ico` (16/32/48), `icon.png` (512), `apple-touch-icon.png` (180), `icon-192-maskable.png`, `icon-512-maskable.png` |
-| `previews/` | `variants.png` (every variant on light and dark), `watermark_1080p.png` / `watermark_360p.png` (proposed watermark, see `.claude/decisions.md` §6) |
+| `previews/` | `variants.png` (every variant on light and dark), `watermark_1080p.png` / `watermark_360p.png` (approved watermark values, see `.claude/decisions.md` §6) |
 
 **Variants:**
 

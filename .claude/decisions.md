@@ -252,7 +252,7 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
 - **Signed tokens:**
   - HLS URLs are HMAC-signed and **expire after 30 minutes**.
   - While the viewer is actively watching, the player **refreshes the token in the background**, extending it another 30 minutes.
-- **Proposed watermark values (S-11, Claude's suggestion, 2026-10-24; to confirm on real full-match footage):**
+- **Watermark values (S-11, approved by the owner 2026-10-24; final check on real full-match footage in I-3):**
   - **Logo:** the white horizontal lockup (`brand/svg/logo_horizontal_white.svg`), **10 % of the frame width** (192 px at 1080p, 64 px at 360p), **45 % opacity**, a soft 35 % shadow so it reads on bright courts.
   - **Slogan:** "SS-SPORT · Fetch Your Dreams" in Barlow Condensed SemiBold, white, **text height 3.2 % of the frame height** (≈35 px at 1080p), **55 % opacity**, same shadow.
   - **Margins:** 2.5 % of the frame width from each edge (48 px at 1080p). Everything scales with the rendition, so 360p/720p/1080p look the same.
