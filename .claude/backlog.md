@@ -39,6 +39,7 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | D-7 | User + roles (Analyst, Admin, extensible) + AuditLog | Claude | Tests green |
 | D-8 | EF Core mappings + migrations | Claude | Migration applies on clean DB |
 | D-9 | DTO pattern: request/response DTOs per endpoint, AutoMapper profiles, entities never exposed | Claude | Mapping tests green (AutoMapper configuration valid) |
+| D-10 | Countries lookup: the owner's 245-country list (ISO alpha-2 + XK, AC, TA) as the nationality catalogue, seeded into `countries` | Claude | Clean DB has all 245 countries; tests green |
 
 ## EPIC 2 — Telegram bot & Mini App
 | Key | Task | Assignee | Done when |
