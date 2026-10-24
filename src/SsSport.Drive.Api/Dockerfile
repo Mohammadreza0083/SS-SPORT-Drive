@@ -6,7 +6,7 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # Restore first so the package layer is cached until a project file changes.
-COPY global.json Directory.Build.props Directory.Packages.props ./
+COPY global.json nuget.config Directory.Build.props Directory.Packages.props ./
 COPY src/SsSport.Drive.Domain/SsSport.Drive.Domain.csproj src/SsSport.Drive.Domain/
 COPY src/SsSport.Drive.Application/SsSport.Drive.Application.csproj src/SsSport.Drive.Application/
 COPY src/SsSport.Drive.Infrastructure/SsSport.Drive.Infrastructure.csproj src/SsSport.Drive.Infrastructure/
