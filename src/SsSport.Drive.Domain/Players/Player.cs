@@ -12,6 +12,35 @@ public enum PlayerCategory
     Women,
 }
 
+/// <summary>Where a player is in its lifecycle.</summary>
+public enum PlayerStatus
+{
+    /// <summary>On the admin waiting list: not visible and no links can be created.</summary>
+    Waiting,
+
+    /// <summary>Published by an admin: visible and shareable.</summary>
+    Published,
+}
+
+/// <summary>A detail a player needs before it can be published.</summary>
+public enum PlayerDetail
+{
+    /// <summary>The full name.</summary>
+    Name,
+
+    /// <summary>The nationality.</summary>
+    Nationality,
+
+    /// <summary>The positions.</summary>
+    Positions,
+
+    /// <summary>The Volleybox page.</summary>
+    Volleybox,
+
+    /// <summary>The photo.</summary>
+    Photo,
+}
+
 /// <summary>Raised when a player is created.</summary>
 /// <param name="PlayerId">The new player.</param>
 public sealed record PlayerCreated(Guid PlayerId) : IDomainEvent;
@@ -20,9 +49,13 @@ public sealed record PlayerCreated(Guid PlayerId) : IDomainEvent;
 /// <param name="PlayerId">The changed player.</param>
 public sealed record PlayerDetailsChanged(Guid PlayerId) : IDomainEvent;
 
+/// <summary>Raised when an admin publishes a complete player; starts transcoding and notifies the analyst.</summary>
+/// <param name="PlayerId">The published player.</param>
+public sealed record PlayerPublished(Guid PlayerId) : IDomainEvent;
+
 /// <summary>
-/// A volleyball player represented by SS-SPORT. A player starts with only a category and may stay incomplete
-/// (the admin waiting list); completeness and publishing are added in backlog D-5.
+/// A volleyball player represented by SS-SPORT. A player starts with only a category and waits on the admin
+/// waiting list until every <see cref="PlayerDetail"/> is set; only then can it be published.
 /// </summary>
 public sealed class Player : AggregateRoot<Guid>
 {
@@ -57,6 +90,21 @@ public sealed class Player : AggregateRoot<Guid>
 
     /// <summary>Gets the Volleybox page, or <see langword="null"/> while not linked.</summary>
     public VolleyboxProfile? Volleybox { get; private set; }
+
+    /// <summary>Gets the photo, or <see langword="null"/> while missing.</summary>
+    public PlayerPhoto? Photo { get; private set; }
+
+    /// <summary>Gets whether the player is waiting or published.</summary>
+    public PlayerStatus Status { get; private set; } = PlayerStatus.Waiting;
+
+    /// <summary>Gets when the player was first published (UTC), or <see langword="null"/> while waiting.</summary>
+    public DateTimeOffset? PublishedAt { get; private set; }
+
+    /// <summary>Gets a value indicating whether the player is published; share links may only be created for published players.</summary>
+    public bool IsPublished => Status == PlayerStatus.Published;
+
+    /// <summary>Gets a value indicating whether every detail needed for publishing is set.</summary>
+    public bool IsComplete => MissingDetails().Count == 0;
 
     /// <summary>Creates a player with only its category and raises <see cref="PlayerCreated"/>.</summary>
     /// <param name="category">Men or women.</param>
@@ -127,6 +175,74 @@ public sealed class Player : AggregateRoot<Guid>
 
         Volleybox = profile;
         DetailsChanged();
+    }
+
+    /// <summary>Sets the photo.</summary>
+    /// <param name="photo">The validated photo reference.</param>
+    public void ChangePhoto(PlayerPhoto photo)
+    {
+        ArgumentNullException.ThrowIfNull(photo);
+        if (photo == Photo)
+        {
+            return;
+        }
+
+        Photo = photo;
+        DetailsChanged();
+    }
+
+    /// <summary>Lists the details still needed before the player can be published, in display order.</summary>
+    /// <returns>The missing details; empty when the player is complete.</returns>
+    public IReadOnlyList<PlayerDetail> MissingDetails()
+    {
+        var missing = new List<PlayerDetail>(5);
+        if (Name is null)
+        {
+            missing.Add(PlayerDetail.Name);
+        }
+
+        if (Nationality is null)
+        {
+            missing.Add(PlayerDetail.Nationality);
+        }
+
+        if (Positions is null)
+        {
+            missing.Add(PlayerDetail.Positions);
+        }
+
+        if (Volleybox is null)
+        {
+            missing.Add(PlayerDetail.Volleybox);
+        }
+
+        if (Photo is null)
+        {
+            missing.Add(PlayerDetail.Photo);
+        }
+
+        return missing;
+    }
+
+    /// <summary>Publishes a complete player and raises <see cref="PlayerPublished"/>. Publishing again changes nothing.</summary>
+    /// <param name="publishedAt">The current time (UTC).</param>
+    /// <exception cref="DomainException"><c>player.incomplete</c> while any detail is missing.</exception>
+    public void Publish(DateTimeOffset publishedAt)
+    {
+        if (IsPublished)
+        {
+            return;
+        }
+
+        var missing = MissingDetails();
+        if (missing.Count > 0)
+        {
+            throw new DomainException("player.incomplete", $"The player cannot be published until these details are set: {string.Join(", ", missing)}.");
+        }
+
+        Status = PlayerStatus.Published;
+        PublishedAt = publishedAt;
+        RaiseDomainEvent(new PlayerPublished(Id));
     }
 
     /// <summary>Corrects the category, e.g. when the folder was filed under the wrong one.</summary>

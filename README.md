@@ -173,7 +173,7 @@ SS-SPORT Drive/
 | # | Epic | Status |
 |---|---|---|
 | 0 | Setup & accounts | 🚧 In progress |
-| 1 | Core domain & persistence | ⏳ Planned |
+| 1 | Core domain & persistence | 🚧 In progress |
 | 2 | Telegram bot & Mini App | ⏳ Planned |
 | 3 | Ingest, transcode & sync | ⏳ Planned |
 | 4 | Viewer site & media protection | ⏳ Planned |
