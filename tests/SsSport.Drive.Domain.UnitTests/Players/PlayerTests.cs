@@ -96,6 +96,24 @@ public sealed class PlayerTests
         player.HeroAssetId.Should().BeNull();
     }
 
+    /// <summary>A player starts without an analyst (archive players) and can be assigned or reassigned to one.</summary>
+    [Fact]
+    public void Analyst_can_be_assigned_and_reassigned()
+    {
+        var player = Player.Create(PlayerCategory.Men, _now);
+        var analyst = Guid.CreateVersion7(_now);
+        var admin = Guid.CreateVersion7(_now.AddMinutes(1));
+        player.ClearDomainEvents();
+
+        player.AnalystId.Should().BeNull();
+        player.AssignAnalyst(analyst);
+        player.AssignAnalyst(analyst);
+        player.AssignAnalyst(admin);
+
+        player.AnalystId.Should().Be(admin);
+        player.DomainEvents.Should().HaveCount(2).And.AllBeEquivalentTo(new PlayerDetailsChanged(player.Id));
+    }
+
     /// <summary>The category can be corrected (for example a folder moved between Men and Women).</summary>
     [Fact]
     public void Category_can_be_corrected()
