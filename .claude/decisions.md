@@ -3,7 +3,7 @@
 Every decision the owner has made, in one place, so nothing has to be asked twice.
 **Precedence:** this file > `SS-SPORT_Drive_BRIEF.md` > `SS-SPORT_Drive_Spec.pdf`. Where the brief or spec disagree with this file, this file wins.
 
-Last updated: 2026-10-23
+Last updated: 2026-10-25
 
 ---
 
@@ -50,6 +50,7 @@ Last updated: 2026-10-23
   - It is clean and complete: summaries, descriptions, tags, schemas, error responses, examples and auth.
   - XML docs flow into it.
   - In production it sits behind admin auth.
+- **Security gate before go-live (owner decision, 2026-10-25):** before the final production deploy the whole system gets a rigorous security test and penetration test (backlog O-8). The attack surface is mapped first with **/graphify** (a knowledge graph of the whole codebase showing endpoints, auth paths, data flows and sensitive nodes), and the test plan is built from that graph. Production does not go live until the report is signed off and no Critical or High finding is open.
 - **CI/CD:** a complete, DevOps-friendly pipeline: build, lint, tests, image build, automatic staging deploy, production deploy from tags with approval, migrations as a step, health checks and rollback.
 
 - **Protected `main` (S-13, 2026-10-24):** GitHub blocks branch protection and rulesets on **private repos on the free plan** (API answers "Upgrade to GitHub Pro"). The rules are listed in the README under Conventions and are switched on once the owner upgrades to GitHub Pro. Until then they are followed by convention: no direct pushes to `main`, and every change goes through a PR with green CI.

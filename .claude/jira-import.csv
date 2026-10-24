@@ -419,6 +419,12 @@ Assignee: Both
 Done when: Checklist signed off
 
 See .claude/decisions.md for all owner decisions.",owner-both,85
+99,Task,O-8 Full penetration test before the final production deploy,"Backlog key: O-8
+Assignee: Both
+First: map the attack surface with /graphify (codebase knowledge graph), then run the pen test from it.
+Done when: Report signed off, no open Critical/High; production deploy is blocked until then
+
+See .claude/decisions.md for all owner decisions.",owner-both,85
 93,Epic,Epic 10 — Performance (k6),,ss-sport-drive,
 94,Task,K-1 k6 project setup + smoke test in CI against staging,"Backlog key: K-1
 Assignee: Claude
