@@ -296,7 +296,7 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
 - **Player aggregate (D-4, 2026-10-24):**
   - **A player starts with only its category** (Men/Women, from the archive folder). Name, nationality, positions and Volleybox can be filled in later, in any order, which is what the waiting list needs. The completeness check, photo and status came with D-5 (below).
   - **Name:** Latin letters only (accented Latin like `á`, `ğ`, `ł` allowed), plus spaces, hyphens and apostrophes. At most 100 characters. Stored Title Cased (`jean-luc o'neil` → `Jean-Luc O'Neil`).
-  - **Nationality:** an ISO 3166-1 alpha-2 code from an embedded list, because the app runs with invariant globalization. `XK` (Kosovo) is accepted as well.
+  - **Nationality:** a code from the country catalogue (see *Countries* below).
   - **Positions:** 1–2 distinct positions, primary first. Folder spellings like `Setter`, `Libero` and `Outside Hitter` are recognised.
   - **Volleybox:** the id is parsed from `…-p12345` (any `*.volleybox.net` host). The URL is normalised to `https://<host>/<name>-p<id>`. Team pages (`-t…`) are rejected with their own error code.
   - **Slug:** lower-case ASCII built from the name, with accents folded by table. Collisions get `-2`, `-3`…
@@ -310,6 +310,12 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
   - `Publish` fails with `player.incomplete` while anything is missing. On success it records `PublishedAt` and raises `PlayerPublished`; transcoding (I-3) and the analyst's Telegram notice (T-8) hook onto that event. Publishing again changes nothing.
   - Share links may only be created for published players (`IsPublished`); the check itself is added with L-1.
   - **No unpublish** for now, and no detail can be cleared, so a published player always stays complete.
+
+- **Countries (D-10, owner, 2026-10-25):**
+  - The owner's `CountrySeeder.cs` list is the **only** country list: **245 countries**, ISO 3166-1 alpha-2 plus `XK` (Kosovo), `AC` (Ascension) and `TA` (Tristan da Cunha), with English names.
+  - It lives in the Domain as `CountryCatalogue`. `Nationality` validates against it and exposes `CountryName`.
+  - It is seeded into **`countries(code, name)`** by the `AddCountries` migration (HasData), so every environment has it. Changing the list means a new migration.
+  - Compared with the earlier embedded ISO list, `AC` and `TA` were added and `AI`, `BQ`, `GF`, `GS`, `MP`, `TC` and `UM` were dropped.
 
 ## 5a. Brand assets (S-8, owner, 2026-10-24)
 
