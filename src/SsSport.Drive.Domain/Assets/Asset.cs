@@ -121,6 +121,14 @@ public sealed class Asset : AggregateRoot<Guid>
         CreatedAt = createdAt;
     }
 
+    /// <summary>Initializes an empty asset for EF Core materialization; the file is an owned value it sets afterwards.</summary>
+    private Asset()
+        : base(Guid.Empty)
+    {
+        File = null!;
+        Title = null!;
+    }
+
     /// <summary>Gets the owning player.</summary>
     public Guid PlayerId { get; }
 

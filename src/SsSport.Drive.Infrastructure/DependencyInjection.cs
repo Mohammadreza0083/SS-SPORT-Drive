@@ -27,7 +27,7 @@ public static class DependencyInjection
         services.AddSingleton(provider => NpgsqlDataSource.Create(ReadConnectionString(provider.GetRequiredService<IConfiguration>())));
         services.AddSingleton<PostgreSqlHealthCheck>();
 
-        services.AddDbContext<AppDbContext>((provider, options) => options.UseNpgsql(provider.GetRequiredService<NpgsqlDataSource>()));
+        services.AddDbContext<AppDbContext>((provider, options) => options.UseAppDatabase(provider.GetRequiredService<NpgsqlDataSource>()));
         services.AddScoped<DbContext>(provider => provider.GetRequiredService<AppDbContext>());
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped(typeof(IRepository<,>), typeof(Repository<,>));

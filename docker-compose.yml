@@ -1,4 +1,4 @@
-# Local development stack: PostgreSQL, S3-compatible storage (R2 stand-in), API, workers and web.
+# Local development stack: PostgreSQL, S3-compatible storage (R2 stand-in), migrations, API, workers and web.
 #
 #   cp .env.example .env      # once, then fill in
 #   docker compose up -d --build --wait
@@ -77,6 +77,23 @@ services:
           || aws --endpoint-url http://storage:9000 s3api create-bucket --bucket "$$BUCKET"
     restart: "no"
 
+  # One-shot job: applies the EF Core migrations with the API image, then exits. The API starts only after it succeeds;
+  # apps never migrate on start-up (CD runs the same command as a pipeline step).
+  migrate:
+    build:
+      context: .
+      dockerfile: src/SsSport.Drive.Api/Dockerfile
+    command: ["migrate"]
+    env_file: .env
+    environment:
+      <<: *app-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+    restart: "no"
+
   api:
     <<: *app
     build:
@@ -85,6 +102,13 @@ services:
     environment:
       <<: *app-environment
       ASPNETCORE_ENVIRONMENT: Development
+    depends_on:
+      postgres:
+        condition: service_healthy
+      storage-init:
+        condition: service_completed_successfully
+      migrate:
+        condition: service_completed_successfully
     ports:
       - "127.0.0.1:${API_PORT:-5080}:8080"
 

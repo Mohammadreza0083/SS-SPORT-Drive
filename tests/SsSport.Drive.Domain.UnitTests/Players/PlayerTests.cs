@@ -114,6 +114,20 @@ public sealed class PlayerTests
         player.DomainEvents.Should().HaveCount(2).And.AllBeEquivalentTo(new PlayerDetailsChanged(player.Id));
     }
 
+    /// <summary>The QR code image key is stored on the player (I-8); the same key again changes nothing.</summary>
+    [Fact]
+    public void Qr_code_key_is_stored()
+    {
+        var player = Player.Create(PlayerCategory.Men, _now);
+        player.ClearDomainEvents();
+
+        player.SetQrCode(SsSport.Drive.Domain.Primitives.StorageKey.Create("qr/p1.png"));
+        player.SetQrCode(SsSport.Drive.Domain.Primitives.StorageKey.Create("qr/p1.png"));
+
+        player.QrCode!.Value.Should().Be("qr/p1.png");
+        player.DomainEvents.Should().BeEmpty();
+    }
+
     /// <summary>The category can be corrected (for example a folder moved between Men and Women).</summary>
     [Fact]
     public void Category_can_be_corrected()

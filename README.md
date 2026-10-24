@@ -121,7 +121,7 @@ cp .env.example .env   # then fill in the secrets
 
 ### Whole stack in Docker
 
-Runs PostgreSQL, RustFS (S3-compatible stand-in for R2), the API, the workers and the web app. Only Docker is needed.
+Runs PostgreSQL, RustFS (S3-compatible stand-in for R2), a one-shot `migrate` job, the API, the workers and the web app. Only Docker is needed.
 
 ```bash
 docker compose up -d --build --wait
@@ -135,8 +135,21 @@ docker compose up -d --build --wait
 | Storage console | http://localhost:9001/rustfs/console/ |
 | PostgreSQL | `localhost:5432` |
 
+The `migrate` service applies the EF Core migrations and exits. The API starts only after it succeeds, and no app migrates on start-up.
+
 Every port is bound to `127.0.0.1` only. The API answers browsers only from the origins in `Cors__AllowedOrigins`.
 Stop with `docker compose down` (add `--volumes` to wipe the data).
+
+### Database migrations
+
+The schema is managed with EF Core migrations in `src/SsSport.Drive.Infrastructure/Persistence/Migrations` (snake_case names, PostgreSQL). `dotnet-ef` is a local tool.
+
+```bash
+dotnet tool restore
+dotnet ef migrations add <Name> --project src/SsSport.Drive.Infrastructure --output-dir Persistence/Migrations
+```
+
+To apply migrations by hand, run `dotnet run --project src/SsSport.Drive.Api -- migrate` (reads `ConnectionStrings__DefaultConnection`). An integration test fails if the model changes without a migration.
 
 ## Project structure
 
