@@ -100,9 +100,11 @@ public sealed class UserTests
         var user = Pending();
         user.ClearDomainEvents();
 
-        user.Decline();
+        user.Decline(_now.AddHours(1));
 
         user.Status.Should().Be(UserStatus.Declined);
+        user.DeclinedAt.Should().Be(_now.AddHours(1));
+        user.CanRequestAgainAt.Should().Be(_now.AddHours(25));
         user.DomainEvents.Should().ContainSingle().Which.Should().Be(new UserDeclined(user.Id));
 
         var approve = () => user.Approve(Role.Analyst);
@@ -130,7 +132,7 @@ public sealed class UserTests
     public void Declined_or_removed_users_can_request_again()
     {
         var declined = Pending();
-        declined.Decline();
+        declined.Decline(_now);
         var removed = Active();
         removed.Remove();
         declined.ClearDomainEvents();
@@ -142,6 +144,38 @@ public sealed class UserTests
         removed.Status.Should().Be(UserStatus.Pending);
         declined.RequestedAt.Should().Be(_now.AddDays(1));
         declined.DomainEvents.Should().ContainSingle().Which.Should().Be(new UserRequestedAccess(declined.Id));
+    }
+
+    /// <summary>A declined user must wait 24 hours before asking again; a removed user may ask straight away.</summary>
+    [Fact]
+    public void Declined_users_wait_24_hours()
+    {
+        var declined = Pending();
+        declined.Decline(_now);
+        var removed = Active();
+        removed.Remove();
+
+        var tooSoon = () => declined.RequestAgain(_now.AddHours(23));
+
+        tooSoon.Should().Throw<DomainException>().Which.Code.Should().Be("user.request_too_soon");
+        declined.Status.Should().Be(UserStatus.Declined);
+        removed.CanRequestAgainAt.Should().BeNull();
+        removed.RequestAgain(_now.AddMinutes(1));
+        removed.Status.Should().Be(UserStatus.Pending);
+    }
+
+    /// <summary>Approving clears an earlier decline.</summary>
+    [Fact]
+    public void Approving_after_a_new_request_clears_the_decline()
+    {
+        var user = Pending();
+        user.Decline(_now);
+        user.RequestAgain(_now.AddDays(2));
+
+        user.Approve(Role.Analyst);
+
+        user.DeclinedAt.Should().BeNull();
+        user.CanRequestAgainAt.Should().BeNull();
     }
 
     /// <summary>Requesting again while pending or active changes nothing.</summary>

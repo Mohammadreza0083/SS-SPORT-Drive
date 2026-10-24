@@ -20,6 +20,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure();
+// Local development only: Telegram__Mode=Polling fetches updates through the VPN proxy (no webhook needed).
+builder.Services.AddHostedService<TelegramPollingService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.Replace(ServiceDescriptor.Scoped<ICurrentUser, HttpContextCurrentUser>());
 builder.Services.AddWebCors();

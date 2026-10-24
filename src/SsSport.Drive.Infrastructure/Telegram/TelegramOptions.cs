@@ -8,6 +8,12 @@ public sealed partial record TelegramOptions
     /// <summary>The configuration section name.</summary>
     public const string SectionName = "Telegram";
 
+    /// <summary>The webhook mode (production, staging).</summary>
+    public const string WebhookMode = "Webhook";
+
+    /// <summary>The polling mode (local development).</summary>
+    public const string PollingMode = "Polling";
+
     /// <summary>Gets the bot's username without <c>@</c> (<c>sssportdrive_bot</c>).</summary>
     public string BotUsername { get; init; } = string.Empty;
 
@@ -16,6 +22,18 @@ public sealed partial record TelegramOptions
 
     /// <summary>Gets the Telegram user id of the first admin.</summary>
     public long? AdminUserId { get; init; }
+
+    /// <summary>Gets the first admin's sign-in email; needed to create them on their first <c>/start</c>.</summary>
+    public string AdminEmail { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets how updates arrive: <c>Webhook</c> (default; Telegram calls <c>/telegram/webhook</c>) or <c>Polling</c>
+    /// (local development only: the API fetches updates itself, through <see cref="Proxy"/> where needed).
+    /// </summary>
+    public string Mode { get; init; } = WebhookMode;
+
+    /// <summary>Gets a value indicating whether the API polls Telegram for updates.</summary>
+    public bool IsPolling => string.Equals(Mode, PollingMode, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Gets the secret Telegram sends in <c>X-Telegram-Bot-Api-Secret-Token</c> with every webhook call

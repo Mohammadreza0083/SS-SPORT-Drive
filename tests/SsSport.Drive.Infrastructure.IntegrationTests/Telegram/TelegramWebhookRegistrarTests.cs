@@ -29,6 +29,16 @@ public sealed class TelegramWebhookRegistrarTests
         request.DropPendingUpdates.Should().BeFalse();
     }
 
+    /// <summary>The command menu lists /start and /help with descriptions.</summary>
+    [Fact]
+    public void Builds_the_command_menu()
+    {
+        var request = TelegramWebhookRegistrar.BuildCommandsRequest();
+
+        request.Commands.Select(command => command.Command).Should().Equal("start", "help");
+        request.Commands.Should().OnlyContain(command => command.Description.Length > 0);
+    }
+
     /// <summary>Missing token, missing or non-HTTPS URL and a missing secret are rejected with a clear message.</summary>
     [Fact]
     public void Rejects_incomplete_settings()

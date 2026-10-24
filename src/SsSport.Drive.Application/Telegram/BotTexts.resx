@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- English copy of the Telegram bot. Keys are read by BotTexts. -->
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="Welcome" xml:space="preserve"><value>Welcome to SS-SPORT Drive.
+
+This bot is for the SS-SPORT team: analysts add players here and get their page links.
+
+Your Telegram ID: {0}
+
+To get started, ask for access.</value></data>
+  <data name="RequestAccessButton" xml:space="preserve"><value>Request access</value></data>
+  <data name="RequestSent" xml:space="preserve"><value>✅ Request sent. An admin will review it, and you will get a message here.</value></data>
+  <data name="RequestPending" xml:space="preserve"><value>⏳ Your request is waiting for an admin.</value></data>
+  <data name="RequestTooSoon" xml:space="preserve"><value>Your last request was declined. You can ask again in about {0} h.</value></data>
+  <data name="AccessEnded" xml:space="preserve"><value>Your access has ended. If this is a mistake, ask for access again.</value></data>
+  <data name="AdminRequest" xml:space="preserve"><value>🆕 Access request
+
+{0} ({1})
+Telegram ID: {2}</value></data>
+  <data name="NoUsername" xml:space="preserve"><value>no username</value></data>
+  <data name="ApproveAnalystButton" xml:space="preserve"><value>Approve as Analyst</value></data>
+  <data name="ApproveAdminButton" xml:space="preserve"><value>Approve as Admin</value></data>
+  <data name="DeclineButton" xml:space="preserve"><value>Decline</value></data>
+  <data name="Approved" xml:space="preserve"><value>✅ {0} approved as {1} by {2}.</value></data>
+  <data name="Declined" xml:space="preserve"><value>❌ {0} declined by {1}.</value></data>
+  <data name="AlreadyHandled" xml:space="preserve"><value>ℹ️ {0} was already {1} by {2}.</value></data>
+  <data name="SomeAdmin" xml:space="preserve"><value>an admin</value></data>
+  <data name="OnlyAdmins" xml:space="preserve"><value>Only admins can review access requests.</value></data>
+  <data name="AdminNeedsEmail" xml:space="preserve"><value>{0} has no email yet, so they can't be an admin. Approve as Analyst, then add their email and change the role in the console.</value></data>
+  <data name="RequestGone" xml:space="preserve"><value>This request no longer exists.</value></data>
+  <data name="WelcomeApproved" xml:space="preserve"><value>🎉 Welcome to SS-SPORT Drive, {0}!
+
+How it works:
+1. New player: fill in one short form (photo, name, nationality, positions, Volleybox link, Drive folder).
+2. We build the player page and send you its link.
+3. Share the link. You will see how often it is watched.</value></data>
+  <data name="WelcomeBack" xml:space="preserve"><value>Welcome back, {0}. What would you like to do?</value></data>
+  <data name="DeclinedNotice" xml:space="preserve"><value>Your access request was declined. You can ask again in 24 hours.</value></data>
+  <data name="NewPlayerButton" xml:space="preserve"><value>➕ New player</value></data>
+  <data name="MyPlayersButton" xml:space="preserve"><value>👥 My players</value></data>
+  <data name="HelpButton" xml:space="preserve"><value>❓ Help</value></data>
+  <data name="Help" xml:space="preserve"><value>SS-SPORT Drive bot
+
+/start: open the menu or ask for access
+/help: show this message
+
+Questions? info@ss-sport.co</value></data>
+  <data name="ComingSoon" xml:space="preserve"><value>Coming soon.</value></data>
+  <data name="FirstAdminNeedsEmail" xml:space="preserve"><value>You are the configured admin, but Telegram__AdminEmail is not set. Add it to the settings to finish the first-admin setup.</value></data>
+</root>

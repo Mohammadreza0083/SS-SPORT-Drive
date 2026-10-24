@@ -204,6 +204,28 @@ Last updated: 2026-10-25
   - **Local development has no webhook:** there is no public URL, and Telegram is blocked in Iran without a VPN. Tests use synthetic updates.
   - **Proxy (owner, 2026-10-25):** the owner's VPN (v2rayN) exposes a mixed HTTP/SOCKS proxy at **`127.0.0.1:10808`**. `Telegram__Proxy` (e.g. `http://127.0.0.1:10808`, or `http://host.docker.internal:10808` inside Docker) routes Bot API calls through it. It stays empty on the VPS.
   - The webhook is documented in Scalar under the "Telegram" tag, with an `apiKey`-in-header security scheme (`TelegramWebhookSecret`), an example update and its 200/400/401 responses.
+- **Bot access flow (T-2, owner-approved 2026-10-25):**
+  - **Flow:**
+    1. `/start` (or any message) from an unknown user → welcome, their Telegram ID, and a **Request access** button.
+    2. Pressing it creates a `Pending` analyst. The same message is **edited in place** to "Request sent".
+    3. **Every active admin** gets the request (name, @username, ID) with **Approve as Analyst / Approve as Admin / Decline**.
+    4. **Approve** → `Active`. The requester gets the welcome (3 steps) with **New player · My players · Help**, and the admin's message becomes "approved as … by …".
+    5. **Decline** → `Declined`. The requester is told to wait 24 h.
+    6. Both decisions are audited (`user.approved` / `user.declined`, actor = the reviewing admin).
+  - **Replies by state:** later `/start`s answer Pending ("waiting"), Active (menu), Declined (hours left, then Request access again) or Removed ("Access ended" + Request access).
+  - **24 h after a decline** (`User.DeclinedAt`, `user.request_too_soon`). A removed user may ask again at once.
+  - **First admin:** the configured owner (`Telegram__AdminUserId` + **`Telegram__AdminEmail`**) becomes the active admin on their first `/start`. Without the email they are told to set it.
+  - **A button on an already-handled request** answers "already approved/declined by <name>", taken from the audit log. Other admins' copies are not edited eagerly.
+  - **Approve as Admin needs an email.** Without one, the admin sees a pop-up: approve as Analyst, then add the email and promote in the console (A-8).
+  - **Not built yet:** *New player* and *My players* answer "Coming soon" until T-4/T-7. *Help* and `/help` work. The "Open Drive" menu button comes with the Mini App (T-3).
+  - **How it is built:**
+    - The update command is a router.
+    - State changes run as their own MediatR commands (`StartBotCommand`, `RequestBotAccessCommand`, `ReviewAccessRequestCommand`), so they are saved first.
+    - Admin and requester notifications are **domain-event handlers** (`UserRequestedAccess`, `UserApproved`, `UserDeclined`), sent only after a successful save.
+    - If Telegram fails during a notification, the state stays saved and the error is logged. A Hangfire outbox comes later.
+  - **What the command carries:** the update now carries the sender's profile (id, chat, username, name), the bot command name and our own button data. **Free text is still never carried or logged**, and neither are names.
+  - **Bot copy** is English in `Application/Telegram/BotTexts.resx`, sent as plain text. `setMyCommands` registers `/start` and `/help` in the `telegram-set-webhook` step.
+  - **Local development:** `Telegram__Mode=Polling` makes the API fetch updates with long polling through `Telegram__Proxy`. It removes a registered webhook first and feeds the same command. The VPS uses `Webhook` mode.
 - .NET keys use `__` nesting (`Telegram__BotToken`, `Email__Resend__ApiKey`, `ConnectionStrings__DefaultConnection`), so they bind straight to configuration sections. This replaces the owner's flat sample names (`BREVO_API_KEY`, ...).
 - **Every environment-specific `appsettings.*.json` is git-ignored.** Only the secret-free base `appsettings.json` stays in git, because the build and Docker need it.
 - **Database: PostgreSQL**, as already decided, even though the owner's `.env` sample used SQL Server variables.
