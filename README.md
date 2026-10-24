@@ -160,6 +160,10 @@ SS-SPORT Drive/
 ## Engineering rules
 
 - 🌿 **One branch per feature:** `feature/<area>-<short-name>`, merged into `main` by pull request with green CI.
+- 🛡️ **Protected `main`** (ruleset, active once the repo is on GitHub Pro):
+  - no deletion and no force-push;
+  - changes only through a pull request, with conversations resolved;
+  - required checks: `.NET build, format & tests`, `Web lint, typecheck, tests & build`, `Edge typecheck & tests` and `Local Docker stack smoke test`, with the branch up to date.
 - 🧪 **Tests first:** every handler, endpoint and domain rule starts as a failing test. Nothing is committed red.
 - 🧱 **Architecture:** MediatR for every command and query, Specification pattern for query criteria, DTOs at every API boundary.
 - 📝 **Docs in code:** XML docs on every .NET member (the build fails without them), TSDoc on exported TypeScript.

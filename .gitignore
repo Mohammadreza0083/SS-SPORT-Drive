@@ -88,3 +88,8 @@ desktop.ini
 # --- Tools --------------------------------------------------------
 graphify-out/
 k6-results/
+
+# Python (brand tooling)
+__pycache__/
+*.pyc
+.venv/

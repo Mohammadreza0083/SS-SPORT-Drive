@@ -52,6 +52,8 @@ Last updated: 2026-10-23
   - In production it sits behind admin auth.
 - **CI/CD:** a complete, DevOps-friendly pipeline: build, lint, tests, image build, automatic staging deploy, production deploy from tags with approval, migrations as a step, health checks and rollback.
 
+- **Protected `main` (S-13, 2026-10-24):** GitHub blocks branch protection and rulesets on **private repos on the free plan** (API answers "Upgrade to GitHub Pro"). The rules are listed in the README under Conventions and are switched on once the owner upgrades to GitHub Pro. Until then they are followed by convention: no direct pushes to `main`, and every change goes through a PR with green CI.
+
 ## 2. Architecture (owner-required)
 
 - **CQRS + DDD + Clean Code + SOLID + DRY.**
@@ -147,6 +149,8 @@ Last updated: 2026-10-23
 - **CORS lockdown:** browsers may call the API only from the origins in `Cors__AllowedOrigins` (comma-separated; locally `http://localhost:3000`). Every other origin is refused.
 - **Local ports are bound to 127.0.0.1 only.** The API's host port is **5080**, because 8080 is often taken on developer machines.
 
+- **VPS purchase deferred (S-1, owner, 2026-10-24):** it is too early to buy the VPS. Everything runs locally in Docker until deploy work (Epic 9) begins.
+
 ## 4. Google Drive & archive
 
 - **Archive size:** about 100 GB so far, so 1–2 transcode workers are enough.
@@ -218,6 +222,17 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
   - Share links may only be created for published players (`IsPublished`); the check itself is added with L-1.
   - **No unpublish** for now, and no detail can be cleared, so a published player always stays complete.
 
+## 5a. Brand assets (S-8, owner, 2026-10-24)
+
+- The three PNGs in `brand/` are **all the brand files that exist**. No vector originals, no separate mark and no reversed version will come.
+- Claude builds the rest from them (`tools/brand/build_brand_assets.py`):
+  - traced SVGs;
+  - the mark alone;
+  - `reversed` (red + white) for dark backgrounds;
+  - `white` for the watermark;
+  - favicons and app icons.
+- See `brand/README.md`.
+
 ## 6. Video watermark & media protection
 
 - **Burned into every video at encode time:**
@@ -237,6 +252,12 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
 - **Signed tokens:**
   - HLS URLs are HMAC-signed and **expire after 30 minutes**.
   - While the viewer is actively watching, the player **refreshes the token in the background**, extending it another 30 minutes.
+- **Watermark values (S-11, approved by the owner 2026-10-24; final check on real full-match footage in I-3):**
+  - **Logo:** the white horizontal lockup (`brand/svg/logo_horizontal_white.svg`), **10 % of the frame width** (192 px at 1080p, 64 px at 360p), **45 % opacity**, a soft 35 % shadow so it reads on bright courts.
+  - **Slogan:** "SS-SPORT · Fetch Your Dreams" in Barlow Condensed SemiBold, white, **text height 3.2 % of the frame height** (≈35 px at 1080p), **55 % opacity**, same shadow.
+  - **Margins:** 2.5 % of the frame width from each edge (48 px at 1080p). Everything scales with the rendition, so 360p/720p/1080p look the same.
+  - **Viewer email overlay:** 2.2 % of the frame height, 20 % opacity (as decided). It **moves every 8 seconds** with a 0.5 s cross-fade, to a random spot that stays out of the two watermark corners.
+  - TV scoreboards often sit top-left. In that case the logo sits above the scoreboard, as in `brand/previews/watermark_1080p.png`. If real footage shows they overlap, move the logo, not the size.
 - **No paid DRM** (Widevine/FairPlay rejected for cost and complexity). Screen recording can't be fully blocked on the web; the email overlay is the deterrent.
 
 ## 7. Viewer access
