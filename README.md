@@ -167,6 +167,7 @@ SS-SPORT Drive/
 ├── web/                                # Next.js front-end
 ├── edge/                               # Cloudflare Worker
 ├── deploy/                             # Staging/production deployment & operations
+├── perf/k6/                            # k6 benchmarks (smoke + load profiles), see perf/k6/README.md
 ├── docker-compose.yml                  # Local stack (reads the root .env)
 ├── .env.example                        # Every setting; copy to .env
 └── .github/workflows/                  # CI pipeline

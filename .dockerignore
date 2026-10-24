@@ -49,6 +49,7 @@ artifacts
 **/*.md
 !**/README.md
 k6-results
+perf
 media-local
 minio-data
 **/.DS_Store
