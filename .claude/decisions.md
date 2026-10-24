@@ -165,6 +165,21 @@ Last updated: 2026-10-25
   - **They are never applied on app start-up.** `dotnet SsSport.Drive.Api.dll migrate` applies them and exits: a one-shot `migrate` service in docker-compose (the API waits for it) and the migration step in CD.
   - An integration test fails when the model has changes that no migration covers.
 
+## 2b. Pagination (owner, 2026-10-25)
+
+- **Never send every entity at once.** No endpoint, Mini App screen or bot message returns an unbounded list. Every list that can grow is paged on the server.
+- **Where it applies:** players (console list, waiting list, analyst's "my players"), public search results, assets in the console, users, the audit log, viewers and recipients, share links, access requests, tracking events and sessions, live activity, sync jobs and the email queue. Any new list is paged by default.
+- **Exempt:** small fixed catalogues that are sent whole and cached (countries, positions, roles), and CSV exports, which stream instead of paging.
+- **Paging happens in the database:** `Skip`/`Take` live in the specification (Ardalis `.Skip().Take()`) and run in SQL. A list is never loaded whole and paged in memory. The total count uses the same criteria without paging (`CountAsync`).
+- **Stable order:** every paged query has an explicit order with a unique tie-breaker (the id), so items never repeat or vanish between pages.
+- **Two styles:**
+  - **Offset paging** (`page`, `pageSize`) for admin tables and search, where the total and page numbers are shown.
+  - **Cursor (keyset) paging** (`cursor`, `pageSize`) for large, append-only feeds: audit log, tracking events, live activity, infinite scroll.
+- **Limits:** `pageSize` defaults to **20** and is at most **100**. A larger or invalid value is a 400 validation error.
+- **One response shape:** `PagedResult<T>` with `items`, `page`, `pageSize`, `totalCount`, `totalPages`; cursor lists return `items` + `nextCursor` (`null` on the last page). The shapes are documented in Scalar.
+- **Front-end:** tables show page controls, and page and size live in the URL (with the filters, A-3). The bot and Mini App page lists with Next/Previous buttons.
+- Built once as shared building blocks (D-11 / SSD-106) and used by every list endpoint after that.
+
 ## 3. Hosting
 
 - **A VPS outside Iran** runs the API, the Telegram bot, the Hangfire workers (ingest, ffmpeg, sync) and PostgreSQL. The provider is still to be chosen. Sizing: about 4 vCPU / 8 GB is enough for the current archive.
