@@ -94,6 +94,9 @@ public sealed class Player : AggregateRoot<Guid>
     /// <summary>Gets the photo, or <see langword="null"/> while missing.</summary>
     public PlayerPhoto? Photo { get; private set; }
 
+    /// <summary>Gets the hero video that autoplays at the top of the page, or <see langword="null"/> when none is chosen.</summary>
+    public Guid? HeroAssetId { get; private set; }
+
     /// <summary>Gets whether the player is waiting or published.</summary>
     public PlayerStatus Status { get; private set; } = PlayerStatus.Waiting;
 
@@ -188,6 +191,31 @@ public sealed class Player : AggregateRoot<Guid>
         }
 
         Photo = photo;
+        DetailsChanged();
+    }
+
+    /// <summary>Chooses the hero video. The caller ensures the asset is a ready video of this player.</summary>
+    /// <param name="assetId">The asset.</param>
+    public void SetHero(Guid assetId)
+    {
+        if (assetId == HeroAssetId)
+        {
+            return;
+        }
+
+        HeroAssetId = assetId;
+        DetailsChanged();
+    }
+
+    /// <summary>Removes the hero video choice, e.g. when that asset is hidden.</summary>
+    public void ClearHero()
+    {
+        if (HeroAssetId is null)
+        {
+            return;
+        }
+
+        HeroAssetId = null;
         DetailsChanged();
     }
 

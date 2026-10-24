@@ -25,13 +25,7 @@ public sealed record PlayerPhoto
     public static PlayerPhoto Create(string? raw)
     {
         var key = (raw ?? string.Empty).Trim();
-        if (key.Length == 0
-            || key.Length > MaxLength
-            || key.StartsWith('/')
-            || key.Contains("://", StringComparison.Ordinal)
-            || key.Contains('\\', StringComparison.Ordinal)
-            || key.Split('/').Contains("..")
-            || key.Any(char.IsWhiteSpace))
+        if (!Primitives.StorageKey.IsValid(key, MaxLength) || key.Any(char.IsWhiteSpace))
         {
             throw new DomainException("player.photo_key_invalid", "The photo must be a relative storage key, e.g. players/{id}/photo.webp.");
         }

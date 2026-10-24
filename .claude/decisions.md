@@ -161,6 +161,17 @@ Last updated: 2026-10-23
   - The player name is suggested from the folder name by stripping the `SS-SPORT ` prefix.
 - **No multi-player folders exist.** No split or "Event page" feature is needed.
 
+- **Existing Drive → R2 backup (owner, 2026-10-24):** a GitHub Actions workflow in the owner's own repo runs `rclone copy gdrive: r2:ssdrivebackup` **every 30 minutes**:
+  - 8 transfers, `--fast-list`;
+  - the rclone config comes from the `RCLONE_CONFIG` secret.
+  
+  What this means for the app:
+  - The R2 bucket **`ssdrivebackup`** mirrors the Drive folder tree, path for path.
+  - `copy` never deletes, so files removed from Drive stay in the backup. This matches "never delete from R2".
+  - Ingest (I-2) **reuses these backed-up originals** and only copies a file itself when the backup does not have it yet. The backup runs every 30 min and the app's poll every 10 min, so new files may not be there yet.
+  - An `Asset` keeps the R2 key of its original. `Source = Archive` means it came from this backup.
+  - The app treats the backup bucket as **read-only** and never writes into it.
+
 ## 4a. Real archive layout (read from the R2 backup, 2026-10-23)
 
 About 200 files in total. Ingest (EPIC 3) must handle all of the following.
@@ -195,6 +206,47 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
 - **Junk to skip:**
   - Loose files at the bucket root (e.g. `InShot_….mp4`).
   - Zero-byte folder markers with no extension.
+
+## 4b. Folders, assets & renditions (D-6, owner-approved 2026-10-24)
+
+- **`DriveFolder` is its own aggregate.**
+  - It records the player, the Drive folder id, its name, when it was linked and when it last synced.
+  - Its access is `Ok` or `Lost`. Losing access raises `FolderAccessLost` once; the next successful sync raises `FolderAccessRestored`.
+  - A player can have several folders.
+- **`Asset` is its own aggregate, one per file.**
+  - **Kind** comes from the extension:
+    - `Video`: mp4, mov, m4v.
+    - `Document`: pdf, png, jpg/jpeg. Stats screenshots are documents.
+    - `Scout`: dvw.
+  
+    Other files and zero-byte files are rejected (`asset.unsupported_file_type`, `asset.file_empty`).
+  - **Source** is `Drive` or `Archive` (the rclone backup).
+  - **Visibility** is `Visible` or `Hidden`.
+  - **Processing:** `Queued → Copying → Processing → Ready`, or `Failed` with a reason. An original already in the backup skips `Copying`. `Retry` re-queues a failed asset from the start.
+  - **Sync rules:**
+    - **Renamed in Drive:** the title follows the new name, unless someone edited it by hand (`TitleIsCustom`).
+    - **Replaced** (same file, new md5): the version goes up, processed output is dropped and the asset is queued again. The same md5 changes nothing, and the kind cannot change.
+    - **Removed from Drive:** the asset is hidden and `RemovedFromSourceAt` is recorded. Nothing is deleted, and `Show()` restores it.
+  - **Events:** `AssetAdded`, `AssetReady`, `AssetFailed`, `AssetHidden`, `AssetReplaced`.
+- **`Rendition`s belong to their asset.**
+  - Qualities are 360/720/1080, **never above the source height**. 360p is always made.
+  - A video is ready only when every planned rendition is ready.
+- **`AssetTagger`:**
+  - The subfolder name wins. It covers every archive spelling of full match, highlights and STATS, and nested match or competition folders keep the tag.
+  - The fallback is file-name keywords on whole words or word starts:
+    - `hl`/`highlight*` → Highlight
+    - `spike*`/`attack*` → Spike
+    - `serve*` → Serve
+    - `block*` → Block
+    - `recep*`/`receiv*`/`pass*` → Reception
+    - `def`/`defen*`/`dig(s)` → Defence
+    - `full*`/`match*`/`game*` → FullMatch
+  - Tags are flags, so several can apply. **`Stats`** is a new tag.
+  - **Title:** the match folder below a tag folder if there is one, otherwise the file name without its extension.
+- **Hero:**
+  - `Player.HeroAssetId` holds the choice. `SetHero` and `ClearHero` set it by hand.
+  - The automatic pick (shortest highlight) belongs in the Application layer.
+- **`StorageKey`** is a shared value object for object keys. It is relative, with no traversal, URL or backslash, and allows spaces because backup paths mirror Drive names.
 
 ## 5. Players & positions
 
