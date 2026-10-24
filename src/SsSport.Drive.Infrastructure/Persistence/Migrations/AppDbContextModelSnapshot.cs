@@ -1683,6 +1683,25 @@ namespace SsSport.Drive.Infrastructure.Persistence.Migrations
                     b.ToTable("users", (string)null);
                 });
 
+            modelBuilder.Entity("SsSport.Drive.Infrastructure.Telegram.TelegramUpdateRecord", b =>
+                {
+                    b.Property<long>("UpdateId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("update_id");
+
+                    b.Property<DateTimeOffset>("ReceivedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("received_at");
+
+                    b.HasKey("UpdateId")
+                        .HasName("pk_telegram_updates");
+
+                    b.HasIndex("ReceivedAt")
+                        .HasDatabaseName("ix_telegram_updates_received_at");
+
+                    b.ToTable("telegram_updates", (string)null);
+                });
+
             modelBuilder.Entity("SsSport.Drive.Domain.Assets.Asset", b =>
                 {
                     b.OwnsOne("SsSport.Drive.Domain.Assets.AssetFile", "File", b1 =>

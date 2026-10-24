@@ -5,10 +5,12 @@ using SsSport.Drive.Api;
 using SsSport.Drive.Api.Authentication;
 using SsSport.Drive.Api.Endpoints;
 using SsSport.Drive.Api.ErrorHandling;
+using SsSport.Drive.Api.Telegram;
 using SsSport.Drive.Application;
 using SsSport.Drive.Application.Abstractions.Authentication;
 using SsSport.Drive.Infrastructure;
 using SsSport.Drive.Infrastructure.Persistence;
+using SsSport.Drive.Infrastructure.Telegram;
 
 // Local runs: load the git-ignored .env from the repository root. Real environment variables always win,
 // and containers get their settings from Docker, so a missing .env is fine.
@@ -39,12 +41,20 @@ if (args is ["migrate"])
     return;
 }
 
+// `dotnet SsSport.Drive.Api.dll telegram-set-webhook` registers the bot's webhook with Telegram and exits (deploy step).
+if (args is ["telegram-set-webhook"])
+{
+    await TelegramWebhookRegistrar.RegisterAsync(app.Services);
+    return;
+}
+
 // Unhandled exceptions become ProblemDetails: 400 validation, 401/403 access, 422 broken business rules, a generic 500 otherwise.
 app.UseExceptionHandler();
 app.UseCors(WebCors.PolicyName);
 
 app.MapApiDocumentation();
 app.MapHealthEndpoints();
+app.MapTelegramWebhook();
 
 await app.RunAsync();
 
