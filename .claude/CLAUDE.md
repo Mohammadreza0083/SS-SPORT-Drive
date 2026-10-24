@@ -30,6 +30,7 @@ Branded, trackable volleyball player video pages built from Google Drive folders
   - Query conditions are expressed with the **Specification pattern** (Ardalis.Specification style). Never scatter ad-hoc `Where` chains through handlers.
   - Read-side queries use direct `AsNoTracking` projections.
   - **DTO pattern:** request/response DTOs for every endpoint, mapped with **Mapperly** (compile-time; AutoMapper was dropped for a security advisory). Entities are never exposed outside the Application layer.
+  - **Pagination (owner, 2026-10-25):** never send a whole table to the front-end, the bot or the user. Every list that can grow is paged on the server, in SQL, through the specification; nothing is loaded whole and paged in memory. Full rules in [decisions.md](decisions.md) §2b.
 - **XML doc comments on every .NET method, class, interface and property** (public and private). TSDoc/JSDoc on every exported TypeScript function and component.
 - **English only** in code, comments, logs and commits. No Persian text in code. UI copy goes in resource files.
 - **Logging:**
