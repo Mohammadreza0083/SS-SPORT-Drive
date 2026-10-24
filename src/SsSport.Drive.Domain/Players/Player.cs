@@ -94,6 +94,9 @@ public sealed class Player : AggregateRoot<Guid>
     /// <summary>Gets the photo, or <see langword="null"/> while missing.</summary>
     public PlayerPhoto? Photo { get; private set; }
 
+    /// <summary>Gets the analyst (team user) responsible for the player, or <see langword="null"/> for archive players.</summary>
+    public Guid? AnalystId { get; private set; }
+
     /// <summary>Gets the hero video that autoplays at the top of the page, or <see langword="null"/> when none is chosen.</summary>
     public Guid? HeroAssetId { get; private set; }
 
@@ -191,6 +194,19 @@ public sealed class Player : AggregateRoot<Guid>
         }
 
         Photo = photo;
+        DetailsChanged();
+    }
+
+    /// <summary>Assigns the player to an analyst, or reassigns it (e.g. to an admin when the analyst is removed).</summary>
+    /// <param name="analystId">The team user; the caller ensures it is an active user.</param>
+    public void AssignAnalyst(Guid analystId)
+    {
+        if (analystId == AnalystId)
+        {
+            return;
+        }
+
+        AnalystId = analystId;
         DetailsChanged();
     }
 

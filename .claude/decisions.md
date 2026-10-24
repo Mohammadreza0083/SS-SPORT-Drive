@@ -351,6 +351,29 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
   - Admins see it in the console (Viewers page + viewer profile).
 - **Access requests:** a dedicated admin page (also announced by the bot) where admins review each request and approve, approve with changes (expiry, players) or decline. Approval auto-creates the personal link and emails it.
 
+## 7b. Team users, roles & audit log (D-7, owner-approved 2026-10-24)
+
+- **`User` is a team member** (analyst or admin), identified by a unique **Telegram id**. Viewers are not users; they get their own accounts (P-5).
+  - **Fields:** Telegram id, username (no `@`), display name (1–100), optional **email**, role, status, when access was requested and when the user was last active.
+  - **Status flow:**
+    - The bot's request creates a `Pending` analyst.
+    - `Approve(role)` → `Active`; `Decline` → `Declined`.
+    - `Remove` → `Removed`. The record is kept.
+    - A declined or removed user who writes again goes **back to `Pending`** on the same record.
+    - Events: `UserRequestedAccess`, `UserApproved`, `UserDeclined`, `UserRemoved`, `UserRoleChanged`.
+  - **The first admin** comes from configuration (`Telegram__AdminUserId` plus an email) and is `Active` + `Admin` straight away.
+  - **An admin must have an email** for console magic-link sign-in. Approving or promoting to Admin without one fails (`user.admin_needs_email`), and an admin's email cannot be cleared.
+  - **Never remove or demote the last active admin.** This needs a count, so the Application layer enforces it (A-8).
+  - Notification preferences (quiet hours etc.) come with T-8.
+- **Roles** are `Analyst` and `Admin`. The list is closed but extensible: new roles are added in code. Names match the role claims the API checks.
+- **`Player.AnalystId`** is the analyst responsible for a player. It is empty for archive players. `AssignAnalyst` sets or reassigns it: removing a user reassigns their players to a chosen admin.
+- **`AuditEntry`:**
+  - Fields: actor (empty = the system), action code (`user.role_changed`), target type + id, optional JSON-object data (≤ 4000 characters), time.
+  - Entries are **append-only**.
+  - **Data must not contain email addresses** (`audit.data_contains_email`); people are referred to by id.
+  - Writing entries is wired up with each sensitive feature: roles (A-8), links (L-1), hide/delete/restore.
+- **`EmailAddress`** is a shared value object: trimmed, lower-case, at most 254 characters. Its `ToString()` is **masked** (`s***@club.com`), so an address dropped into a log is not exposed.
+
 ## 8. Email
 
 - **OTP codes:** **Resend is primary**, **Brevo is the fallback**.
