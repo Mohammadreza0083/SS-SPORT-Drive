@@ -32,6 +32,7 @@ public sealed class PersistenceRegistrationTests
         var repository = scope.ServiceProvider.GetRequiredService<IRepository<Note, Guid>>();
 
         unitOfWork.Should().BeOfType<UnitOfWork>();
+        scope.ServiceProvider.GetRequiredService<IPagedReader>().Should().BeOfType<PagedReader>();
         repository.Should().BeOfType<Repository<Note, Guid>>();
         scope.ServiceProvider.GetRequiredService<AppDbContext>()
             .Should().BeSameAs(scope.ServiceProvider.GetRequiredService<Microsoft.EntityFrameworkCore.DbContext>());

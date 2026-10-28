@@ -3,7 +3,7 @@
 Every decision the owner has made, in one place, so nothing has to be asked twice.
 **Precedence:** this file > `SS-SPORT_Drive_BRIEF.md` > `SS-SPORT_Drive_Spec.pdf`. Where the brief or spec disagree with this file, this file wins.
 
-Last updated: 2026-10-25
+Last updated: 2026-10-29
 
 ---
 
@@ -170,7 +170,7 @@ Last updated: 2026-10-25
 - **Never send every entity at once.** No endpoint, Mini App screen or bot message returns an unbounded list. Every list that can grow is paged on the server.
 - **Where it applies:** players (console list, waiting list, analyst's "my players"), public search results, assets in the console, users, the audit log, viewers and recipients, share links, access requests, tracking events and sessions, live activity, sync jobs and the email queue. Any new list is paged by default.
 - **Exempt:** small fixed catalogues that are sent whole and cached (countries, positions, roles), and CSV exports, which stream instead of paging.
-- **Paging happens in the database:** `Skip`/`Take` live in the specification (Ardalis `.Skip().Take()`) and run in SQL. A list is never loaded whole and paged in memory. The total count uses the same criteria without paging (`CountAsync`).
+- **Paging happens in the database:** `Skip`/`Take` run in SQL. A list is never loaded whole and paged in memory. The total count uses the same criteria without paging.
 - **Stable order:** every paged query has an explicit order with a unique tie-breaker (the id), so items never repeat or vanish between pages.
 - **Two styles:**
   - **Offset paging** (`page`, `pageSize`) for admin tables and search, where the total and page numbers are shown.
@@ -179,6 +179,12 @@ Last updated: 2026-10-25
 - **One response shape:** `PagedResult<T>` with `items`, `page`, `pageSize`, `totalCount`, `totalPages`; cursor lists return `items` + `nextCursor` (`null` on the last page). The shapes are documented in Scalar.
 - **Front-end:** tables show page controls, and page and size live in the URL (with the filters, A-3). The bot and Mini App page lists with Next/Previous buttons.
 - Built once as shared building blocks (D-11 / SSD-106) and used by every list endpoint after that.
+- **How it is built (D-11, owner-approved 2026-10-25, done 2026-10-29):**
+  - **Queries:** a list query implements `IPagedQuery<TItem>` (with `PageRequest Paging`) or `ICursorQuery<TItem>` (with `CursorRequest Paging`). Shared open-generic validators check the paging of every such query, so a query writes no paging rules. Errors are keyed `page`, `pageSize` and `cursor`, the names the client sent.
+  - **Reading:** handlers call `IPagedReader`. It takes a specification for criteria, includes and (for offset lists) the order. **Paging comes from the request, never from the specification:** a specification that pages itself is refused. An offset specification without an order is refused too. The reader appends the id as the last order key, reads untracked and maps each row with the DTO mapper.
+  - **Cursors:** the reader orders by one key and then the id, and filters with a PostgreSQL row comparison (`(key, id) < (@key, @id)`), so deep pages stay fast. It reads one extra row to know whether a next page exists. The cursor is base64url JSON holding the key's type, the key and the id. It is not signed, because it only moves within a list the caller may already read. A cursor from a list with another key type is a 400.
+  - **API:** endpoints bind `[AsParameters] PageParameters` / `CursorParameters`, and `.WithPagedResponse<T>()` / `.WithCursorResponse<T>()` document the 200 page (with an example) and the 400 in Scalar.
+  - **Guard:** an architecture test fails any Application query whose result is a bare collection unless it carries `[UnpagedList("reason")]`, the exemption for fixed catalogues.
 
 ## 3. Hosting
 
