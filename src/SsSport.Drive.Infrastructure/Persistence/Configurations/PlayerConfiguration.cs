@@ -7,6 +7,9 @@ namespace SsSport.Drive.Infrastructure.Persistence.Configurations;
 /// <summary>Maps <see cref="Player"/> to <c>players</c>; the Volleybox profile is stored in two columns of the same row.</summary>
 internal sealed class PlayerConfiguration : IEntityTypeConfiguration<Player>
 {
+    /// <summary>The shadow key of the owned Volleybox profile (the owning player's id).</summary>
+    private const string VolleyboxOwnerKey = "OwnerId";
+
     /// <summary>Configures the player table.</summary>
     /// <param name="builder">The entity builder.</param>
     public void Configure(EntityTypeBuilder<Player> builder)
@@ -28,6 +31,10 @@ internal sealed class PlayerConfiguration : IEntityTypeConfiguration<Player>
 
         builder.OwnsOne(player => player.Volleybox, volleybox =>
         {
+            // The profile has its own PlayerId (the Volleybox id), which clashes with EF's default owner-key name, so
+            // the owner key is named explicitly. It shares the players.id column: the schema stays the same.
+            volleybox.WithOwner().HasForeignKey(VolleyboxOwnerKey);
+            volleybox.Property<Guid>(VolleyboxOwnerKey).HasColumnName("id");
             volleybox.Property(profile => profile.PlayerId).HasColumnName("volleybox_player_id");
             volleybox.Property(profile => profile.Url).HasColumnName("volleybox_url").HasMaxLength(300);
             volleybox.HasIndex(profile => profile.PlayerId).IsUnique();

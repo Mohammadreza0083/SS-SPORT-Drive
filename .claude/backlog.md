@@ -41,6 +41,7 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | D-9 | DTO pattern: request/response DTOs per endpoint, Mapperly mappers (replaced AutoMapper), entities never exposed | Claude | Mapping tests green; unmapped DTO members fail the build |
 | D-10 | Countries lookup: the owner's 245-country list (ISO alpha-2 + XK, AC, TA) as the nationality catalogue, seeded into `countries` | Claude | Clean DB has all 245 countries; tests green |
 | D-11 | Pagination building blocks (decisions §2b): `PageRequest` / `CursorRequest` DTOs + validators (size 20 default, 100 max), `PagedResult<T>` / `CursorResult<T>`, paging in specifications with a stable order, Scalar schemas; every list endpoint uses them | Claude | Tests green; no list endpoint returns an unbounded collection |
+| D-12 | Fix the EF shadow-FK warning on the owned Volleybox profile (`VolleyboxProfile.PlayerId1`): explicit owner key on `players.id`, model test with warning 10625 as an error | Claude | No EF model warnings; tests green |
 
 ## EPIC 2 — Telegram bot & Mini App
 | Key | Task | Assignee | Done when |
