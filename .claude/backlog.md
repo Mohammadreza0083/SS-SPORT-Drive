@@ -48,6 +48,7 @@ Every Claude task follows the working agreement: explain → approve → tests �
 |---|---|---|---|
 | T-1 | Webhook endpoint + secret validation | Claude | Tests green |
 | T-2 | Access flow: request → admins approve/decline → welcome | Claude | E2E on test bot |
+| T-2a | Fix red CI on `main`: `TelegramWebhookTests.Valid_update_is_recorded_once` fails without a bot token (the handler builds the real bot client); use a fake messenger in the test host | Claude | Test green in CI without `.env`; `main` green |
 | T-3 | Mini App auth (initData signature) | Claude | Tests green |
 | T-4 | New player form (photo, name, nationality, positions incl. DS, Volleybox, Drive link) with live validation | Claude | Works in Telegram |
 | T-5 | Update-player mode for a known Volleybox ID | Claude | Tests green |
