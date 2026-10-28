@@ -86,7 +86,7 @@ Api / Workers  →  Infrastructure  →  Application  →  Domain
 | Area | Technology |
 |---|---|
 | Backend | .NET 10, ASP.NET Core, MediatR, Mapperly, FluentValidation, EF Core |
-| Data | PostgreSQL, Unit of Work + generic repository, Specification pattern, `AsNoTracking` read projections |
+| Data | PostgreSQL, Unit of Work + generic repository, Specification pattern, `AsNoTracking` read projections, server-side paging (offset + keyset cursors) |
 | Jobs | Hangfire (PostgreSQL storage), ffmpeg |
 | Front-end | Next.js 16, TypeScript, Media Chrome + hls-video-element |
 | Edge & storage | Cloudflare Workers, Cloudflare R2, Turnstile |
@@ -184,6 +184,7 @@ SS-SPORT Drive/
   - required checks: `.NET build, format & tests`, `Web lint, typecheck, tests & build`, `Edge typecheck & tests` and `Local Docker stack smoke test`, with the branch up to date.
 - 🧪 **Tests first:** every handler, endpoint and domain rule starts as a failing test. Nothing is committed red.
 - 🧱 **Architecture:** MediatR for every command and query, Specification pattern for query criteria, DTOs at every API boundary.
+- 📄 **Paging:** no list is ever sent whole. Lists use `IPagedQuery` / `ICursorQuery` and `IPagedReader`, which page in SQL (20 per page by default, 100 at most). An architecture test fails any query that returns a bare collection unless it is marked `[UnpagedList("reason")]`.
 - 📝 **Docs in code:** XML docs on every .NET member (the build fails without them), TSDoc on exported TypeScript.
 - 📚 **API docs:** every endpoint is fully described in OpenAPI and rendered with Scalar.
 - 🔒 **No secrets in git:** configuration comes from environment variables and secrets only.
