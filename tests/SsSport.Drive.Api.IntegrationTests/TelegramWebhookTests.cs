@@ -3,8 +3,13 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
+using SsSport.Drive.Api.IntegrationTests.Telegram;
+using SsSport.Drive.Application.Telegram;
 using SsSport.Drive.Infrastructure.Persistence;
 using Testcontainers.PostgreSql;
 
@@ -24,6 +29,9 @@ public sealed class TelegramWebhookTests : IAsyncLifetime
 
     /// <summary>A throwaway PostgreSQL 17 server; keep the image in step with docker-compose.</summary>
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:17-alpine").Build();
+
+    /// <summary>Stands in for Telegram, so the bot's replies never reach the real Bot API.</summary>
+    private readonly RecordingMessenger _bot = new();
 
     /// <summary>Starts PostgreSQL and applies the migrations.</summary>
     /// <returns>A task that completes when the database is ready.</returns>
@@ -88,6 +96,7 @@ public sealed class TelegramWebhookTests : IAsyncLifetime
         }
 
         (await CountAsync(5004)).Should().Be(1);
+        _bot.Calls.Should().NotBeEmpty("the update reached the bot, which answered through the stand-in messenger");
     }
 
     /// <summary>A body that is not a Telegram update is answered 400 with ProblemDetails.</summary>
@@ -170,14 +179,20 @@ public sealed class TelegramWebhookTests : IAsyncLifetime
         return (long)(await command.ExecuteScalarAsync(TestContext.Current.CancellationToken))!;
     }
 
-    /// <summary>Creates the in-memory API against the test database with a given webhook secret.</summary>
+    /// <summary>
+    /// Creates the in-memory API against the test database with a given webhook secret. The bot answers through
+    /// <see cref="RecordingMessenger"/>, never the real Bot API.
+    /// </summary>
     /// <param name="secret">The configured secret; empty disables the webhook.</param>
     /// <returns>The API host.</returns>
     private WebApplicationFactory<Program> CreateApi(string secret) =>
-        new WebApplicationFactory<Program>().WithWebHostBuilder(builder => builder.ConfigureAppConfiguration((_, configuration) =>
-            configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        new WebApplicationFactory<Program>().WithWebHostBuilder(builder => builder
+            .ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["ConnectionStrings:DefaultConnection"] = _postgres.GetConnectionString(),
                 ["Telegram:WebhookSecret"] = secret,
-            })));
+                // CI has no bot token; blank it here too, so a developer's .env cannot hide a real Bot API call.
+                ["Telegram:BotToken"] = string.Empty,
+            }))
+            .ConfigureTestServices(services => services.Replace(ServiceDescriptor.Singleton<ITelegramMessenger>(_bot))));
 }
