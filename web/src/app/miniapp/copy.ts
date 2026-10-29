@@ -33,6 +33,17 @@ export const newPlayerCopy = {
   rejected: "The player could not be saved. Check the fields and try again.",
 } as const;
 
+/** UI copy of the photo step (T-4b). */
+export const photoCopy = {
+  label: "Player photo",
+  hint: "A clear photo of the player, at least 800 px on its shorter side. JPEG, PNG, WebP or HEIC, up to 15 MB.",
+  uploading: "Uploading…",
+  complete: (name: string) => `${name} is complete and waiting for an admin to publish.`,
+  stillMissing: (details: string) => `Photo saved. Still missing: ${details}.`,
+  replace: "Choose another photo",
+  rejected: "The photo could not be saved. Try another one.",
+} as const;
+
 /** Messages for the API's rule codes, so the form explains what to fix. */
 export const ruleMessages: Record<string, string> = {
   "player.name_required": "Enter the player's full name.",
@@ -47,4 +58,7 @@ export const ruleMessages: Record<string, string> = {
   "player.volleybox_taken": "A player with this Volleybox page already exists.",
   "drive_folder.link_invalid": "Paste the link of the player's Drive folder.",
   "drive_folder.taken": "This Drive folder already belongs to a player.",
+  "player.photo_too_small": "The photo must be at least 800 px on its shorter side.",
+  "player.photo_too_large": "The photo is larger than 15 MB.",
+  "player.photo_unreadable": "Send a JPEG, PNG, WebP or HEIC photo.",
 };

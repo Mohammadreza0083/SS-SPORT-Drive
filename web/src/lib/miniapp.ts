@@ -185,6 +185,66 @@ export async function createPlayer(form: NewPlayerForm, initData: string, fetchI
   }
 }
 
+/** The largest photo the API accepts: 15 MB. */
+export const MAX_PHOTO_BYTES = 15 * 1024 * 1024;
+
+/** A player's photo after an upload, as the API returns it. */
+export interface PlayerPhoto {
+  photoKey: string;
+  width: number;
+  height: number;
+  isComplete: boolean;
+  missingDetails: string[];
+}
+
+/** The outcome of uploading a photo. */
+export type PhotoUpload = { kind: "uploaded"; photo: PlayerPhoto } | { kind: "rejected"; code: string | null };
+
+/**
+ * Uploads a player's photo: the file itself is the body, with its own content type. Files over 15 MB are refused
+ * here, without sending them.
+ *
+ * @param playerId - The player.
+ * @param file - The chosen photo.
+ * @param initData - The raw initData from Telegram.
+ * @param fetchImpl - The fetch to use (tests pass a stub).
+ * @returns The stored photo, or the code of the rule it broke.
+ */
+export async function uploadPhoto(playerId: string, file: Blob, initData: string, fetchImpl: typeof fetch = fetch): Promise<PhotoUpload> {
+  if (file.size > MAX_PHOTO_BYTES) {
+    return { kind: "rejected", code: "player.photo_too_large" };
+  }
+
+  try {
+    const response = await fetchImpl(`/api/miniapp/players/${encodeURIComponent(playerId)}/photo`, {
+      method: "PUT",
+      headers: { Authorization: `tma ${initData}`, "Content-Type": file.type || "application/octet-stream" },
+      body: file,
+      cache: "no-store",
+    });
+    return response.ok ? { kind: "uploaded", photo: (await response.json()) as PlayerPhoto } : { kind: "rejected", code: await problemCode(response) };
+  } catch {
+    return { kind: "rejected", code: null };
+  }
+}
+
+/**
+ * Reads a player's photo and makes a local URL for an `<img>`, since an image tag cannot send the `tma` header.
+ *
+ * @param playerId - The player.
+ * @param initData - The raw initData from Telegram.
+ * @param fetchImpl - The fetch to use (tests pass a stub).
+ * @returns An object URL (revoke it when done), or `null` when there is no photo.
+ */
+export async function fetchPhotoUrl(playerId: string, initData: string, fetchImpl: typeof fetch = fetch): Promise<string | null> {
+  try {
+    const response = await fetchImpl(`/api/miniapp/players/${encodeURIComponent(playerId)}/photo`, signedRequest(initData));
+    return response.ok ? URL.createObjectURL(await response.blob()) : null;
+  } catch {
+    return null;
+  }
+}
+
 /** A Drive id: 10 to 100 of A–Z, a–z, 0–9, `-` and `_` (the API's rule). */
 const DRIVE_ID = /^[A-Za-z0-9_-]{10,100}$/;
 
@@ -264,7 +324,8 @@ export async function forwardToApi(request: Request, apiBaseUrl: string, apiPath
     const response = await fetchImpl(`${apiBaseUrl.replace(/\/+$/, "")}${apiPath}${new URL(request.url).search}`, {
       method: request.method,
       headers,
-      body: hasBody ? await request.text() : undefined,
+      // Bytes, not text: photo uploads are binary.
+      body: hasBody ? await request.arrayBuffer() : undefined,
       cache: "no-store",
     });
     return new Response(response.body, {

@@ -155,7 +155,7 @@ After a deploy, `dotnet SsSport.Drive.Api.dll telegram-set-webhook` registers th
 
 The Telegram Mini App lives at `/miniapp` in the web app. It signs in on every request with Telegram's signed `initData` (`Authorization: tma <initData>`, valid for 24 hours); only active analysts and admins get through. Telegram opens Mini Apps over HTTPS only, so trying it from the bot needs a public HTTPS URL.
 
-Analysts add a player at `/miniapp/new`: category, name, nationality, positions, Volleybox link (checked live) and Drive folder link. The player waits on the admin waiting list until an admin publishes it. The browser only calls same-origin `/api/miniapp/*` routes, which forward to `API_BASE_URL`.
+Analysts add a player at `/miniapp/new`: category, name, nationality, positions, Volleybox link (checked live) and Drive folder link. The player waits on the admin waiting list until an admin publishes it. The browser only calls same-origin `/api/miniapp/*` routes, which forward to `API_BASE_URL`. Right after, the analyst adds the photo (JPEG, PNG, WebP or HEIC, at least 800 px on its shorter side); the API makes it upright, strips its metadata and stores it as WebP in the `Storage__*` bucket next to the original.
 
 To apply migrations by hand, run `dotnet run --project src/SsSport.Drive.Api -- migrate` (reads `ConnectionStrings__DefaultConnection`). An integration test fails if the model changes without a migration.
 

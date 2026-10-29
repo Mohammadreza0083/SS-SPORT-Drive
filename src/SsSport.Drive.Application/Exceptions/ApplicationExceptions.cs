@@ -24,6 +24,17 @@ public sealed class UnauthenticatedException : Exception
     }
 }
 
+/// <summary>The requested record does not exist (or has nothing to return yet). The API returns 404.</summary>
+public sealed class NotFoundException : Exception
+{
+    /// <summary>Initializes the exception.</summary>
+    /// <param name="what">What was not found, e.g. <c>Player</c>.</param>
+    public NotFoundException(string what)
+        : base($"{what} was not found.")
+    {
+    }
+}
+
 /// <summary>The caller is signed in but lacks a required role. The API returns 403.</summary>
 public sealed class ForbiddenAccessException : Exception
 {
