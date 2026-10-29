@@ -149,7 +149,8 @@ public sealed class MiniAppUpdatePlayerTests : IAsyncLifetime
         body.RootElement.GetProperty("driveFolderId").GetString().Should().Be("extraFolder_0001");
         body.RootElement.GetProperty("name").GetString().Should().Be("SS-SPORT extraFolder_0001");
         (await ScalarAsync<long>("SELECT count(*) FROM drive_folders WHERE player_id = @p", id)).Should().Be(2, "a new folder is added, never a replacement");
-        _bot.ToChat(OwnerTelegramId).Should().ContainSingle(call => call.Kind == "Send")
+        // The owner's chat also holds the player's progress message (T-6a); this test looks at the folder notice only.
+        _bot.ToChat(OwnerTelegramId).Should().ContainSingle(call => call.Kind == "Send" && call.Text!.Contains("added a Drive folder"))
             .Which.Text.Should().Contain(name).And.Contain($"Analyst {OtherTelegramId}").And.Contain("SS-SPORT extraFolder_0001");
     }
 
@@ -162,7 +163,7 @@ public sealed class MiniAppUpdatePlayerTests : IAsyncLifetime
         using var response = await SendAsync(OwnerTelegramId, HttpMethod.Post, $"/miniapp/players/{id}/folders", new { driveFolderUrl = "extraFolder_0002" });
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
-        _bot.ToChat(OwnerTelegramId).Should().BeEmpty();
+        _bot.ToChat(OwnerTelegramId).Should().NotContain(call => call.Text!.Contains("added a Drive folder"), "the progress message updates, but no notice is sent");
     }
 
     /// <summary>Adding a folder runs the same checks as creating a player.</summary>
