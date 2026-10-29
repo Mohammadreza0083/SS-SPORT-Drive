@@ -33,11 +33,32 @@ function stubApi(
       return Promise.resolve(driveFolder.clone());
     }
 
+    if (url.startsWith("/api/miniapp/players/") && init?.method === undefined) {
+      return Promise.resolve(Response.json(existingCard));
+    }
+
     return Promise.resolve(created.clone());
   });
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
 }
+
+/** The card of a player that already exists (update mode, T-5). */
+const existingCard = {
+  id: "p9",
+  name: "Kian Moradi",
+  category: "Men",
+  nationalityCode: "IR",
+  nationalityName: "Iran",
+  positions: ["S"],
+  status: "Waiting",
+  analystName: "Reza Ahmadi",
+  hasPhoto: false,
+  folderCount: 1,
+  folders: [],
+  canEditDetails: false,
+  canChangePhoto: false,
+};
 
 /** A Drive check for a readable folder. */
 const folderPreview = () =>
@@ -102,14 +123,26 @@ describe("NewPlayerForm", () => {
     });
   });
 
-  it("blocks a Volleybox id that already belongs to a player", async () => {
+  it("switches to update mode for a Volleybox id that already belongs to a player", async () => {
     stubApi(Response.json({ volleyboxId: 48213, url: "u", existingPlayerId: "p9", existingPlayerName: "Arash Tehrani" }));
     render(<NewPlayerForm initData="x" />);
 
-    await fillForm();
+    fireEvent.change(screen.getByLabelText("Volleybox link"), { target: { value: "https://volleybox.net/arash-tehrani-p48213" } });
+    fireEvent.blur(screen.getByLabelText("Volleybox link"));
 
-    expect(await screen.findByText(/Arash Tehrani already has a page/)).toBeTruthy();
-    expect((screen.getByRole("button", { name: "Create player" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(await screen.findByRole("heading", { name: "Update player" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Create player" })).toBeNull();
+  });
+
+  it("offers to open the player a pasted folder belongs to", async () => {
+    stubApi(newVolleybox(), undefined, Response.json({ folderId: "1AbC-dEf_GhIjKlMnOp", name: "SS-SPORT Kian", videoCount: 0, documentCount: 0, scoutCount: 0, otherCount: 0, totalBytes: 0, isTruncated: false, existingPlayerId: "p9", existingPlayerName: "Kian Moradi" }));
+    render(<NewPlayerForm initData="x" />);
+    fireEvent.change(screen.getByLabelText("Drive folder link"), { target: { value: "https://drive.google.com/drive/folders/1AbC-dEf_GhIjKlMnOp" } });
+    fireEvent.blur(screen.getByLabelText("Drive folder link"));
+
+    fireEvent.click(await screen.findByRole("button", { name: "Open Kian Moradi" }));
+
+    expect(await screen.findByRole("heading", { name: "Update player" })).toBeTruthy();
   });
 
   it("explains a team page", async () => {

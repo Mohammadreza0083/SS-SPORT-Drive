@@ -41,7 +41,7 @@ public record PlayerSummaryDto
 }
 
 /// <summary>One player with every detail (player page in the console, waiting-list drawer).</summary>
-public sealed record PlayerDetailsDto : PlayerSummaryDto
+public record PlayerDetailsDto : PlayerSummaryDto
 {
     /// <summary>Gets the Volleybox player id, or <see langword="null"/>.</summary>
     public int? VolleyboxId { get; init; }

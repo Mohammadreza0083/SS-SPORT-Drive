@@ -45,7 +45,7 @@ export interface NewPlayerForm {
 export type VolleyboxCheck =
   | { kind: "empty" }
   | { kind: "new"; volleyboxId: number }
-  | { kind: "existing"; volleyboxId: number; playerName: string }
+  | { kind: "existing"; volleyboxId: number; playerId: string; playerName: string }
   | { kind: "invalid"; code: string | null };
 
 /** The outcome of creating a player. */
@@ -152,7 +152,7 @@ export async function checkVolleybox(url: string, initData: string, fetchImpl: t
 
     const body = (await response.json()) as { volleyboxId: number; existingPlayerId: string | null; existingPlayerName: string | null };
     return body.existingPlayerId
-      ? { kind: "existing", volleyboxId: body.volleyboxId, playerName: body.existingPlayerName ?? "" }
+      ? { kind: "existing", volleyboxId: body.volleyboxId, playerId: body.existingPlayerId, playerName: body.existingPlayerName ?? "" }
       : { kind: "new", volleyboxId: body.volleyboxId };
   } catch {
     return { kind: "invalid", code: null };
@@ -195,10 +195,16 @@ export interface DriveFolderPreview {
   otherCount: number;
   totalBytes: number;
   isTruncated: boolean;
+  existingPlayerId?: string | null;
+  existingPlayerName?: string | null;
 }
 
 /** The outcome of checking a Drive folder link. */
-export type DriveFolderCheck = { kind: "empty" } | { kind: "found"; preview: DriveFolderPreview } | { kind: "invalid"; code: string | null };
+export type DriveFolderCheck =
+  | { kind: "empty" }
+  | { kind: "found"; preview: DriveFolderPreview }
+  | { kind: "taken"; playerId: string; playerName: string }
+  | { kind: "invalid"; code: string | null };
 
 /**
  * Checks a pasted Drive folder link live: the API reads the folder with the service account (T-4c).
@@ -216,7 +222,14 @@ export async function checkDriveFolder(url: string, initData: string, fetchImpl:
 
   try {
     const response = await fetchImpl(`/api/miniapp/drive-folder?url=${encodeURIComponent(link)}`, signedRequest(initData));
-    return response.ok ? { kind: "found", preview: (await response.json()) as DriveFolderPreview } : { kind: "invalid", code: await problemCode(response) };
+    if (!response.ok) {
+      return { kind: "invalid", code: await problemCode(response) };
+    }
+
+    const preview = (await response.json()) as DriveFolderPreview;
+    return preview.existingPlayerId
+      ? { kind: "taken", playerId: preview.existingPlayerId, playerName: preview.existingPlayerName ?? "" }
+      : { kind: "found", preview };
   } catch {
     return { kind: "invalid", code: null };
   }
@@ -239,6 +252,106 @@ export function formatBytes(bytes: number): string {
 
   const shown = unit === 0 || value >= 10 ? Math.round(value).toString() : (Math.round(value * 10) / 10).toString();
   return `${shown} ${units[unit]}`;
+}
+
+/** A player card in update mode (T-5), as `GET /miniapp/players/{id}` returns it. */
+export interface MiniAppPlayer {
+  id: string;
+  name: string | null;
+  category: "Men" | "Women";
+  nationalityCode: string | null;
+  nationalityName: string | null;
+  positions: PositionCode[];
+  status: "Waiting" | "Published";
+  analystName: string | null;
+  hasPhoto: boolean;
+  folderCount: number;
+  folders: { id: string; name: string }[];
+  canEditDetails: boolean;
+  canChangePhoto: boolean;
+}
+
+/** The details to change; fields left out stay as they are. */
+export type PlayerChanges = Partial<Pick<NewPlayerForm, "category" | "name" | "nationalityCode" | "positions" | "volleyboxUrl">>;
+
+/**
+ * Sends JSON with the `tma` header.
+ *
+ * @param method - The HTTP method.
+ * @param body - The JSON body.
+ * @param initData - The raw initData from Telegram.
+ * @returns The request options.
+ */
+function signedJson(method: string, body: unknown, initData: string): RequestInit {
+  return {
+    method,
+    headers: { Authorization: `tma ${initData}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    cache: "no-store",
+  };
+}
+
+/**
+ * Reads a player card for update mode.
+ *
+ * @param playerId - The player.
+ * @param initData - The raw initData from Telegram.
+ * @param fetchImpl - The fetch to use (tests pass a stub).
+ * @returns The card, or `null` when it cannot be read.
+ */
+export async function fetchPlayer(playerId: string, initData: string, fetchImpl: typeof fetch = fetch): Promise<MiniAppPlayer | null> {
+  try {
+    const response = await fetchImpl(`/api/miniapp/players/${encodeURIComponent(playerId)}`, signedRequest(initData));
+    return response.ok ? ((await response.json()) as MiniAppPlayer) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Adds a Drive folder to an existing player.
+ *
+ * @param playerId - The player.
+ * @param driveFolderUrl - The folder link.
+ * @param initData - The raw initData from Telegram.
+ * @param fetchImpl - The fetch to use (tests pass a stub).
+ * @returns The linked folder, or the code of why not.
+ */
+export async function addFolder(
+  playerId: string,
+  driveFolderUrl: string,
+  initData: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<{ kind: "added"; folder: { id: string; name: string } } | { kind: "rejected"; code: string | null }> {
+  try {
+    const response = await fetchImpl(`/api/miniapp/players/${encodeURIComponent(playerId)}/folders`, signedJson("POST", { driveFolderUrl }, initData));
+    return response.ok ? { kind: "added", folder: (await response.json()) as { id: string; name: string } } : { kind: "rejected", code: await problemCode(response) };
+  } catch {
+    return { kind: "rejected", code: null };
+  }
+}
+
+/**
+ * Saves changed details of a player.
+ *
+ * @param playerId - The player.
+ * @param changes - Only the fields that changed.
+ * @param initData - The raw initData from Telegram.
+ * @param fetchImpl - The fetch to use (tests pass a stub).
+ * @returns The player after the edit, or the code of the rule it broke.
+ */
+export async function updatePlayer(
+  playerId: string,
+  changes: PlayerChanges,
+  initData: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<{ kind: "updated"; player: Partial<MiniAppPlayer> } | { kind: "rejected"; code: string | null }> {
+  try {
+    const response = await fetchImpl(`/api/miniapp/players/${encodeURIComponent(playerId)}`, signedJson("PATCH", changes, initData));
+    return response.ok ? { kind: "updated", player: (await response.json()) as Partial<MiniAppPlayer> } : { kind: "rejected", code: await problemCode(response) };
+  } catch {
+    return { kind: "rejected", code: null };
+  }
 }
 
 /** The largest photo the API accepts: 15 MB. */

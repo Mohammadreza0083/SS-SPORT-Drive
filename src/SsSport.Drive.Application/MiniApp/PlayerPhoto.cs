@@ -31,22 +31,56 @@ public sealed record PlayerPhotoDto
     public IReadOnlyList<string> MissingDetails { get; init; } = [];
 }
 
-/// <summary>Who may change a player from the Mini App: the analyst who owns it, or any admin (owner, 2026-10-29).</summary>
+/// <summary>
+/// Who may change a player from the Mini App (owner, 2026-10-29): the photo by the owning analyst or any admin; the
+/// details by the owning analyst while the player waits, and by an admin always. Anyone in the team may add a folder.
+/// </summary>
 internal static class PlayerAccess
 {
+    /// <summary>Tells whether the caller may change the photo: the owning analyst or an admin.</summary>
+    /// <param name="player">The player.</param>
+    /// <param name="currentUser">The caller.</param>
+    /// <returns><see langword="true"/> when they may.</returns>
+    public static bool CanChangePhoto(Player player, ICurrentUser currentUser) =>
+        currentUser.IsInRole(Role.Admin.Name) || IsOwner(player, currentUser);
+
+    /// <summary>Tells whether the caller may edit the details: an admin, or the owning analyst while the player waits.</summary>
+    /// <param name="player">The player.</param>
+    /// <param name="currentUser">The caller.</param>
+    /// <returns><see langword="true"/> when they may.</returns>
+    public static bool CanEditDetails(Player player, ICurrentUser currentUser) =>
+        currentUser.IsInRole(Role.Admin.Name) || (IsOwner(player, currentUser) && player.Status == PlayerStatus.Waiting);
+
     /// <summary>Refuses the caller unless they own the player or are an admin.</summary>
     /// <param name="player">The player.</param>
     /// <param name="currentUser">The caller.</param>
     /// <exception cref="ForbiddenAccessException">The caller is another analyst.</exception>
     public static void EnsureCanManage(Player player, ICurrentUser currentUser)
     {
-        if (currentUser.IsInRole(Role.Admin.Name) || (Guid.TryParse(currentUser.UserId, out var userId) && player.AnalystId == userId))
+        if (!CanChangePhoto(player, currentUser))
         {
-            return;
+            throw new ForbiddenAccessException();
         }
-
-        throw new ForbiddenAccessException();
     }
+
+    /// <summary>Refuses the caller unless they may edit the details.</summary>
+    /// <param name="player">The player.</param>
+    /// <param name="currentUser">The caller.</param>
+    /// <exception cref="ForbiddenAccessException">Another analyst, or the owner of a published player.</exception>
+    public static void EnsureCanEditDetails(Player player, ICurrentUser currentUser)
+    {
+        if (!CanEditDetails(player, currentUser))
+        {
+            throw new ForbiddenAccessException();
+        }
+    }
+
+    /// <summary>Tells whether the caller is the player's analyst.</summary>
+    /// <param name="player">The player.</param>
+    /// <param name="currentUser">The caller.</param>
+    /// <returns><see langword="true"/> for the owning analyst.</returns>
+    private static bool IsOwner(Player player, ICurrentUser currentUser) =>
+        Guid.TryParse(currentUser.UserId, out var userId) && player.AnalystId == userId;
 }
 
 /// <summary>A player by id, read untracked.</summary>

@@ -187,6 +187,7 @@ public static class MiniAppEndpoints
             .AddOpenApiOperationTransformer(Document("201", ExampleCreatedPlayer, ExampleNewPlayer));
 
         app.MapPlayerPhoto();
+        app.MapPlayerEndpoints();
         return app;
     }
 

@@ -260,6 +260,22 @@ Last updated: 2026-10-29
   - **Category (Men/Women) is a required choice at the top of the form** (the owner gave no preference, so Claude's proposal stands), because every player needs it.
   - **Duplicates:** a Volleybox id that already exists is refused with `player.volleybox_taken` and the live check says so (switching to Update mode is T-5). A Drive folder already linked to a player is refused with `drive_folder.taken`.
   - **Until T-4c** the Drive link was only checked for its format, and the folder was stored with its Drive id as a provisional name. Since T-4c (below), the folder is read from Drive and linked under its real name.
+- **Update-player mode (T-5, owner-approved 2026-10-29):**
+  - **When it starts:** the Volleybox check finds an existing player, and the form becomes that player's card with three choices:
+    1. **Add this folder** (the default).
+    2. **Update photo & details.**
+    3. **Just open the existing page.** Until the viewer page (V-2) exists, this opens the player in the Mini App.
+  - **Add this folder:**
+    - **Any active analyst or admin** may add a folder to **any** player. It only adds videos, and a new folder is always **added**, never a replacement.
+    - The same live Drive check as T-4c applies.
+    - When someone other than the owning analyst adds it, **the owner is told by the bot**. This happens after the save, from the `DriveFolderLinked` event. Archive players without an analyst notify nobody.
+  - **Update photo & details:**
+    - **Details:** the owning analyst may edit them **while the player is Waiting**. After Publish, **only an admin** may, because a new name means a new slug and the page changes.
+    - **Photo:** the owning analyst or an admin, at any time (T-4b).
+    - Everyone else sees whose player it is and who to ask.
+    - A changed name gets a new unique slug, and a changed Volleybox id must still be free (`player.volleybox_taken`).
+  - **Seeing the card:** every active team member may read a player's card (`GET /miniapp/players/{id}`). It carries `canEditDetails` and `canChangePhoto`, so the Mini App shows only what the caller may do.
+  - **Folder duplicates:** the live Drive check now answers 200 with `existingPlayerId`/`existingPlayerName` for a folder that already belongs to a player, as the Volleybox check does. Creating a player or adding the folder still refuses it with `drive_folder.taken`.
 - **Live Drive folder check (T-4c, owner, 2026-10-29):**
   - **Only folders in the agency's Shared Drive** (`GoogleDrive__SharedDriveId`) are accepted. Anything else is refused with `drive_folder.outside_shared_drive`.
   - **If Drive cannot be reached, creation stops** with 503 `drive.unavailable`. This covers a network failure, a timeout, a Google error, bad credentials and missing settings. No player is ever created with an unchecked folder.
