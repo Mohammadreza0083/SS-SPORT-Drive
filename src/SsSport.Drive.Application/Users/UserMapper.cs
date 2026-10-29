@@ -13,6 +13,11 @@ public static partial class UserMapper
     /// <returns>The DTO.</returns>
     public static partial UserDto ToDto(this User user);
 
+    /// <summary>Maps a user to the identity sign-in needs.</summary>
+    /// <param name="user">The user.</param>
+    /// <returns>The DTO.</returns>
+    public static partial TeamMemberDto ToTeamMemberDto(this User user);
+
     /// <summary>Turns an email into the full address (the DTO is admin-only).</summary>
     /// <param name="email">The email.</param>
     /// <returns>The address.</returns>
