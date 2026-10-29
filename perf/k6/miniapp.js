@@ -9,6 +9,9 @@
  *  - create_player:  POST /miniapp/players                 → 201 (opt-in with CREATE_PLAYERS=1; see below)
  *  - forged:         GET  /miniapp/me with a bad signature → 401 (no database work)
  *  - not_member:     GET  /miniapp/me as a stranger        → 403 (signature + one lookup)
+ *  - photo_upload:   PUT  /miniapp/players/{id}/photo      → 200 (opt-in with PHOTO_PLAYERS; JPEG → WebP + 2 objects stored)
+ *  - photo_read:     GET  /miniapp/players/{id}/photo      → 200 (opt-in with PHOTO_PLAYERS; streams the WebP)
+ *  - drive_check:    GET  /miniapp/drive-folder?url=…      → 200 (opt-in with DRIVE_FOLDER_ID; reads real Google Drive)
  *
  * Usage (see perf/k6/README.md):
  *   k6 run -e BASE_URL=http://localhost:5080 -e BOT_TOKEN=... -e ANALYST_TELEGRAM_ID=... -e PROFILE=smoke perf/k6/miniapp.js
@@ -22,6 +25,11 @@
  *   CREATE_PLAYERS       1 to include create_player. Since T-4c every new player's Drive folder is read from Google
  *                        Drive, so this only works against an API whose Drive reader accepts the generated folder ids
  *                        (a test double); against real Drive the made-up folders are refused with 422.
+ *   PHOTO_PLAYERS        how many seeded players the photo scenarios use (0 = skip them). Their ids must follow
+ *                        0199f000-0000-7000-8000-000000000001 … and they must belong to ANALYST_TELEGRAM_ID (see README).
+ *   DRIVE_FOLDER_ID      a real, unlinked player folder in the Shared Drive (empty = skip drive_check). Every check
+ *                        calls Google, so this scenario runs at a fixed, low rate (1/s smoke, 2/s load) to respect
+ *                        the Drive API quota.
  */
 import http from 'k6/http';
 import crypto from 'k6/crypto';
@@ -34,12 +42,38 @@ const ANALYST_ID = Number(__ENV.ANALYST_TELEGRAM_ID || 0);
 const PROFILE = (__ENV.PROFILE || 'smoke').toLowerCase();
 const PEAK_RATE = Number(__ENV.PEAK_RATE || 50);
 const CREATE_PLAYERS = __ENV.CREATE_PLAYERS === '1';
+const PHOTO_PLAYERS = Number(__ENV.PHOTO_PLAYERS || 0);
+const DRIVE_FOLDER_ID = __ENV.DRIVE_FOLDER_ID || '';
+
+/** How many players get a photo in setup, so the read scenario always finds one. */
+const READ_PLAYERS = Math.min(PHOTO_PLAYERS, 20);
+
+/** A photo-like 1200×1600 JPEG of 625 KB, read once in the init context. */
+const PHOTO = PHOTO_PLAYERS > 0 ? open('./fixtures/player-1200x1600.jpg', 'b') : null;
 
 /** A Telegram id nobody in the team has (the 403 scenario). */
 const STRANGER_ID = 999000001;
 
 /** Letters for the names of created players; names allow Latin letters only. */
 const LETTERS = 'abcdefghijklmnopqrstuvwxyz';
+
+/**
+ * Builds a scenario that ignores the peak: a fixed rate for the whole run (for calls that reach Google).
+ * @param {string} execName the exported function the scenario runs.
+ * @param {number} rate requests per second.
+ * @returns {object} the k6 scenario.
+ */
+function fixedRate(execName, rate) {
+  return {
+    executor: 'constant-arrival-rate',
+    exec: execName,
+    rate,
+    timeUnit: '1s',
+    duration: PROFILE === 'load' ? '3m30s' : '30s',
+    preAllocatedVUs: 2,
+    maxVUs: 20,
+  };
+}
 
 /**
  * Builds one scenario: a constant rate for smoke, or a ramp to its share of the peak for load.
@@ -78,6 +112,8 @@ export const options = {
     ...(CREATE_PLAYERS ? { create_player: scenario('createPlayer', 2, 0.1) } : {}),
     forged: scenario('forged', 2, 0.2),
     not_member: scenario('notMember', 1, 0.1),
+    ...(PHOTO_PLAYERS > 0 ? { photo_upload: scenario('photoUpload', 1, 0.05), photo_read: scenario('photoRead', 3, 0.3) } : {}),
+    ...(DRIVE_FOLDER_ID ? { drive_check: fixedRate('driveCheck', PROFILE === 'load' ? 2 : 1) } : {}),
   },
   thresholds: {
     // Every response has the status its scenario expects (200/201, or 401/403 where that is the point).
@@ -90,6 +126,9 @@ export const options = {
     ...(CREATE_PLAYERS ? { 'http_req_duration{scenario:create_player}': ['p(95)<400', 'p(99)<800'] } : {}),
     'http_req_duration{scenario:forged}': ['p(95)<100'],
     'http_req_duration{scenario:not_member}': ['p(95)<150'],
+    // The analyst waits for these after picking a photo or pasting a link, so seconds, not milliseconds.
+    ...(PHOTO_PLAYERS > 0 ? { 'http_req_duration{scenario:photo_upload}': ['p(95)<2000'], 'http_req_duration{scenario:photo_read}': ['p(95)<150'] } : {}),
+    ...(DRIVE_FOLDER_ID ? { 'http_req_duration{scenario:drive_check}': ['p(95)<3000'] } : {}),
   },
   summaryTrendStats: ['avg', 'min', 'med', 'p(90)', 'p(95)', 'p(99)', 'max'],
 };
@@ -158,6 +197,13 @@ export function setup() {
     fail(`Sign-in failed with ${response.status}: is the API up, the bot token right and the analyst active?`);
   }
 
+  for (let n = 1; n <= READ_PLAYERS; n += 1) {
+    const uploaded = putPhoto(n);
+    if (uploaded.status !== 200) {
+      fail(`Seeding a photo failed with ${uploaded.status}: are the ${PHOTO_PLAYERS} players seeded for the analyst and is storage up?`);
+    }
+  }
+
   // Volleybox ids are 32-bit: each minute of the clock gets its own window of 100 000 ids. Runs started in the same
   // minute share a window, so wait a minute between runs.
   return { base: 100000000 + (Math.floor(Date.now() / 60000) % 18000) * 100000 };
@@ -215,4 +261,43 @@ export function forged() {
 export function notMember() {
   const response = http.get(`${BASE_URL}/miniapp/me`, signed(initData(STRANGER_ID), { responseCallback: http.expectedStatuses(403) }));
   check(response, { 'not member: 403': (r) => r.status === 403 });
+}
+
+/**
+ * The id of the n-th seeded player (1-based), as the README's seed SQL creates them.
+ * @param {number} n the player number.
+ * @returns {string} the player id.
+ */
+function playerId(n) {
+  return `0199f000-0000-7000-8000-${String(n).padStart(12, '0')}`;
+}
+
+/**
+ * Uploads the test photo for the n-th seeded player.
+ * @param {number} n the player number.
+ * @returns {object} the k6 response.
+ */
+function putPhoto(n) {
+  return http.put(`${BASE_URL}/miniapp/players/${playerId(n)}/photo`, PHOTO, {
+    headers: { Authorization: `tma ${initData(ANALYST_ID)}`, 'Content-Type': 'image/jpeg' },
+  });
+}
+
+/** photo_upload: the analyst uploads a photo; it is checked, converted to WebP and stored with the original. */
+export function photoUpload() {
+  const response = putPhoto(1 + (exec.scenario.iterationInTest % PHOTO_PLAYERS));
+  check(response, { 'photo upload: 200': (r) => r.status === 200 });
+}
+
+/** photo_read: the form shows the stored photo. */
+export function photoRead() {
+  const n = 1 + (exec.scenario.iterationInTest % READ_PLAYERS);
+  const response = http.get(`${BASE_URL}/miniapp/players/${playerId(n)}/photo`, signed(initData(ANALYST_ID)));
+  check(response, { 'photo read: 200 webp': (r) => r.status === 200 && r.headers['Content-Type'] === 'image/webp' });
+}
+
+/** drive_check: a pasted folder link is checked against real Google Drive. */
+export function driveCheck() {
+  const response = http.get(`${BASE_URL}/miniapp/drive-folder?url=${encodeURIComponent(DRIVE_FOLDER_ID)}`, signed(initData(ANALYST_ID)));
+  check(response, { 'drive check: 200': (r) => r.status === 200 });
 }

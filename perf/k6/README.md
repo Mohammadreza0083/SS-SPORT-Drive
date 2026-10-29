@@ -60,6 +60,9 @@ Every request signs in with Telegram-signed `initData` (`Authorization: tma <ini
 | `create_player` (opt-in, `CREATE_PLAYERS=1`) | `POST /miniapp/players` (a new name, Volleybox id and Drive folder each time) | 201 | < 400 ms (p99 < 800 ms) |
 | `forged` | `GET /miniapp/me` signed for another bot | 401, no database work | < 100 ms |
 | `not_member` | `GET /miniapp/me` as a Telegram user outside the team | 403 | < 150 ms |
+| `photo_upload` (opt-in, `PHOTO_PLAYERS`) | `PUT /miniapp/players/{id}/photo` with a photo-like 1200×1600 JPEG of 625 KB (`fixtures/`) | 200 | < 2000 ms |
+| `photo_read` (opt-in, `PHOTO_PLAYERS`) | `GET /miniapp/players/{id}/photo` | 200, WebP | < 150 ms |
+| `drive_check` (opt-in, `DRIVE_FOLDER_ID`) | `GET /miniapp/drive-folder` against **real Google Drive**, fixed at 1/s (smoke) or 2/s (load) for the API quota | 200 | < 3000 ms |
 
 Across the whole run, fewer than 1 % of requests may fail and more than 99 % of checks must pass. The 401s and 403s count as expected.
 
@@ -108,6 +111,38 @@ Across the whole run, fewer than 1 % of requests may fail and more than 99 % of 
 | `load`, peak 200 | 66 179 | 0 | 10.1 ms | 10.4 ms | 27.3 ms | 49.6 ms | 315/s avg |
 
 Every threshold passed with a wide margin, even at 4× the default peak. A handful of analysts will never come close to these rates. The 4 246 players created in the peak-200 run all got distinct slugs and folders.
+
+### Photo and Drive scenarios (T-4b, T-4c)
+
+These need object storage and, for `drive_check`, the real Shared Drive:
+
+1. **Start a throwaway RustFS next to the database and create a bucket:**
+
+   ```bash
+   docker run -d --name ssd-bench-s3 -e RUSTFS_ACCESS_KEY=benchkey -e RUSTFS_SECRET_KEY=benchsecret123 -p 127.0.0.1:59000:9000 rustfs/rustfs:1.0.3
+   docker run --rm -e AWS_ACCESS_KEY_ID=benchkey -e AWS_SECRET_ACCESS_KEY=benchsecret123 -e AWS_DEFAULT_REGION=us-east-1 amazon/aws-cli:2.38.5 --endpoint-url http://host.docker.internal:59000 s3api create-bucket --bucket ssd-bench
+   ```
+
+2. **Start the API** with `Storage__ServiceUrl=http://127.0.0.1:59000 Storage__AccessKey=benchkey Storage__SecretKey=benchsecret123 Storage__Bucket=ssd-bench`. For `drive_check`, also set the real `GoogleDrive__ServiceAccountKeyPath` (absolute) and `GoogleDrive__SharedDriveId`, plus `GoogleDrive__Proxy` where Google needs a VPN.
+
+3. **Seed players for the analyst.** The ids follow the pattern the script expects:
+
+   ```bash
+   docker exec ssd-bench-pg psql -U bench -d ss_sport_drive_bench -c "INSERT INTO players (id, category, created_at, status, analyst_id) SELECT ('0199f000-0000-7000-8000-' || lpad(n::text, 12, '0'))::uuid, 'Men', now(), 'Waiting', (SELECT id FROM users WHERE telegram_id = 777000001) FROM generate_series(1, 200) AS n;"
+   ```
+
+4. **Run with `-e PHOTO_PLAYERS=200`**, and `-e DRIVE_FOLDER_ID=<a real, unlinked player folder id>` for the Drive check.
+
+**Results (2026-10-29, same machine, Drive through the owner's VPN from Iran):**
+
+| Run | Requests | Failed | p95 upload | p99 upload | p95 read | p95 Drive check | p99 Drive check |
+|---|---|---|---|---|---|---|---|
+| `smoke` | 807 | 0 | 543 ms | 553 ms | 60 ms | 2.81 s | 4.05 s |
+| `load`, peak 50 | 19 291 | 0 | 484 ms | 549 ms | 59 ms | 2.28 s | 2.57 s |
+
+All thresholds passed, and every one of the 200 players got its photo.
+- **Photo upload:** about 250–500 ms, almost all of it Magick decoding the JPEG and encoding the WebP.
+- **Drive check:** about 2 s, most of it the round trips to Google through the VPN. On the VPS (no VPN, close to Google) expect a fraction of that. Re-measure there with K-1.
 
 ### Notes
 
