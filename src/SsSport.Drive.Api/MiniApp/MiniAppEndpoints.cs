@@ -48,6 +48,21 @@ public static class MiniAppEndpoints
         }
         """;
 
+    /// <summary>A Drive folder check.</summary>
+    private const string ExampleDriveFolder =
+        """
+        {
+          "folderId": "1AbC-dEf_GhIjKlMnOp",
+          "name": "SS-SPORT Arash Tehrani／OH",
+          "videoCount": 14,
+          "documentCount": 3,
+          "scoutCount": 2,
+          "otherCount": 0,
+          "totalBytes": 4831838208,
+          "isTruncated": false
+        }
+        """;
+
     /// <summary>A filled new-player form.</summary>
     private const string ExampleNewPlayer =
         """
@@ -133,6 +148,23 @@ public static class MiniAppEndpoints
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .AddOpenApiOperationTransformer(Document("200", ExampleVolleybox));
 
+        app.MapGet("/miniapp/drive-folder", CheckDriveFolderAsync)
+            .WithTags(Tag)
+            .WithName("CheckMiniAppDriveFolder")
+            .WithSummary("Check a pasted Drive folder link")
+            .WithDescription(
+                "Reads the folder with the SS-SPORT service account, read-only, and returns its name and what is in it (videos, documents, scout files, " +
+                "other files and total size, subfolders included). Counting stops after 2000 files (`isTruncated`). " +
+                "The folder must be in the agency's Shared Drive and not yet linked to a player. Refusals are 422 with a `code`: " +
+                "`drive_folder.link_invalid`, `drive_folder.taken`, `drive_folder.no_access`, `drive_folder.outside_shared_drive`, `drive_folder.not_a_folder`. " +
+                "When Google Drive cannot be reached the answer is 503 `drive.unavailable`.")
+            .Produces<DriveFolderCheckDto>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable)
+            .AddOpenApiOperationTransformer(Document("200", ExampleDriveFolder));
+
         app.MapPost("/miniapp/players", CreatePlayerAsync)
             .WithTags(Tag)
             .WithName("CreateMiniAppPlayer")
@@ -141,7 +173,9 @@ public static class MiniAppEndpoints
                 "Creates a player on the admin waiting list, owned by the signed-in analyst, and links the Drive folder. An admin publishes it later. " +
                 "Missing or unreadable fields are a 400 with errors per field. Broken rules are a 422 with a stable `code`: " +
                 "`player.name_invalid_characters`, `player.name_too_long`, `player.nationality_invalid`, `player.duplicate_position`, " +
-                "`player.volleybox_url_invalid`, `player.volleybox_not_a_player`, `player.volleybox_taken`, `drive_folder.link_invalid`, `drive_folder.taken`. " +
+                "`player.volleybox_url_invalid`, `player.volleybox_not_a_player`, `player.volleybox_taken`, `drive_folder.link_invalid`, `drive_folder.taken`, " +
+                "`drive_folder.no_access`, `drive_folder.outside_shared_drive`, `drive_folder.not_a_folder`. The folder is read from Drive and linked under its real name; " +
+                "when Google Drive cannot be reached nothing is created and the answer is 503 `drive.unavailable`. " +
                 "Nothing is saved when any check fails. `missingDetails` lists `Photo` until the photo is uploaded with `PUT /miniapp/players/{id}/photo`.")
             .Accepts<NewPlayerDto>("application/json")
             .Produces<PlayerDetailsDto>(StatusCodes.Status201Created)
@@ -149,6 +183,7 @@ public static class MiniAppEndpoints
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable)
             .AddOpenApiOperationTransformer(Document("201", ExampleCreatedPlayer, ExampleNewPlayer));
 
         app.MapPlayerPhoto();
@@ -207,6 +242,14 @@ public static class MiniAppEndpoints
     /// <returns>200 with the parsed id; a broken link becomes a 422 ProblemDetails.</returns>
     private static async Task<Ok<VolleyboxCheckDto>> CheckVolleyboxAsync(string? url, ISender sender, CancellationToken cancellationToken) =>
         TypedResults.Ok(await sender.Send(new CheckVolleyboxQuery(url), cancellationToken));
+
+    /// <summary>Checks a Drive folder link.</summary>
+    /// <param name="url">The pasted link or folder id.</param>
+    /// <param name="sender">The MediatR sender.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>200 with the folder preview; refusals come from the pipeline as ProblemDetails.</returns>
+    private static async Task<Ok<DriveFolderCheckDto>> CheckDriveFolderAsync(string? url, ISender sender, CancellationToken cancellationToken) =>
+        TypedResults.Ok(await sender.Send(new CheckDriveFolderQuery(url), cancellationToken));
 
     /// <summary>Creates a player from the form.</summary>
     /// <param name="form">The form.</param>

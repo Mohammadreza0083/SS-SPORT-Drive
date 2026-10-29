@@ -14,7 +14,11 @@ const countries = [
  * @param created - The answer of the create call.
  * @returns The fetch stub.
  */
-function stubApi(volleybox: Response, created: Response = Response.json({ id: "p1", name: "Arash Tehrani", status: "Waiting" }, { status: 201 })) {
+function stubApi(
+  volleybox: Response,
+  created: Response = Response.json({ id: "p1", name: "Arash Tehrani", status: "Waiting" }, { status: 201 }),
+  driveFolder: Response = folderPreview(),
+) {
   const fetchMock = vi.fn((url: string, init?: RequestInit) => {
     void init;
     if (url.startsWith("/api/miniapp/countries")) {
@@ -25,11 +29,28 @@ function stubApi(volleybox: Response, created: Response = Response.json({ id: "p
       return Promise.resolve(volleybox.clone());
     }
 
+    if (url.startsWith("/api/miniapp/drive-folder")) {
+      return Promise.resolve(driveFolder.clone());
+    }
+
     return Promise.resolve(created.clone());
   });
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
 }
+
+/** A Drive check for a readable folder. */
+const folderPreview = () =>
+  Response.json({
+    folderId: "1AbC-dEf_GhIjKlMnOp",
+    name: "SS-SPORT Arash Tehrani",
+    videoCount: 14,
+    documentCount: 3,
+    scoutCount: 2,
+    otherCount: 0,
+    totalBytes: 4831838208,
+    isTruncated: false,
+  });
 
 /** A Volleybox check for a new player. */
 const newVolleybox = () => Response.json({ volleyboxId: 48213, url: "u", existingPlayerId: null, existingPlayerName: null });
@@ -44,6 +65,7 @@ async function fillForm() {
   fireEvent.change(screen.getByLabelText("Volleybox link"), { target: { value: "https://volleybox.net/arash-tehrani-p48213" } });
   fireEvent.blur(screen.getByLabelText("Volleybox link"));
   fireEvent.change(screen.getByLabelText("Drive folder link"), { target: { value: "https://drive.google.com/drive/folders/1AbC-dEf_GhIjKlMnOp" } });
+  fireEvent.blur(screen.getByLabelText("Drive folder link"));
 }
 
 beforeEach(() => {
@@ -99,6 +121,35 @@ describe("NewPlayerForm", () => {
     expect(await screen.findByText(/team page/i)).toBeTruthy();
   });
 
+  it("previews the Drive folder once the link is checked", async () => {
+    stubApi(newVolleybox());
+    render(<NewPlayerForm initData="x" />);
+
+    await fillForm();
+
+    expect(await screen.findByText("SS-SPORT Arash Tehrani · 14 videos · 3 documents · 2 scout files · 4.5 GB")).toBeTruthy();
+  });
+
+  it("blocks a folder the service account cannot read", async () => {
+    stubApi(newVolleybox(), undefined, new Response(JSON.stringify({ status: 422, code: "drive_folder.no_access" }), { status: 422 }));
+    render(<NewPlayerForm initData="x" />);
+
+    await fillForm();
+
+    expect(await screen.findByText(/no access to it/i)).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Create player" }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("says when Google Drive cannot be reached", async () => {
+    stubApi(newVolleybox(), undefined, new Response(JSON.stringify({ status: 503, code: "drive.unavailable" }), { status: 503 }));
+    render(<NewPlayerForm initData="x" />);
+
+    await fillForm();
+
+    expect(await screen.findByText(/cannot be reached/i)).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Create player" }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
   it("flags a link that is not a Drive folder", async () => {
     stubApi(newVolleybox());
     render(<NewPlayerForm initData="x" />);
@@ -129,6 +180,10 @@ describe("NewPlayerForm", () => {
 
       if (url.startsWith("/api/miniapp/volleybox")) {
         return Promise.resolve(newVolleybox());
+      }
+
+      if (url.startsWith("/api/miniapp/drive-folder")) {
+        return Promise.resolve(folderPreview());
       }
 
       if (url === "/api/miniapp/players") {
@@ -165,6 +220,10 @@ describe("NewPlayerForm", () => {
 
       if (url.startsWith("/api/miniapp/volleybox")) {
         return Promise.resolve(newVolleybox());
+      }
+
+      if (url.startsWith("/api/miniapp/drive-folder")) {
+        return Promise.resolve(folderPreview());
       }
 
       if (init?.method === "PUT") {

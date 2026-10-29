@@ -16,6 +16,7 @@
     <PackageReference Include="Ardalis.Specification.EntityFrameworkCore" />
     <PackageReference Include="Magick.NET-Q8-AnyCPU" />
     <PackageReference Include="AWSSDK.S3" />
+    <PackageReference Include="Google.Apis.Drive.v3" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SsSport.Drive.Application\SsSport.Drive.Application.csproj" />

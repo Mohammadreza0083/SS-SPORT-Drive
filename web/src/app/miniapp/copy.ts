@@ -10,6 +10,17 @@ export const miniAppCopy = {
   comingSoon: "My players arrives here soon.",
 } as const;
 
+/**
+ * Writes a count with its noun in the singular or plural.
+ *
+ * @param count - The count.
+ * @param noun - The singular noun.
+ * @returns For example `1 video` or `14 videos`.
+ */
+function plural(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? "" : "s"}`;
+}
+
 /** UI copy of the new-player form (T-4a). */
 export const newPlayerCopy = {
   title: "New player",
@@ -26,6 +37,9 @@ export const newPlayerCopy = {
   volleyboxNew: (id: number) => `Player ID ${id} · new player`,
   volleyboxExisting: (name: string) => `${name} already has a page. Updating players comes soon.`,
   drive: "Drive folder link",
+  driveChecking: "Checking the folder…",
+  driveFound: (name: string, videos: number, documents: number, scouts: number, size: string, truncated: boolean) =>
+    `${name} · ${plural(videos, "video")} · ${plural(documents, "document")} · ${plural(scouts, "scout file")} · ${size}${truncated ? " (first 2000 files)" : ""}`,
   photoLater: "The photo is added in the next step.",
   create: "Create player",
   creating: "Creating…",
@@ -58,6 +72,10 @@ export const ruleMessages: Record<string, string> = {
   "player.volleybox_taken": "A player with this Volleybox page already exists.",
   "drive_folder.link_invalid": "Paste the link of the player's Drive folder.",
   "drive_folder.taken": "This Drive folder already belongs to a player.",
+  "drive_folder.no_access": "The folder cannot be found, or the SS-SPORT Drive account has no access to it.",
+  "drive_folder.outside_shared_drive": "This folder is not in the SS-SPORT Shared Drive. Move it there, then paste its link again.",
+  "drive_folder.not_a_folder": "This link opens a file. Paste the link of the player folder.",
+  "drive.unavailable": "Google Drive cannot be reached right now. Try again in a moment.",
   "player.photo_too_small": "The photo must be at least 800 px on its shorter side.",
   "player.photo_too_large": "The photo is larger than 15 MB.",
   "player.photo_unreadable": "Send a JPEG, PNG, WebP or HEIC photo.",

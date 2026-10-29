@@ -3,6 +3,7 @@ using FluentValidation;
 using Riok.Mapperly.Abstractions;
 using SsSport.Drive.Application.Abstractions.Authentication;
 using SsSport.Drive.Application.Abstractions.Authorization;
+using SsSport.Drive.Application.Abstractions.Drive;
 using SsSport.Drive.Application.Abstractions.Messaging;
 using SsSport.Drive.Application.Abstractions.Persistence;
 using SsSport.Drive.Application.Exceptions;
@@ -202,19 +203,25 @@ public sealed class CreatePlayerCommandValidator : AbstractValidator<CreatePlaye
 /// <summary>Handles <see cref="CreatePlayerCommand"/>; the transaction behaviour saves the player and its folder together.</summary>
 /// <param name="players">The players.</param>
 /// <param name="folders">The linked Drive folders.</param>
+/// <param name="drive">Reads the Drive folder with the service account (T-4c).</param>
 /// <param name="currentUser">The analyst sending the form.</param>
 /// <param name="timeProvider">The clock.</param>
 public sealed class CreatePlayerCommandHandler(
     IRepository<Player, Guid> players,
     IRepository<DriveFolder, Guid> folders,
+    IDriveFolderReader drive,
     ICurrentUser currentUser,
     TimeProvider timeProvider) : ICommandHandler<CreatePlayerCommand, PlayerDetailsDto>
 {
-    /// <summary>Builds the player from the form, after checking that its Volleybox id and Drive folder are free.</summary>
+    /// <summary>
+    /// Builds the player from the form, after checking that its Volleybox id and Drive folder are free and that the
+    /// service account can read the folder in the Shared Drive.
+    /// </summary>
     /// <param name="request">The command.</param>
     /// <param name="cancellationToken">Cancels the work.</param>
     /// <returns>The new player.</returns>
-    /// <exception cref="DomainException">A field breaks a rule, or the Volleybox id or the Drive folder is taken.</exception>
+    /// <exception cref="DomainException">A field breaks a rule, the Volleybox id or the Drive folder is taken, or the folder cannot be used.</exception>
+    /// <exception cref="ServiceUnavailableException">Google Drive cannot be reached (owner, 2026-10-29: creation stops).</exception>
     public async Task<PlayerDetailsDto> Handle(CreatePlayerCommand request, CancellationToken cancellationToken)
     {
         if (!Guid.TryParse(currentUser.UserId, out var analystId))
@@ -233,10 +240,8 @@ public sealed class CreatePlayerCommandHandler(
             throw new DomainException("player.volleybox_taken", "A player with this Volleybox page already exists.");
         }
 
-        if (await folders.AnyAsync(new DriveFolderByDriveIdSpec(folderLink.FolderId), cancellationToken))
-        {
-            throw new DomainException("drive_folder.taken", "This Drive folder already belongs to a player.");
-        }
+        await DriveFolderChecks.EnsureFreeAsync(folders, folderLink.FolderId, cancellationToken);
+        var folder = await DriveFolderChecks.ReadUsableAsync(drive, folderLink.FolderId, cancellationToken);
 
         var now = timeProvider.GetUtcNow();
         var player = Player.Create(Enum.Parse<PlayerCategory>(request.Category!, ignoreCase: true), now);
@@ -247,8 +252,7 @@ public sealed class CreatePlayerCommandHandler(
         player.AssignAnalyst(analystId);
         players.Add(player);
 
-        // The real folder name arrives with the Drive check (T-4c) and the sync; until then the id stands in for it.
-        folders.Add(DriveFolder.Link(player.Id, folderLink.FolderId, folderLink.FolderId, now));
+        folders.Add(DriveFolder.Link(player.Id, folderLink.FolderId, folder.Name!, now));
         return player.ToDetailsDto();
     }
 
@@ -265,5 +269,111 @@ public sealed class CreatePlayerCommandHandler(
         }
 
         return candidate;
+    }
+}
+
+/// <summary>What the live Drive check shows the analyst about a pasted folder.</summary>
+public sealed record DriveFolderCheckDto
+{
+    /// <summary>Gets the Drive folder id.</summary>
+    public string FolderId { get; init; } = string.Empty;
+
+    /// <summary>Gets the folder name in Drive.</summary>
+    public string Name { get; init; } = string.Empty;
+
+    /// <summary>Gets the number of videos, subfolders included.</summary>
+    public int VideoCount { get; init; }
+
+    /// <summary>Gets the number of documents (PDFs and stat images).</summary>
+    public int DocumentCount { get; init; }
+
+    /// <summary>Gets the number of DataVolley scout files.</summary>
+    public int ScoutCount { get; init; }
+
+    /// <summary>Gets the number of files the player page will not show.</summary>
+    public int OtherCount { get; init; }
+
+    /// <summary>Gets the total size in bytes.</summary>
+    public long TotalBytes { get; init; }
+
+    /// <summary>Gets a value indicating whether counting stopped at the limit, so the counts are a lower bound.</summary>
+    public bool IsTruncated { get; init; }
+}
+
+/// <summary>The Drive folder rules shared by the live check and player creation (T-4a, T-4c).</summary>
+internal static class DriveFolderChecks
+{
+    /// <summary>Refuses a folder that is already linked to a player.</summary>
+    /// <param name="folders">The linked folders.</param>
+    /// <param name="folderId">The Drive folder id.</param>
+    /// <param name="cancellationToken">Cancels the query.</param>
+    /// <returns>A task that completes when the folder is free.</returns>
+    /// <exception cref="DomainException"><c>drive_folder.taken</c>.</exception>
+    public static async Task EnsureFreeAsync(IRepository<DriveFolder, Guid> folders, string folderId, CancellationToken cancellationToken)
+    {
+        if (await folders.AnyAsync(new DriveFolderByDriveIdSpec(folderId), cancellationToken))
+        {
+            throw new DomainException("drive_folder.taken", "This Drive folder already belongs to a player.");
+        }
+    }
+
+    /// <summary>Reads the folder with the service account and refuses it unless it is a readable folder in the Shared Drive.</summary>
+    /// <param name="drive">The Drive reader.</param>
+    /// <param name="folderId">The Drive folder id.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <returns>The folder summary.</returns>
+    /// <exception cref="DomainException"><c>drive_folder.no_access</c>, <c>drive_folder.outside_shared_drive</c> or <c>drive_folder.not_a_folder</c>.</exception>
+    public static async Task<DriveFolderSummary> ReadUsableAsync(IDriveFolderReader drive, string folderId, CancellationToken cancellationToken)
+    {
+        var summary = await drive.ReadAsync(folderId, cancellationToken);
+        return summary.Status switch
+        {
+            DriveFolderStatus.Found => summary,
+            DriveFolderStatus.OutsideSharedDrive => throw new DomainException(
+                "drive_folder.outside_shared_drive", "This folder is not in the SS-SPORT Shared Drive. Move it there, then paste its link again."),
+            DriveFolderStatus.NotAFolder => throw new DomainException(
+                "drive_folder.not_a_folder", "This link opens a file. Paste the link of the player folder."),
+            _ => throw new DomainException(
+                "drive_folder.no_access", "The folder cannot be found, or the SS-SPORT Drive account has no access to it."),
+        };
+    }
+}
+
+/// <summary>Checks a pasted Drive folder link live (<c>GET /miniapp/drive-folder</c>, T-4c).</summary>
+/// <param name="Url">The pasted link or folder id.</param>
+public sealed record CheckDriveFolderQuery(string? Url) : IQuery<DriveFolderCheckDto>, IAuthorizedRequest
+{
+    /// <summary>Gets the roles allowed: every active team member.</summary>
+    public IReadOnlyCollection<string> RequiredRoles => MiniAppAccess.TeamRoles;
+}
+
+/// <summary>Handles <see cref="CheckDriveFolderQuery"/>.</summary>
+/// <param name="folders">The linked folders.</param>
+/// <param name="drive">Reads the folder with the service account.</param>
+public sealed class CheckDriveFolderQueryHandler(IRepository<DriveFolder, Guid> folders, IDriveFolderReader drive)
+    : IQueryHandler<CheckDriveFolderQuery, DriveFolderCheckDto>
+{
+    /// <summary>Parses the link, checks the folder is free, and reads it from Drive.</summary>
+    /// <param name="request">The query.</param>
+    /// <param name="cancellationToken">Cancels the work.</param>
+    /// <returns>The folder name and what is in it.</returns>
+    /// <exception cref="DomainException">The link or the folder cannot be used.</exception>
+    /// <exception cref="ServiceUnavailableException">Google Drive cannot be reached.</exception>
+    public async Task<DriveFolderCheckDto> Handle(CheckDriveFolderQuery request, CancellationToken cancellationToken)
+    {
+        var link = DriveFolderLink.Create(request.Url);
+        await DriveFolderChecks.EnsureFreeAsync(folders, link.FolderId, cancellationToken);
+        var summary = await DriveFolderChecks.ReadUsableAsync(drive, link.FolderId, cancellationToken);
+        return new DriveFolderCheckDto
+        {
+            FolderId = link.FolderId,
+            Name = summary.Name ?? string.Empty,
+            VideoCount = summary.VideoCount,
+            DocumentCount = summary.DocumentCount,
+            ScoutCount = summary.ScoutCount,
+            OtherCount = summary.OtherCount,
+            TotalBytes = summary.TotalBytes,
+            IsTruncated = summary.IsTruncated,
+        };
     }
 }

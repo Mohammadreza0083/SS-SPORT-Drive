@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using SsSport.Drive.Application.Abstractions.Drive;
 using SsSport.Drive.Application.Abstractions.Persistence;
 using SsSport.Drive.Application.Abstractions.Storage;
 using SsSport.Drive.Application.Telegram;
@@ -67,6 +68,7 @@ public sealed class MiniAppPlayerPhotoTests : IAsyncLifetime
             {
                 services.Replace(ServiceDescriptor.Singleton<ITelegramMessenger>(new RecordingMessenger()));
                 services.Replace(ServiceDescriptor.Singleton<IObjectStorage>(_storage));
+                services.Replace(ServiceDescriptor.Singleton<IDriveFolderReader>(new FakeDriveFolderReader()));
             });
         });
         await DatabaseMigrator.MigrateAsync(_api.Services, TestContext.Current.CancellationToken);

@@ -4,10 +4,12 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Npgsql;
+using SsSport.Drive.Application.Abstractions.Drive;
 using SsSport.Drive.Application.Abstractions.Images;
 using SsSport.Drive.Application.Abstractions.Persistence;
 using SsSport.Drive.Application.Abstractions.Storage;
 using SsSport.Drive.Application.Telegram;
+using SsSport.Drive.Infrastructure.Drive;
 using SsSport.Drive.Infrastructure.Images;
 using SsSport.Drive.Infrastructure.Persistence;
 using SsSport.Drive.Infrastructure.Storage;
@@ -46,6 +48,13 @@ public static class DependencyInjection
         services.AddOptions<StorageOptions>().BindConfiguration(StorageOptions.SectionName);
         services.AddSingleton<IObjectStorage, S3ObjectStorage>();
         services.AddSingleton<IPhotoProcessor, MagickPhotoProcessor>();
+
+        services.AddOptions<GoogleDriveOptions>()
+            .BindConfiguration(GoogleDriveOptions.SectionName)
+            .Validate(options => options.Proxy.Length == 0 || Uri.TryCreate(options.Proxy, UriKind.Absolute, out _), "GoogleDrive__Proxy must be an absolute URL, e.g. http://127.0.0.1:10808.")
+            .ValidateOnStart();
+        services.AddSingleton<IDriveApi, GoogleDriveApi>();
+        services.AddSingleton<IDriveFolderReader, GoogleDriveFolderReader>();
 
         services.AddTelegram();
         return services;

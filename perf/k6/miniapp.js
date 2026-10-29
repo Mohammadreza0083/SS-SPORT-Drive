@@ -6,7 +6,7 @@
  *  - profile:        GET  /miniapp/me                      → 200 (signature + user lookup + profile read)
  *  - countries:      GET  /miniapp/countries               → 200 (245 countries from memory)
  *  - volleybox:      GET  /miniapp/volleybox?url=…         → 200 (parse + one indexed lookup)
- *  - create_player:  POST /miniapp/players                 → 201 (3 duplicate checks + 2 inserts in one transaction)
+ *  - create_player:  POST /miniapp/players                 → 201 (opt-in with CREATE_PLAYERS=1; see below)
  *  - forged:         GET  /miniapp/me with a bad signature → 401 (no database work)
  *  - not_member:     GET  /miniapp/me as a stranger        → 403 (signature + one lookup)
  *
@@ -19,6 +19,9 @@
  *   ANALYST_TELEGRAM_ID  Telegram id of an active analyst or admin in the API's database (required)
  *   PROFILE              smoke (default, ~30 s, light) or load (~4 min, ramps to the peak rate)
  *   PEAK_RATE            profile reads per second at the peak of the load profile (default 50)
+ *   CREATE_PLAYERS       1 to include create_player. Since T-4c every new player's Drive folder is read from Google
+ *                        Drive, so this only works against an API whose Drive reader accepts the generated folder ids
+ *                        (a test double); against real Drive the made-up folders are refused with 422.
  */
 import http from 'k6/http';
 import crypto from 'k6/crypto';
@@ -30,6 +33,7 @@ const BOT_TOKEN = __ENV.BOT_TOKEN || '';
 const ANALYST_ID = Number(__ENV.ANALYST_TELEGRAM_ID || 0);
 const PROFILE = (__ENV.PROFILE || 'smoke').toLowerCase();
 const PEAK_RATE = Number(__ENV.PEAK_RATE || 50);
+const CREATE_PLAYERS = __ENV.CREATE_PLAYERS === '1';
 
 /** A Telegram id nobody in the team has (the 403 scenario). */
 const STRANGER_ID = 999000001;
@@ -71,7 +75,7 @@ export const options = {
     profile: scenario('profile', 10, 1),
     countries: scenario('countries', 3, 0.2),
     volleybox: scenario('volleybox', 5, 0.4),
-    create_player: scenario('createPlayer', 2, 0.1),
+    ...(CREATE_PLAYERS ? { create_player: scenario('createPlayer', 2, 0.1) } : {}),
     forged: scenario('forged', 2, 0.2),
     not_member: scenario('notMember', 1, 0.1),
   },
@@ -83,7 +87,7 @@ export const options = {
     'http_req_duration{scenario:profile}': ['p(95)<150', 'p(99)<300'],
     'http_req_duration{scenario:countries}': ['p(95)<150'],
     'http_req_duration{scenario:volleybox}': ['p(95)<150'],
-    'http_req_duration{scenario:create_player}': ['p(95)<400', 'p(99)<800'],
+    ...(CREATE_PLAYERS ? { 'http_req_duration{scenario:create_player}': ['p(95)<400', 'p(99)<800'] } : {}),
     'http_req_duration{scenario:forged}': ['p(95)<100'],
     'http_req_duration{scenario:not_member}': ['p(95)<150'],
   },
