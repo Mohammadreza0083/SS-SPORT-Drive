@@ -4,9 +4,13 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Npgsql;
+using SsSport.Drive.Application.Abstractions.Images;
 using SsSport.Drive.Application.Abstractions.Persistence;
+using SsSport.Drive.Application.Abstractions.Storage;
 using SsSport.Drive.Application.Telegram;
+using SsSport.Drive.Infrastructure.Images;
 using SsSport.Drive.Infrastructure.Persistence;
+using SsSport.Drive.Infrastructure.Storage;
 using SsSport.Drive.Infrastructure.Telegram;
 using Telegram.Bot;
 
@@ -22,7 +26,8 @@ public static class DependencyInjection
 
     /// <summary>
     /// Adds the shared PostgreSQL data source, the EF Core context, the persistence ports
-    /// (unit of work + generic repository, one per request scope) and the Telegram adapters. The connection string is
+    /// (unit of work + generic repository, one per request scope), the media bucket, the photo processor and the
+    /// Telegram adapters. The connection string is
     /// read lazily from configuration, so hosts and tests can supply it from any configuration source.
     /// </summary>
     /// <param name="services">The service collection to add to.</param>
@@ -37,6 +42,10 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped(typeof(IRepository<,>), typeof(Repository<,>));
         services.AddScoped<IPagedReader, PagedReader>();
+
+        services.AddOptions<StorageOptions>().BindConfiguration(StorageOptions.SectionName);
+        services.AddSingleton<IObjectStorage, S3ObjectStorage>();
+        services.AddSingleton<IPhotoProcessor, MagickPhotoProcessor>();
 
         services.AddTelegram();
         return services;

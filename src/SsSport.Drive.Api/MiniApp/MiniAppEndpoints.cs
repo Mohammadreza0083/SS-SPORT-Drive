@@ -142,7 +142,7 @@ public static class MiniAppEndpoints
                 "Missing or unreadable fields are a 400 with errors per field. Broken rules are a 422 with a stable `code`: " +
                 "`player.name_invalid_characters`, `player.name_too_long`, `player.nationality_invalid`, `player.duplicate_position`, " +
                 "`player.volleybox_url_invalid`, `player.volleybox_not_a_player`, `player.volleybox_taken`, `drive_folder.link_invalid`, `drive_folder.taken`. " +
-                "Nothing is saved when any check fails. Until the photo upload exists (T-4b), `missingDetails` still lists `Photo`.")
+                "Nothing is saved when any check fails. `missingDetails` lists `Photo` until the photo is uploaded with `PUT /miniapp/players/{id}/photo`.")
             .Accepts<NewPlayerDto>("application/json")
             .Produces<PlayerDetailsDto>(StatusCodes.Status201Created)
             .ProducesValidationProblem()
@@ -151,6 +151,7 @@ public static class MiniAppEndpoints
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .AddOpenApiOperationTransformer(Document("201", ExampleCreatedPlayer, ExampleNewPlayer));
 
+        app.MapPlayerPhoto();
         return app;
     }
 
@@ -159,18 +160,20 @@ public static class MiniAppEndpoints
     /// example and, for a body, a request example.
     /// </summary>
     /// <param name="status">The success status code.</param>
-    /// <param name="responseExample">The success example.</param>
+    /// <param name="responseExample">The JSON success example, or <see langword="null"/> for a non-JSON response.</param>
     /// <param name="requestExample">The request body example, or <see langword="null"/>.</param>
     /// <returns>The transformer.</returns>
-    private static Func<OpenApiOperation, OpenApiOperationTransformerContext, CancellationToken, Task> Document(
-        string status, string responseExample, string? requestExample = null) =>
+    internal static Func<OpenApiOperation, OpenApiOperationTransformerContext, CancellationToken, Task> Document(
+        string status, string? responseExample, string? requestExample = null) =>
         (operation, context, _) =>
         {
             operation.Security =
             [
                 new OpenApiSecurityRequirement { [new OpenApiSecuritySchemeReference(TelegramMiniAppAuthenticationHandler.SchemeName, context.Document)] = [] },
             ];
-            if (operation.Responses?.TryGetValue(status, out var success) == true && success.Content?.TryGetValue("application/json", out var media) == true)
+            if (responseExample is not null
+                && operation.Responses?.TryGetValue(status, out var success) == true
+                && success.Content?.TryGetValue("application/json", out var media) == true)
             {
                 media.Example = JsonNode.Parse(responseExample);
             }

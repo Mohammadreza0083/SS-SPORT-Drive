@@ -260,6 +260,26 @@ Last updated: 2026-10-29
   - **Category (Men/Women) is a required choice at the top of the form** (the owner gave no preference, so Claude's proposal stands), because every player needs it.
   - **Duplicates:** a Volleybox id that already exists is refused with `player.volleybox_taken` and the live check says so (switching to Update mode is T-5). A Drive folder already linked to a player is refused with `drive_folder.taken`.
   - **Until T-4c** the Drive link is only checked for its format, and the folder is stored with its Drive id as a provisional name. T-4c (and later sync) replaces it with the real name.
+- **Player photo upload (T-4b, owner, 2026-10-29):**
+  - **When:** after the player is created. The confirmation screen offers **Add photo** (camera or gallery). My players (T-7) reuses the same step.
+  - **Who:** the analyst who owns the player, and every admin, whether the player is Waiting or Published. Anyone else gets 403.
+  - **Library: Magick.NET** (Apache-2.0), owner's choice over SkiaSharp. It reads iPhone **HEIC** as well as JPEG, PNG and WebP.
+  - **Rules:**
+    - At most **15 MB**.
+    - The **shorter side must be at least 800 px** (`player.photo_too_small`). Anything Magick cannot read as one of those formats is refused (`player.photo_unreadable`).
+  - **Processing:**
+    - The EXIF orientation is applied, then **all metadata is stripped** (no GPS).
+    - The longer side is capped at 2000 px, and the result is encoded as WebP (quality 85).
+  - **Storage:** both files are kept under immutable, versioned keys, and `Player.Photo` points at the WebP:
+    - the original as uploaded: `players/{id}/photo-{unix ms}-original` (input for background removal, I-7);
+    - the processed photo: `players/{id}/photo-{unix ms}.webp`.
+    
+    Replacing a photo writes new keys. Nothing is deleted.
+  - **Transport:**
+    - The Mini App sends the raw image as the body of `PUT /miniapp/players/{id}/photo`, with no multipart, and reads it back with `GET`, through the same-origin forwarding routes.
+    - Storage stays private and the API streams the photo.
+    - Objects go through an `IObjectStorage` port with an S3 adapter (AWSSDK.S3) that works against RustFS locally and R2 later.
+- .NET keys use `__` nesting
 - .NET keys use `__` nesting (`Telegram__BotToken`, `Email__Resend__ApiKey`, `ConnectionStrings__DefaultConnection`), so they bind straight to configuration sections. This replaces the owner's flat sample names (`BREVO_API_KEY`, ...).
 - **Every environment-specific `appsettings.*.json` is git-ignored.** Only the secret-free base `appsettings.json` stays in git, because the build and Docker need it.
 - **Database: PostgreSQL**, as already decided, even though the owner's `.env` sample used SQL Server variables.

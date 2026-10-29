@@ -8,6 +8,8 @@ import {
   isDriveFolderLink,
   readInitData,
   togglePosition,
+  uploadPhoto,
+  fetchPhotoUrl,
   type NewPlayerForm,
 } from "./miniapp";
 
@@ -178,7 +180,78 @@ describe("togglePosition", () => {
   });
 });
 
+describe("uploadPhoto", () => {
+  const playerId = "0199f2b1-2d4e-7c8a-b1f3-5e6a7b8c9d0e";
+
+  it("sends the file itself as the body, with its type and the tma header", async () => {
+    const photo = { photoKey: "players/p/photo-1.webp", width: 1000, height: 1200, isComplete: true, missingDetails: [] };
+    const fetchMock = vi.fn().mockResolvedValue(Response.json(photo));
+    const file = new Blob(["jpeg bytes"], { type: "image/jpeg" });
+
+    const result = await uploadPhoto(playerId, file, "user=1&hash=ab", fetchMock);
+
+    expect(result).toEqual({ kind: "uploaded", photo });
+    expect(fetchMock).toHaveBeenCalledWith(`/api/miniapp/players/${playerId}/photo`, {
+      method: "PUT",
+      headers: { Authorization: "tma user=1&hash=ab", "Content-Type": "image/jpeg" },
+      body: file,
+      cache: "no-store",
+    });
+  });
+
+  it("returns the code of a refused photo, including the size limit", async () => {
+    expect(await uploadPhoto(playerId, new Blob(["x"]), "x", vi.fn().mockResolvedValue(problem(422, { code: "player.photo_too_small" })))).toEqual({
+      kind: "rejected",
+      code: "player.photo_too_small",
+    });
+    expect(await uploadPhoto(playerId, new Blob(["x"]), "x", vi.fn().mockResolvedValue(problem(413, { code: "player.photo_too_large" })))).toEqual({
+      kind: "rejected",
+      code: "player.photo_too_large",
+    });
+  });
+
+  it("refuses files over 15 MB before sending them", async () => {
+    const fetchMock = vi.fn();
+
+    const result = await uploadPhoto(playerId, new Blob([new Uint8Array(15 * 1024 * 1024 + 1)]), "x", fetchMock);
+
+    expect(result).toEqual({ kind: "rejected", code: "player.photo_too_large" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("fetchPhotoUrl", () => {
+  it("reads the photo with the tma header and returns an object URL", async () => {
+    const createObjectURL = vi.fn().mockReturnValue("blob:photo");
+    vi.stubGlobal("URL", Object.assign(URL, { createObjectURL }));
+    const fetchMock = vi.fn().mockResolvedValue(new Response(new Blob(["webp"], { type: "image/webp" })));
+
+    expect(await fetchPhotoUrl("p1", "x", fetchMock)).toBe("blob:photo");
+    expect(fetchMock).toHaveBeenCalledWith("/api/miniapp/players/p1/photo", { headers: { Authorization: "tma x" }, cache: "no-store" });
+  });
+
+  it("returns null when there is no photo", async () => {
+    expect(await fetchPhotoUrl("p1", "x", vi.fn().mockResolvedValue(new Response(null, { status: 404 })))).toBeNull();
+  });
+});
+
 describe("forwardToApi", () => {
+  it("forwards a binary body byte for byte", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({}));
+    const bytes = new Uint8Array([0xff, 0xd8, 0xff, 0x00, 0x10]);
+    const request = new Request("http://localhost:3000/api/miniapp/players/p1/photo", {
+      method: "PUT",
+      headers: { Authorization: "tma x", "Content-Type": "image/jpeg" },
+      body: bytes,
+    });
+
+    await forwardToApi(request, "http://api:8080", "/miniapp/players/p1/photo", fetchMock);
+
+    const sent = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(new Uint8Array(sent.body as ArrayBuffer)).toEqual(bytes);
+    expect(sent.headers).toEqual({ Authorization: "tma x", "Content-Type": "image/jpeg" });
+  });
+
   it("forwards the method, Authorization, Content-Type and body to the API path and passes the answer back", async () => {
     const fetchMock = vi.fn().mockResolvedValue(problem(422, { code: "drive_folder.taken" }));
     const request = new Request("http://localhost:3000/api/miniapp/players", {
@@ -192,9 +265,10 @@ describe("forwardToApi", () => {
     expect(fetchMock).toHaveBeenCalledWith("http://api:8080/miniapp/players", {
       method: "POST",
       headers: { Authorization: "tma user=1&hash=ab", "Content-Type": "application/json" },
-      body: '{"name":"A"}',
+      body: expect.any(ArrayBuffer),
       cache: "no-store",
     });
+    expect(new TextDecoder().decode(fetchMock.mock.calls[0][1].body as ArrayBuffer)).toBe('{"name":"A"}');
     expect(response.status).toBe(422);
     expect(response.headers.get("Content-Type")).toBe("application/problem+json");
   });

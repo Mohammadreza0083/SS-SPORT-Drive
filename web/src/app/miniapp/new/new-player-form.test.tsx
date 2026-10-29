@@ -120,6 +120,70 @@ describe("NewPlayerForm", () => {
     expect(await screen.findByText(/already belongs to a player/i)).toBeTruthy();
   });
 
+  it("asks for the photo after creating the player, uploads it and shows it back", async () => {
+    const fetchMock = stubApi(newVolleybox());
+    fetchMock.mockImplementation((url: string, init?: RequestInit) => {
+      if (url.startsWith("/api/miniapp/countries")) {
+        return Promise.resolve(Response.json(countries));
+      }
+
+      if (url.startsWith("/api/miniapp/volleybox")) {
+        return Promise.resolve(newVolleybox());
+      }
+
+      if (url === "/api/miniapp/players") {
+        return Promise.resolve(Response.json({ id: "p1", name: "Arash Tehrani", status: "Waiting" }, { status: 201 }));
+      }
+
+      if (init?.method === "PUT") {
+        return Promise.resolve(Response.json({ photoKey: "players/p1/photo-1.webp", width: 1000, height: 1200, isComplete: true, missingDetails: [] }));
+      }
+
+      return Promise.resolve(new Response(new Blob(["webp"], { type: "image/webp" })));
+    });
+    vi.stubGlobal("URL", Object.assign(URL, { createObjectURL: vi.fn().mockReturnValue("blob:photo"), revokeObjectURL: vi.fn() }));
+    render(<NewPlayerForm initData="x" />);
+    await fillForm();
+    const create = screen.getByRole("button", { name: "Create player" }) as HTMLButtonElement;
+    await waitFor(() => expect(create.disabled).toBe(false));
+    fireEvent.click(create);
+    const input = await screen.findByLabelText("Player photo");
+
+    fireEvent.change(input, { target: { files: [new File(["jpeg"], "photo.jpg", { type: "image/jpeg" })] } });
+
+    expect(await screen.findByText(/complete/i)).toBeTruthy();
+    expect((screen.getByRole("img", { name: "Arash Tehrani" }) as HTMLImageElement).src).toBe("blob:photo");
+    expect(fetchMock).toHaveBeenCalledWith("/api/miniapp/players/p1/photo", expect.objectContaining({ method: "PUT" }));
+  });
+
+  it("explains a photo that is too small", async () => {
+    const fetchMock = stubApi(newVolleybox());
+    fetchMock.mockImplementation((url: string, init?: RequestInit) => {
+      if (url.startsWith("/api/miniapp/countries")) {
+        return Promise.resolve(Response.json(countries));
+      }
+
+      if (url.startsWith("/api/miniapp/volleybox")) {
+        return Promise.resolve(newVolleybox());
+      }
+
+      if (init?.method === "PUT") {
+        return Promise.resolve(new Response(JSON.stringify({ status: 422, code: "player.photo_too_small" }), { status: 422 }));
+      }
+
+      return Promise.resolve(Response.json({ id: "p1", name: "Arash Tehrani", status: "Waiting" }, { status: 201 }));
+    });
+    render(<NewPlayerForm initData="x" />);
+    await fillForm();
+    const create = screen.getByRole("button", { name: "Create player" }) as HTMLButtonElement;
+    await waitFor(() => expect(create.disabled).toBe(false));
+    fireEvent.click(create);
+
+    fireEvent.change(await screen.findByLabelText("Player photo"), { target: { files: [new File(["x"], "small.jpg", { type: "image/jpeg" })] } });
+
+    expect(await screen.findByText(/at least 800 px/i)).toBeTruthy();
+  });
+
   it("restores a saved draft", async () => {
     window.localStorage.setItem("ssd.miniapp.newPlayerDraft", JSON.stringify({ name: "Saved Name", positions: ["MB"] }));
     stubApi(newVolleybox());

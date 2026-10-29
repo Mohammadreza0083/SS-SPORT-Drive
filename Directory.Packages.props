@@ -36,6 +36,9 @@
     <PackageVersion Include="Scalar.AspNetCore" Version="2.18.3" />
     <!-- Loads the git-ignored root .env into environment variables for local runs. -->
     <PackageVersion Include="DotNetEnv" Version="3.2.0" />
+    <!-- Player photos (T-4b): Magick.NET (Apache-2.0) reads HEIC/JPEG/PNG/WebP and writes WebP; S3 client for RustFS / R2. -->
+    <PackageVersion Include="Magick.NET-Q8-AnyCPU" Version="14.17.2" />
+    <PackageVersion Include="AWSSDK.S3" Version="4.0.104.4" />
   </ItemGroup>
 
   <ItemGroup Label="Testing">

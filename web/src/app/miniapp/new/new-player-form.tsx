@@ -14,6 +14,7 @@ import {
   type VolleyboxCheck,
 } from "@/lib/miniapp";
 import { newPlayerCopy as copy, ruleMessages } from "../copy";
+import { PhotoStep } from "./photo-step";
 
 /** Where the draft is kept, so closing the Mini App never loses what was typed. */
 const DRAFT_KEY = "ssd.miniapp.newPlayerDraft";
@@ -38,7 +39,7 @@ interface Draft {
 const EMPTY_DRAFT: Draft = { category: null, name: "", nationalityCode: "", positions: [], volleyboxUrl: "", driveFolderUrl: "" };
 
 /** Where sending the form stands. */
-type SubmitState = { kind: "idle" } | { kind: "sending" } | { kind: "created"; name: string } | { kind: "rejected"; code: string | null };
+type SubmitState = { kind: "idle" } | { kind: "sending" } | { kind: "created"; id: string; name: string } | { kind: "rejected"; code: string | null };
 
 /**
  * Reads the saved draft, ignoring anything unreadable.
@@ -149,7 +150,7 @@ export function NewPlayerForm({ initData }: { initData: string }) {
         // Nothing to clean up when storage is unavailable.
       }
 
-      setSubmit({ kind: "created", name: result.player.name });
+      setSubmit({ kind: "created", id: result.player.id, name: result.player.name });
     } else {
       setSubmit({ kind: "rejected", code: result.code });
     }
@@ -160,6 +161,7 @@ export function NewPlayerForm({ initData }: { initData: string }) {
       <main>
         <h1>{copy.title}</h1>
         <p role="status">{copy.created(submit.name)}</p>
+        <PhotoStep playerId={submit.id} playerName={submit.name} initData={initData} />
       </main>
     );
   }
