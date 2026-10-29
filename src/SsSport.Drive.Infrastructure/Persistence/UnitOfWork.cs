@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SsSport.Drive.Application.Abstractions.Events;
 using SsSport.Drive.Application.Abstractions.Persistence;
+using SsSport.Drive.Application.Exceptions;
 using SsSport.Drive.Domain.Primitives;
 
 namespace SsSport.Drive.Infrastructure.Persistence;
@@ -17,6 +18,7 @@ public sealed class UnitOfWork(DbContext context, IDomainEventDispatcher domainE
     /// <summary>Writes all staged changes, then dispatches the domain events they raised.</summary>
     /// <param name="cancellationToken">Cancels the save and the dispatch.</param>
     /// <returns>The number of rows written.</returns>
+    /// <exception cref="ConcurrencyConflictException">Another request saved one of the aggregates first.</exception>
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         var aggregates = context.ChangeTracker.Entries()
@@ -25,7 +27,16 @@ public sealed class UnitOfWork(DbContext context, IDomainEventDispatcher domainE
             .Where(aggregate => aggregate.DomainEvents.Count > 0)
             .ToList();
 
-        var written = await context.SaveChangesAsync(cancellationToken);
+        int written;
+        try
+        {
+            written = await context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException exception)
+        {
+            // Another request saved the same aggregate first (xmin changed); report it as a conflict, not a crash.
+            throw new ConcurrencyConflictException(exception);
+        }
 
         var raised = aggregates.SelectMany(aggregate => aggregate.DomainEvents).ToList();
         aggregates.ForEach(aggregate => aggregate.ClearDomainEvents());

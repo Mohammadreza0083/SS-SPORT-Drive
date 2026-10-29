@@ -6,7 +6,8 @@ namespace SsSport.Drive.Api.ErrorHandling;
 
 /// <summary>
 /// Turns failures raised by the MediatR pipeline into ProblemDetails: validation 400 (errors per field),
-/// sign-in required 401, missing role 403, not found 404, an outside service down 503 (with a <c>code</c>).
+/// sign-in required 401, missing role 403, not found 404, a concurrent change 409 and an outside service down 503
+/// (both with a <c>code</c>).
 /// Every other exception falls through to the next handler.
 /// </summary>
 /// <param name="problemDetails">Writes ProblemDetails responses.</param>
@@ -41,6 +42,12 @@ public sealed class ApplicationExceptionHandler(IProblemDetailsService problemDe
             {
                 Status = StatusCodes.Status404NotFound,
                 Title = notFound.Message,
+            },
+            ConcurrencyConflictException conflict => new ProblemDetails
+            {
+                Status = StatusCodes.Status409Conflict,
+                Title = conflict.Message,
+                Extensions = { ["code"] = ConcurrencyConflictException.Code },
             },
             ServiceUnavailableException unavailable => new ProblemDetails
             {

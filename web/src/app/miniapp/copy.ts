@@ -101,6 +101,7 @@ export const ruleMessages: Record<string, string> = {
   "drive_folder.outside_shared_drive": "This folder is not in the SS-SPORT Shared Drive. Move it there, then paste its link again.",
   "drive_folder.not_a_folder": "This link opens a file. Paste the link of the player folder.",
   "drive.unavailable": "Google Drive cannot be reached right now. Try again in a moment.",
+  "concurrency.conflict": "Someone changed this player at the same moment. Try again.",
   "player.photo_too_small": "The photo must be at least 800 px on its shorter side.",
   "player.photo_too_large": "The photo is larger than 15 MB.",
   "player.photo_unreadable": "Send a JPEG, PNG, WebP or HEIC photo.",
