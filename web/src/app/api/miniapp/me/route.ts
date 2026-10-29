@@ -1,4 +1,5 @@
-import { forwardProfileRequest } from "@/lib/miniapp";
+import { forwardToApi } from "@/lib/miniapp";
+import { apiBaseUrl } from "../api-base-url";
 
 /**
  * `GET /api/miniapp/me`: forwards the Mini App's signed initData to the API's `GET /miniapp/me`.
@@ -7,5 +8,5 @@ import { forwardProfileRequest } from "@/lib/miniapp";
  * @returns The API's answer.
  */
 export async function GET(request: Request): Promise<Response> {
-  return forwardProfileRequest(request, process.env.API_BASE_URL ?? "http://localhost:5080");
+  return forwardToApi(request, apiBaseUrl(), "/miniapp/me");
 }

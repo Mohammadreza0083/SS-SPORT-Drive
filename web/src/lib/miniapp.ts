@@ -19,6 +19,38 @@ export interface TelegramWindow {
   Telegram?: { WebApp?: { initData?: string } };
 }
 
+/** A country in the nationality picker. */
+export interface Country {
+  code: string;
+  name: string;
+}
+
+/** The position codes, in the order the chips show them. */
+export const POSITIONS = ["S", "OH", "OPP", "MB", "L", "DS"] as const;
+
+/** A position code. */
+export type PositionCode = (typeof POSITIONS)[number];
+
+/** The new-player form as the API takes it. */
+export interface NewPlayerForm {
+  category: "Men" | "Women";
+  name: string;
+  nationalityCode: string;
+  positions: PositionCode[];
+  volleyboxUrl: string;
+  driveFolderUrl: string;
+}
+
+/** The outcome of checking a Volleybox link. */
+export type VolleyboxCheck =
+  | { kind: "empty" }
+  | { kind: "new"; volleyboxId: number }
+  | { kind: "existing"; volleyboxId: number; playerName: string }
+  | { kind: "invalid"; code: string | null };
+
+/** The outcome of creating a player. */
+export type CreatePlayerResult = { kind: "created"; player: { id: string; name: string; status: string } } | { kind: "rejected"; code: string | null };
+
 /** Where the browser asks for the profile: a same-origin route that forwards to the API. */
 export const PROFILE_ROUTE = "/api/miniapp/me";
 
@@ -34,6 +66,31 @@ export function readInitData(source: TelegramWindow): string | null {
 }
 
 /**
+ * Builds the request options every Mini App call shares: the `tma` Authorization header and no caching.
+ *
+ * @param initData - The raw initData from Telegram.
+ * @returns The request options.
+ */
+function signedRequest(initData: string): RequestInit {
+  return { headers: { Authorization: `tma ${initData}` }, cache: "no-store" };
+}
+
+/**
+ * Reads the `code` of a ProblemDetails response, if it has one.
+ *
+ * @param response - The error response.
+ * @returns The code, or `null`.
+ */
+async function problemCode(response: Response): Promise<string | null> {
+  try {
+    const body = (await response.json()) as { code?: unknown };
+    return typeof body.code === "string" ? body.code : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Signs in with the initData and reads who the caller is.
  *
  * @param initData - The raw initData from Telegram.
@@ -42,10 +99,7 @@ export function readInitData(source: TelegramWindow): string | null {
  */
 export async function fetchMiniAppProfile(initData: string, fetchImpl: typeof fetch = fetch): Promise<MiniAppSignIn> {
   try {
-    const response = await fetchImpl(PROFILE_ROUTE, {
-      headers: { Authorization: `tma ${initData}` },
-      cache: "no-store",
-    });
+    const response = await fetchImpl(PROFILE_ROUTE, signedRequest(initData));
     if (response.ok) {
       return { kind: "ok", profile: (await response.json()) as MiniAppProfile };
     }
@@ -61,23 +115,156 @@ export async function fetchMiniAppProfile(initData: string, fetchImpl: typeof fe
 }
 
 /**
- * Forwards a profile request to the API (`GET /miniapp/me`), passing on only the Authorization header, so the
- * browser never calls the API across origins.
+ * Reads the country catalogue for the nationality picker.
+ *
+ * @param initData - The raw initData from Telegram.
+ * @param fetchImpl - The fetch to use (tests pass a stub).
+ * @returns The countries, or an empty list when they cannot be read.
+ */
+export async function fetchCountries(initData: string, fetchImpl: typeof fetch = fetch): Promise<Country[]> {
+  try {
+    const response = await fetchImpl("/api/miniapp/countries", signedRequest(initData));
+    return response.ok ? ((await response.json()) as Country[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Checks a pasted Volleybox link: is it a player page, and does that player already exist?
+ *
+ * @param url - The pasted link.
+ * @param initData - The raw initData from Telegram.
+ * @param fetchImpl - The fetch to use (tests pass a stub).
+ * @returns The check result.
+ */
+export async function checkVolleybox(url: string, initData: string, fetchImpl: typeof fetch = fetch): Promise<VolleyboxCheck> {
+  const link = url.trim();
+  if (!link) {
+    return { kind: "empty" };
+  }
+
+  try {
+    const response = await fetchImpl(`/api/miniapp/volleybox?url=${encodeURIComponent(link)}`, signedRequest(initData));
+    if (!response.ok) {
+      return { kind: "invalid", code: await problemCode(response) };
+    }
+
+    const body = (await response.json()) as { volleyboxId: number; existingPlayerId: string | null; existingPlayerName: string | null };
+    return body.existingPlayerId
+      ? { kind: "existing", volleyboxId: body.volleyboxId, playerName: body.existingPlayerName ?? "" }
+      : { kind: "new", volleyboxId: body.volleyboxId };
+  } catch {
+    return { kind: "invalid", code: null };
+  }
+}
+
+/**
+ * Sends the new-player form.
+ *
+ * @param form - The filled form.
+ * @param initData - The raw initData from Telegram.
+ * @param fetchImpl - The fetch to use (tests pass a stub).
+ * @returns The created player, or the code of the rule it broke.
+ */
+export async function createPlayer(form: NewPlayerForm, initData: string, fetchImpl: typeof fetch = fetch): Promise<CreatePlayerResult> {
+  try {
+    const response = await fetchImpl("/api/miniapp/players", {
+      method: "POST",
+      headers: { Authorization: `tma ${initData}`, "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+      cache: "no-store",
+    });
+    if (response.ok) {
+      return { kind: "created", player: (await response.json()) as { id: string; name: string; status: string } };
+    }
+
+    return { kind: "rejected", code: await problemCode(response) };
+  } catch {
+    return { kind: "rejected", code: null };
+  }
+}
+
+/** A Drive id: 10 to 100 of A–Z, a–z, 0–9, `-` and `_` (the API's rule). */
+const DRIVE_ID = /^[A-Za-z0-9_-]{10,100}$/;
+
+/**
+ * Checks that a pasted link points to a Google Drive folder, mirroring the API's `DriveFolderLink`.
+ * The API checks again; this only gives instant feedback.
+ *
+ * @param text - The pasted link.
+ * @returns `true` for a Drive folder link or a bare folder id.
+ */
+export function isDriveFolderLink(text: string): boolean {
+  const value = text.trim();
+  if (DRIVE_ID.test(value)) {
+    return true;
+  }
+
+  let url: URL;
+  try {
+    url = new URL(value.includes("://") ? value : `https://${value}`);
+  } catch {
+    return false;
+  }
+
+  if (url.hostname.toLowerCase() !== "drive.google.com") {
+    return false;
+  }
+
+  const segments = url.pathname.split("/").filter(Boolean);
+  const folders = segments.indexOf("folders");
+  if (segments[0] === "drive" && folders > 0) {
+    return DRIVE_ID.test(segments[folders + 1] ?? "");
+  }
+
+  return url.pathname === "/open" && DRIVE_ID.test(url.searchParams.get("id") ?? "");
+}
+
+/**
+ * Taps a position chip: the first tap chooses the primary, the second the secondary, a third is ignored, and tapping
+ * a chosen position removes it.
+ *
+ * @param chosen - The positions chosen so far, primary first.
+ * @param position - The tapped position.
+ * @returns The new choice.
+ */
+export function togglePosition(chosen: readonly PositionCode[], position: PositionCode): PositionCode[] {
+  if (chosen.includes(position)) {
+    return chosen.filter((code) => code !== position);
+  }
+
+  return chosen.length < 2 ? [...chosen, position] : [...chosen];
+}
+
+/**
+ * Forwards a Mini App request to one fixed API path, passing on only the method, the Authorization and Content-Type
+ * headers, the query string and the body, so the browser never calls the API across origins.
  *
  * @param request - The incoming request.
  * @param apiBaseUrl - Where the Next.js server reaches the API (`API_BASE_URL`).
+ * @param apiPath - The API path this route stands for, e.g. `/miniapp/players`.
  * @param fetchImpl - The fetch to use (tests pass a stub).
  * @returns The API's answer, 401 without an Authorization header, or 502 when the API is unreachable.
  */
-export async function forwardProfileRequest(request: Request, apiBaseUrl: string, fetchImpl: typeof fetch = fetch): Promise<Response> {
+export async function forwardToApi(request: Request, apiBaseUrl: string, apiPath: string, fetchImpl: typeof fetch = fetch): Promise<Response> {
   const authorization = request.headers.get("Authorization");
   if (!authorization) {
     return problem(401, "Sign-in is required.");
   }
 
+  const headers: Record<string, string> = { Authorization: authorization };
+  const contentType = request.headers.get("Content-Type");
+  if (contentType) {
+    headers["Content-Type"] = contentType;
+  }
+
+  const hasBody = request.method !== "GET" && request.method !== "HEAD";
   try {
-    const response = await fetchImpl(`${apiBaseUrl.replace(/\/+$/, "")}/miniapp/me`, {
-      headers: { Authorization: authorization },
+    const response = await fetchImpl(`${apiBaseUrl.replace(/\/+$/, "")}${apiPath}${new URL(request.url).search}`, {
+      method: request.method,
+      headers,
+      body: hasBody ? await request.text() : undefined,
       cache: "no-store",
     });
     return new Response(response.body, {

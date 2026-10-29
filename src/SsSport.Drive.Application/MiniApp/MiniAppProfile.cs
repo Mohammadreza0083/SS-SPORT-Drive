@@ -51,11 +51,18 @@ public sealed class ActiveUserByIdSpec : Specification<User>, ISingleResultSpeci
     public ActiveUserByIdSpec(Guid id) => Query.Where(user => user.Id == id && user.Status == UserStatus.Active).AsNoTracking();
 }
 
+/// <summary>Who may use the Mini App.</summary>
+public static class MiniAppAccess
+{
+    /// <summary>Gets the roles of every active team member: analysts and admins.</summary>
+    public static IReadOnlyCollection<string> TeamRoles { get; } = [Role.Analyst.Name, Role.Admin.Name];
+}
+
 /// <summary>Who is using the Mini App (<c>GET /miniapp/me</c>); for active analysts and admins only.</summary>
 public sealed record GetMiniAppProfileQuery : IQuery<MiniAppProfileDto>, IAuthorizedRequest
 {
     /// <summary>Gets the roles allowed: every active team member.</summary>
-    public IReadOnlyCollection<string> RequiredRoles { get; } = [Role.Analyst.Name, Role.Admin.Name];
+    public IReadOnlyCollection<string> RequiredRoles => MiniAppAccess.TeamRoles;
 }
 
 /// <summary>Handles <see cref="GetMiniAppProfileQuery"/>.</summary>

@@ -1,30 +1,21 @@
 "use client";
 
-import Script from "next/script";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { fetchMiniAppProfile, readInitData, type MiniAppSignIn, type TelegramWindow } from "@/lib/miniapp";
 import { miniAppCopy } from "./copy";
-
-/** Telegram's Mini App script; it fills in `window.Telegram.WebApp`. */
-const TELEGRAM_SCRIPT = "https://telegram.org/js/telegram-web-app.js";
+import { useTelegramReady } from "./telegram";
 
 /** What the page shows: still signing in, outside Telegram, or the sign-in result. */
 type ViewState = { kind: "loading" } | { kind: "outside" } | MiniAppSignIn;
 
 /**
- * The Mini App entry: loads Telegram's script, then signs in.
+ * The Mini App entry: signs in once Telegram's script (loaded by the layout) is ready.
  *
  * @returns The Mini App home.
  */
 export function MiniApp() {
-  const [telegramReady, setTelegramReady] = useState(false);
-
-  return (
-    <>
-      <Script src={TELEGRAM_SCRIPT} strategy="afterInteractive" onReady={() => setTelegramReady(true)} />
-      <MiniAppHome telegramReady={telegramReady} />
-    </>
-  );
+  return <MiniAppHome telegramReady={useTelegramReady()} />;
 }
 
 /**
@@ -58,6 +49,7 @@ export function MiniAppHome({ telegramReady }: { telegramReady: boolean }) {
         <>
           <h1>{miniAppCopy.greeting(state.profile.displayName)}</h1>
           <p>{state.profile.role}</p>
+          <Link href="/miniapp/new">{miniAppCopy.newPlayer}</Link>
           <p>{miniAppCopy.comingSoon}</p>
         </>
       ) : (
