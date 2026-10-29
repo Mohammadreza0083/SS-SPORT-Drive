@@ -44,6 +44,21 @@ public sealed class ApplicationExceptionHandlerTests
         problem.RootElement.GetProperty("status").GetInt32().Should().Be(403);
     }
 
+    /// <summary>
+    /// Two people changing the same record at once is a 409 with a stable code (D-13), so the client can reload and retry
+    /// instead of seeing a server error.
+    /// </summary>
+    [Fact]
+    public async Task Concurrency_conflict_becomes_409_with_a_code()
+    {
+        var (status, problem) = await HandleAsync(new ConcurrencyConflictException(new InvalidOperationException("stale row")));
+
+        status.Should().Be(StatusCodes.Status409Conflict);
+        problem.RootElement.GetProperty("status").GetInt32().Should().Be(409);
+        problem.RootElement.GetProperty("code").GetString().Should().Be("concurrency.conflict");
+        problem.RootElement.GetProperty("title").GetString().Should().NotContain("stale row", "internal details stay out of the response");
+    }
+
     /// <summary>Other exceptions are left to the next handler.</summary>
     [Fact]
     public async Task Other_exceptions_are_not_handled()

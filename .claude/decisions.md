@@ -260,6 +260,9 @@ Last updated: 2026-10-29
   - **Category (Men/Women) is a required choice at the top of the form** (the owner gave no preference, so Claude's proposal stands), because every player needs it.
   - **Duplicates:** a Volleybox id that already exists is refused with `player.volleybox_taken` and the live check says so (switching to Update mode is T-5). A Drive folder already linked to a player is refused with `drive_folder.taken`.
   - **Until T-4c** the Drive link was only checked for its format, and the folder was stored with its Drive id as a provisional name. Since T-4c (below), the folder is read from Drive and linked under its real name.
+- **Concurrent edits and log levels (D-13, owner-approved 2026-10-29; found by the K-8 benchmark):**
+  - **Concurrent saves:** when two requests save the same aggregate at once, PostgreSQL's `xmin` check still refuses the later save, so nothing is overwritten. The unit of work now reports that as `ConcurrencyConflictException`, and the API answers **409** with `code: concurrency.conflict` (it used to be a raw 500). The Mini App tells the analyst to try again.
+  - **Log levels** (`LoggingBehavior`): refusals the API answers on purpose (401, 403, 400, 404, 409, 422) are logged at **Information**, with the reason as a structured `Reason` property (the rule code or the refusal type) and no stack trace. An outside service being down (503) is a **Warning**. Only real failures are **Error**, so Grafana error alerts mean something.
 - **Update-player mode (T-5, owner-approved 2026-10-29):**
   - **When it starts:** the Volleybox check finds an existing player, and the form becomes that player's card with three choices:
     1. **Add this folder** (the default).
