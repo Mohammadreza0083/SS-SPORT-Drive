@@ -9,8 +9,10 @@
  *  - create_player:  POST /miniapp/players                 → 201 (opt-in with CREATE_PLAYERS=1; see below)
  *  - forged:         GET  /miniapp/me with a bad signature → 401 (no database work)
  *  - not_member:     GET  /miniapp/me as a stranger        → 403 (signature + one lookup)
- *  - photo_upload:   PUT  /miniapp/players/{id}/photo      → 200 (opt-in with PHOTO_PLAYERS; JPEG → WebP + 2 objects stored)
- *  - photo_read:     GET  /miniapp/players/{id}/photo      → 200 (opt-in with PHOTO_PLAYERS; streams the WebP)
+ *  - photo_upload:   PUT  /miniapp/players/{id}/photo      → 200 (opt-in with SEEDED_PLAYERS; JPEG → WebP + 2 objects stored)
+ *  - photo_read:     GET  /miniapp/players/{id}/photo      → 200 (opt-in with SEEDED_PLAYERS; streams the WebP)
+ *  - player_card:    GET  /miniapp/players/{id}            → 200 (opt-in with SEEDED_PLAYERS; update-mode card, T-5)
+ *  - player_edit:    PATCH /miniapp/players/{id}           → 200 (opt-in with SEEDED_PLAYERS; nationality + positions, T-5)
  *  - drive_check:    GET  /miniapp/drive-folder?url=…      → 200 (opt-in with DRIVE_FOLDER_ID; reads real Google Drive)
  *
  * Usage (see perf/k6/README.md):
@@ -25,7 +27,8 @@
  *   CREATE_PLAYERS       1 to include create_player. Since T-4c every new player's Drive folder is read from Google
  *                        Drive, so this only works against an API whose Drive reader accepts the generated folder ids
  *                        (a test double); against real Drive the made-up folders are refused with 422.
- *   PHOTO_PLAYERS        how many seeded players the photo scenarios use (0 = skip them). Their ids must follow
+ *   SEEDED_PLAYERS       how many seeded players the photo and update-mode scenarios use (0 = skip them; the older
+ *                        name PHOTO_PLAYERS still works). Their ids must follow
  *                        0199f000-0000-7000-8000-000000000001 … and they must belong to ANALYST_TELEGRAM_ID (see README).
  *   DRIVE_FOLDER_ID      a real, unlinked player folder in the Shared Drive (empty = skip drive_check). Every check
  *                        calls Google, so this scenario runs at a fixed, low rate (1/s smoke, 2/s load) to respect
@@ -42,7 +45,7 @@ const ANALYST_ID = Number(__ENV.ANALYST_TELEGRAM_ID || 0);
 const PROFILE = (__ENV.PROFILE || 'smoke').toLowerCase();
 const PEAK_RATE = Number(__ENV.PEAK_RATE || 50);
 const CREATE_PLAYERS = __ENV.CREATE_PLAYERS === '1';
-const PHOTO_PLAYERS = Number(__ENV.PHOTO_PLAYERS || 0);
+const PHOTO_PLAYERS = Number(__ENV.SEEDED_PLAYERS || __ENV.PHOTO_PLAYERS || 0);
 const DRIVE_FOLDER_ID = __ENV.DRIVE_FOLDER_ID || '';
 
 /** How many players get a photo in setup, so the read scenario always finds one. */
@@ -112,7 +115,14 @@ export const options = {
     ...(CREATE_PLAYERS ? { create_player: scenario('createPlayer', 2, 0.1) } : {}),
     forged: scenario('forged', 2, 0.2),
     not_member: scenario('notMember', 1, 0.1),
-    ...(PHOTO_PLAYERS > 0 ? { photo_upload: scenario('photoUpload', 1, 0.05), photo_read: scenario('photoRead', 3, 0.3) } : {}),
+    ...(PHOTO_PLAYERS > 0
+      ? {
+        photo_upload: scenario('photoUpload', 1, 0.05),
+        photo_read: scenario('photoRead', 3, 0.3),
+        player_card: scenario('playerCard', 5, 0.4),
+        player_edit: scenario('playerEdit', 2, 0.1),
+      }
+      : {}),
     ...(DRIVE_FOLDER_ID ? { drive_check: fixedRate('driveCheck', PROFILE === 'load' ? 2 : 1) } : {}),
   },
   thresholds: {
@@ -127,7 +137,15 @@ export const options = {
     'http_req_duration{scenario:forged}': ['p(95)<100'],
     'http_req_duration{scenario:not_member}': ['p(95)<150'],
     // The analyst waits for these after picking a photo or pasting a link, so seconds, not milliseconds.
-    ...(PHOTO_PLAYERS > 0 ? { 'http_req_duration{scenario:photo_upload}': ['p(95)<2000'], 'http_req_duration{scenario:photo_read}': ['p(95)<150'] } : {}),
+    ...(PHOTO_PLAYERS > 0
+      ? {
+        'http_req_duration{scenario:photo_upload}': ['p(95)<2000'],
+        'http_req_duration{scenario:photo_read}': ['p(95)<150'],
+        // The card reads the player, its owner and two folder queries; an edit reads, checks and saves one player.
+        'http_req_duration{scenario:player_card}': ['p(95)<150', 'p(99)<300'],
+        'http_req_duration{scenario:player_edit}': ['p(95)<300', 'p(99)<600'],
+      }
+      : {}),
     ...(DRIVE_FOLDER_ID ? { 'http_req_duration{scenario:drive_check}': ['p(95)<3000'] } : {}),
   },
   summaryTrendStats: ['avg', 'min', 'med', 'p(90)', 'p(95)', 'p(99)', 'max'],
@@ -300,4 +318,19 @@ export function photoRead() {
 export function driveCheck() {
   const response = http.get(`${BASE_URL}/miniapp/drive-folder?url=${encodeURIComponent(DRIVE_FOLDER_ID)}`, signed(initData(ANALYST_ID)));
   check(response, { 'drive check: 200': (r) => r.status === 200 });
+}
+
+/** player_card: update mode opens an existing player (T-5). */
+export function playerCard() {
+  const n = 1 + (exec.scenario.iterationInTest % PHOTO_PLAYERS);
+  const response = http.get(`${BASE_URL}/miniapp/players/${playerId(n)}`, signed(initData(ANALYST_ID)));
+  check(response, { 'player card: 200 editable': (r) => r.status === 200 && r.json().canEditDetails === true });
+}
+
+/** player_edit: the owner changes the nationality and positions of a waiting player (T-5). */
+export function playerEdit() {
+  const i = exec.scenario.iterationInTest;
+  const body = JSON.stringify({ nationalityCode: i % 2 === 0 ? 'IT' : 'IR', positions: i % 3 === 0 ? ['OH', 'OPP'] : ['MB'] });
+  const response = http.patch(`${BASE_URL}/miniapp/players/${playerId(1 + (i % PHOTO_PLAYERS))}`, body, signed(initData(ANALYST_ID)));
+  check(response, { 'player edit: 200': (r) => r.status === 200 });
 }

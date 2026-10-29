@@ -42,6 +42,7 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | D-10 | Countries lookup: the owner's 245-country list (ISO alpha-2 + XK, AC, TA) as the nationality catalogue, seeded into `countries` | Claude | Clean DB has all 245 countries; tests green |
 | D-11 | Pagination building blocks (decisions §2b): `PageRequest` / `CursorRequest` DTOs + validators (size 20 default, 100 max), `PagedResult<T>` / `CursorResult<T>`, paging in specifications with a stable order, Scalar schemas; every list endpoint uses them | Claude | Tests green; no list endpoint returns an unbounded collection |
 | D-12 | Fix the EF shadow-FK warning on the owned Volleybox profile (`VolleyboxProfile.PlayerId1`): explicit owner key on `players.id`, model test with warning 10625 as an error | Claude | No EF model warnings; tests green |
+| D-13 | Concurrent edits answer 500: map optimistic concurrency conflicts to 409 (`concurrency.conflict`); log expected 4xx at Information/Warning, not Error (found by K-8) | Claude | Tests green |
 
 ## EPIC 2 — Telegram bot & Mini App
 | Key | Task | Assignee | Done when |
@@ -149,3 +150,4 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | K-5 | Benchmark the admin console APIs (players list, viewer analytics) | Both | Report reviewed |
 | K-6 | Benchmark the Mini App API: sign-in, countries, Volleybox check, create player (`perf/k6/miniapp.js`) | Both | Report reviewed |
 | K-7 | Benchmark the Mini App photo upload/read and the live Drive folder check (same script, opt-in scenarios) | Both | Report reviewed |
+| K-8 | Benchmark the Mini App update mode: player card and details edit (same script, opt-in scenarios) | Both | Report reviewed |
