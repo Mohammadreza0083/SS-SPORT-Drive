@@ -151,7 +151,9 @@ dotnet ef migrations add <Name> --project src/SsSport.Drive.Infrastructure --out
 
 To chat with the bot on your machine, set `Telegram__Mode=Polling` (plus `Telegram__Proxy` where Telegram needs a VPN). The API then fetches updates itself, so no public URL is needed.
 
-After a deploy, `dotnet SsSport.Drive.Api.dll telegram-set-webhook` registers the bot's webhook (`Telegram__WebhookUrl`, `Telegram__WebhookSecret`). Where Telegram needs a VPN, set `Telegram__Proxy`.
+After a deploy, `dotnet SsSport.Drive.Api.dll telegram-set-webhook` registers the bot's webhook (`Telegram__WebhookUrl`, `Telegram__WebhookSecret`) and, when `Telegram__MiniAppUrl` is set, the "Open Drive" menu button. Where Telegram needs a VPN, set `Telegram__Proxy`.
+
+The Telegram Mini App lives at `/miniapp` in the web app. It signs in on every request with Telegram's signed `initData` (`Authorization: tma <initData>`, valid for 24 hours); only active analysts and admins get through. Telegram opens Mini Apps over HTTPS only, so trying it from the bot needs a public HTTPS URL.
 
 To apply migrations by hand, run `dotnet run --project src/SsSport.Drive.Api -- migrate` (reads `ConnectionStrings__DefaultConnection`). An integration test fails if the model changes without a migration.
 

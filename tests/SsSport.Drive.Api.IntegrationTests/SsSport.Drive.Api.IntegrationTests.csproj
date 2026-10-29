@@ -5,6 +5,10 @@
     <PackageReference Include="Testcontainers.PostgreSql" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Signs Mini App initData the way Telegram does (shared with the Infrastructure tests). -->
+    <Compile Include="..\SsSport.Drive.Infrastructure.IntegrationTests\Telegram\InitDataSigner.cs" Link="Telegram\InitDataSigner.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\..\src\SsSport.Drive.Api\SsSport.Drive.Api.csproj" />
   </ItemGroup>
 </Project>

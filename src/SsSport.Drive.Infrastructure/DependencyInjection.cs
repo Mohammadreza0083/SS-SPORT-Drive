@@ -53,6 +53,7 @@ public static class DependencyInjection
             .BindConfiguration(TelegramOptions.SectionName)
             .Validate(options => TelegramOptions.IsValidSecret(options.WebhookSecret), "Telegram__WebhookSecret must be 1-256 characters of A-Z, a-z, 0-9, _ or -.")
             .Validate(options => options.Proxy.Length == 0 || Uri.TryCreate(options.Proxy, UriKind.Absolute, out _), "Telegram__Proxy must be an absolute URL, e.g. http://127.0.0.1:10808.")
+            .Validate(options => TelegramOptions.IsValidMiniAppUrl(options.MiniAppUrl), "Telegram__MiniAppUrl must be empty or an absolute HTTPS URL.")
             .Validate(options => options.IsPolling || string.Equals(options.Mode, TelegramOptions.WebhookMode, StringComparison.OrdinalIgnoreCase), "Telegram__Mode must be Webhook or Polling.")
             .ValidateOnStart();
 

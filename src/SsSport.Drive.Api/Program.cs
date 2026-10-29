@@ -1,10 +1,12 @@
 using System.Text.Json.Serialization;
 using DotNetEnv;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using SsSport.Drive.Api;
 using SsSport.Drive.Api.Authentication;
 using SsSport.Drive.Api.Endpoints;
 using SsSport.Drive.Api.ErrorHandling;
+using SsSport.Drive.Api.MiniApp;
 using SsSport.Drive.Api.Telegram;
 using SsSport.Drive.Application;
 using SsSport.Drive.Application.Abstractions.Authentication;
@@ -24,6 +26,9 @@ builder.Services.AddInfrastructure();
 builder.Services.AddHostedService<TelegramPollingService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.Replace(ServiceDescriptor.Scoped<ICurrentUser, HttpContextCurrentUser>());
+// Mini App callers sign in per request with Telegram-signed initData (T-3). The admin and viewer sessions join later.
+builder.Services.AddAuthentication(TelegramMiniAppAuthenticationHandler.SchemeName)
+    .AddScheme<AuthenticationSchemeOptions, TelegramMiniAppAuthenticationHandler>(TelegramMiniAppAuthenticationHandler.SchemeName, configureOptions: null);
 builder.Services.AddWebCors();
 builder.Services.AddProblemDetails();
 // Enums are written by name ("Waiting", not 0), so responses and Scalar stay readable.
@@ -53,10 +58,12 @@ if (args is ["telegram-set-webhook"])
 // Unhandled exceptions become ProblemDetails: 400 validation, 401/403 access, 422 broken business rules, a generic 500 otherwise.
 app.UseExceptionHandler();
 app.UseCors(WebCors.PolicyName);
+app.UseAuthentication();
 
 app.MapApiDocumentation();
 app.MapHealthEndpoints();
 app.MapTelegramWebhook();
+app.MapMiniApp();
 
 await app.RunAsync();
 

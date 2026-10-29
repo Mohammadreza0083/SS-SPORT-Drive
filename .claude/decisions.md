@@ -238,7 +238,7 @@ Last updated: 2026-10-29
   - **First admin:** the configured owner (`Telegram__AdminUserId` + **`Telegram__AdminEmail`**) becomes the active admin on their first `/start`. Without the email they are told to set it.
   - **A button on an already-handled request** answers "already approved/declined by <name>", taken from the audit log. Other admins' copies are not edited eagerly.
   - **Approve as Admin needs an email.** Without one, the admin sees a pop-up: approve as Analyst, then add the email and promote in the console (A-8).
-  - **Not built yet:** *New player* and *My players* answer "Coming soon" until T-4/T-7. *Help* and `/help` work. The "Open Drive" menu button comes with the Mini App (T-3).
+  - **Not built yet:** *New player* and *My players* answer "Coming soon" until T-4/T-7. *Help* and `/help` work. The "Open Drive" menu button came with the Mini App (T-3, below).
   - **How it is built:**
     - The update command is a router.
     - State changes run as their own MediatR commands (`StartBotCommand`, `RequestBotAccessCommand`, `ReviewAccessRequestCommand`), so they are saved first.
@@ -247,6 +247,13 @@ Last updated: 2026-10-29
   - **What the command carries:** the update now carries the sender's profile (id, chat, username, name), the bot command name and our own button data. **Free text is still never carried or logged**, and neither are names.
   - **Bot copy** is English in `Application/Telegram/BotTexts.resx`, sent as plain text. `setMyCommands` registers `/start` and `/help` in the `telegram-set-webhook` step.
   - **Local development:** `Telegram__Mode=Polling` makes the API fetch updates with long polling through `Telegram__Proxy`. It removes a registered webhook first and feeds the same command. The VPS uses `Webhook` mode.
+- **Mini App auth (T-3, owner-approved 2026-10-29):**
+  - **Per request, nothing stored:** the Mini App sends `Telegram.WebApp.initData` as `Authorization: tma <initData>` with every call. The API's `TelegramMiniApp` scheme recomputes Telegram's HMAC-SHA256 signature under our bot token (`HMAC-SHA256("WebAppData", botToken)`), compares in constant time, and needs `auth_date` at most **24 hours** old (5 minutes of clock skew allowed).
+  - **401 vs 403:** missing, forged, tampered or stale initData → 401. A correctly signed Telegram user who is not an active team member (unknown, Pending, Declined, Removed) → 403. Only an active user gets the user-id and role claims, so the existing MediatR role checks do the rest.
+  - **`GET /miniapp/me`** returns the caller's profile (id, Telegram id, display name, username, role) read from our database, never from initData, and never the email.
+  - **The browser never calls the API across origins:** the web app's `/api/miniapp/me` route forwards only the Authorization header to `API_BASE_URL`.
+  - **Menu button:** `telegram-set-webhook` sets "Open Drive" to `Telegram__MiniAppUrl` (HTTPS only). Locally it stays unset, because Telegram cannot open a local URL.
+  - initData and its hash are never logged, only the rejection reason and the Telegram id.
 - .NET keys use `__` nesting (`Telegram__BotToken`, `Email__Resend__ApiKey`, `ConnectionStrings__DefaultConnection`), so they bind straight to configuration sections. This replaces the owner's flat sample names (`BREVO_API_KEY`, ...).
 - **Every environment-specific `appsettings.*.json` is git-ignored.** Only the secret-free base `appsettings.json` stays in git, because the build and Docker need it.
 - **Database: PostgreSQL**, as already decided, even though the owner's `.env` sample used SQL Server variables.

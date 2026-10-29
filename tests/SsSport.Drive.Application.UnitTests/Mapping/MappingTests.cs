@@ -1,6 +1,7 @@
 using SsSport.Drive.Application.Assets;
 using SsSport.Drive.Application.Audit;
 using SsSport.Drive.Application.DriveFolders;
+using SsSport.Drive.Application.MiniApp;
 using SsSport.Drive.Application.Players;
 using SsSport.Drive.Application.Users;
 using SsSport.Drive.Domain.Assets;
@@ -132,6 +133,35 @@ public sealed class MappingTests
         dto.Email.Should().Be("owner@ss-sport.co");
         dto.Role.Should().Be("Admin");
         dto.Status.Should().Be("Active");
+    }
+
+    /// <summary>The Mini App profile carries who the caller is and their role, never their email.</summary>
+    [Fact]
+    public void User_maps_to_mini_app_profile()
+    {
+        var user = User.CreateFirstAdmin(42, "Owner", EmailAddress.Create("owner@ss-sport.co"), _now);
+
+        var dto = user.ToMiniAppProfileDto();
+
+        dto.Id.Should().Be(user.Id);
+        dto.TelegramId.Should().Be(42);
+        dto.DisplayName.Should().Be("Owner");
+        dto.Username.Should().BeNull();
+        dto.Role.Should().Be("Admin");
+        typeof(MiniAppProfileDto).GetProperty("Email").Should().BeNull("the Mini App never needs the email");
+    }
+
+    /// <summary>The team-member identity used for sign-in carries the id, role and whether the user is active.</summary>
+    [Fact]
+    public void User_maps_to_team_member()
+    {
+        var pending = User.RequestAccess(43, "sara", "Sara", _now);
+
+        var dto = pending.ToTeamMemberDto();
+
+        dto.Id.Should().Be(pending.Id);
+        dto.Role.Should().Be("Analyst");
+        dto.IsActive.Should().BeFalse();
     }
 
     /// <summary>An audit entry maps as-is.</summary>

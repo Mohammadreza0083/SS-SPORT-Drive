@@ -35,6 +35,14 @@ public static class ApiDocumentation
                 Name = Telegram.TelegramWebhookEndpoints.SecretHeader,
                 Description = "The secret token registered with Telegram's setWebhook (Telegram__WebhookSecret). Used only by Telegram.",
             };
+            document.Components.SecuritySchemes[Authentication.TelegramMiniAppAuthenticationHandler.SchemeName] = new OpenApiSecurityScheme
+            {
+                Type = SecuritySchemeType.ApiKey,
+                In = ParameterLocation.Header,
+                Name = "Authorization",
+                Description = "Telegram Mini App sign-in: `tma <initData>`, where initData is `Telegram.WebApp.initData` exactly as Telegram " +
+                    "gave it (URL-encoded, with its hash). Valid for 24 hours after Telegram issued it.",
+            };
             return Task.CompletedTask;
         }));
 

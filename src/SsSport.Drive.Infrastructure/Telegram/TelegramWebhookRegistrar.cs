@@ -28,6 +28,31 @@ public static partial class TelegramWebhookRegistrar
         ],
     };
 
+    /// <summary>
+    /// Builds the <c>setChatMenuButton</c> request that makes the bot's menu button open the Mini App as "Open Drive".
+    /// </summary>
+    /// <param name="options">The Telegram settings.</param>
+    /// <returns>The request, or <see langword="null"/> when no Mini App URL is configured.</returns>
+    /// <exception cref="InvalidOperationException">The Mini App URL is not an absolute HTTPS URL.</exception>
+    public static SetChatMenuButtonRequest? BuildMenuButtonRequest(TelegramOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        if (string.IsNullOrEmpty(options.MiniAppUrl))
+        {
+            return null;
+        }
+
+        if (!TelegramOptions.IsValidMiniAppUrl(options.MiniAppUrl))
+        {
+            throw new InvalidOperationException("Telegram__MiniAppUrl must be an absolute HTTPS URL.");
+        }
+
+        return new SetChatMenuButtonRequest
+        {
+            MenuButton = new MenuButtonWebApp { Text = "Open Drive", WebApp = new WebAppInfo { Url = options.MiniAppUrl } },
+        };
+    }
+
     /// <summary>Builds the <c>setWebhook</c> request from the settings.</summary>
     /// <param name="options">The Telegram settings.</param>
     /// <returns>The request.</returns>
@@ -59,7 +84,10 @@ public static partial class TelegramWebhookRegistrar
         };
     }
 
-    /// <summary>Calls <c>setWebhook</c> with the configured URL, secret and update types, then <c>setMyCommands</c>.</summary>
+    /// <summary>
+    /// Calls <c>setWebhook</c> with the configured URL, secret and update types, then <c>setMyCommands</c>, then
+    /// <c>setChatMenuButton</c> when a Mini App URL is configured.
+    /// </summary>
     /// <param name="services">The root service provider of a host that called <c>AddInfrastructure</c>.</param>
     /// <param name="cancellationToken">Cancels the call.</param>
     /// <returns>A task that completes when Telegram has accepted the webhook.</returns>
@@ -73,6 +101,11 @@ public static partial class TelegramWebhookRegistrar
 
         await client.SendRequest(request, cancellationToken);
         await client.SendRequest(BuildCommandsRequest(), cancellationToken);
+        if (BuildMenuButtonRequest(options) is { } menuButton)
+        {
+            await client.SendRequest(menuButton, cancellationToken);
+        }
+
         LogRegistered(logger, new Uri(request.Url).Host, string.Join(",", AllowedUpdates));
     }
 

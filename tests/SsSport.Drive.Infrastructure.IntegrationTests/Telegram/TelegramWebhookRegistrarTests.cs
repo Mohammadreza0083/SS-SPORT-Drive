@@ -1,3 +1,5 @@
+using global::Telegram.Bot.Requests;
+using global::Telegram.Bot.Types;
 using global::Telegram.Bot.Types.Enums;
 using SsSport.Drive.Infrastructure.Telegram;
 
@@ -63,6 +65,37 @@ public sealed class TelegramWebhookRegistrarTests
     public void Secret_format_is_validated(string secret, bool valid)
     {
         TelegramOptions.IsValidSecret(secret).Should().Be(valid);
+    }
+
+    /// <summary>With a Mini App URL, the chat menu button opens the Mini App as "Open Drive".</summary>
+    [Fact]
+    public void Builds_the_mini_app_menu_button()
+    {
+        var request = TelegramWebhookRegistrar.BuildMenuButtonRequest(_options with { MiniAppUrl = "https://drive.ss-sport.co/miniapp" });
+
+        var button = request.Should().NotBeNull().And.Subject.As<SetChatMenuButtonRequest>().MenuButton.Should().BeOfType<MenuButtonWebApp>().Subject;
+        button.Text.Should().Be("Open Drive");
+        button.WebApp.Url.Should().Be("https://drive.ss-sport.co/miniapp");
+    }
+
+    /// <summary>Without a Mini App URL (local development) the menu button is left alone.</summary>
+    [Fact]
+    public void Skips_the_menu_button_without_a_mini_app_url()
+    {
+        TelegramWebhookRegistrar.BuildMenuButtonRequest(_options).Should().BeNull();
+    }
+
+    /// <summary>Telegram opens Mini Apps over HTTPS only.</summary>
+    /// <param name="url">The configured URL.</param>
+    /// <param name="valid">Whether it is allowed.</param>
+    [Theory]
+    [InlineData("", true)]
+    [InlineData("https://drive.ss-sport.co/miniapp", true)]
+    [InlineData("http://localhost:3000/miniapp", false)]
+    [InlineData("not a url", false)]
+    public void Mini_app_url_must_be_https(string url, bool valid)
+    {
+        TelegramOptions.IsValidMiniAppUrl(url).Should().Be(valid);
     }
 
     /// <summary>A secret longer than 256 characters is rejected.</summary>

@@ -50,6 +50,18 @@ public sealed partial record TelegramOptions
     /// </summary>
     public string Proxy { get; init; } = string.Empty;
 
+    /// <summary>
+    /// Gets the public HTTPS URL of the Mini App (<c>https://drive.ss-sport.co/miniapp</c>). The <c>telegram-set-webhook</c>
+    /// step sets it as the bot's "Open Drive" menu button. Empty (local development) leaves the menu button alone.
+    /// </summary>
+    public string MiniAppUrl { get; init; } = string.Empty;
+
+    /// <summary>Checks a Mini App URL: empty, or an absolute HTTPS URL (Telegram opens Mini Apps over HTTPS only).</summary>
+    /// <param name="url">The URL.</param>
+    /// <returns><see langword="true"/> when the URL can be used.</returns>
+    public static bool IsValidMiniAppUrl(string? url) =>
+        string.IsNullOrEmpty(url) || (Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps);
+
     /// <summary>Checks a webhook secret against Telegram's rule; empty is allowed (webhook disabled).</summary>
     /// <param name="secret">The secret.</param>
     /// <returns><see langword="true"/> when the secret can be used.</returns>
