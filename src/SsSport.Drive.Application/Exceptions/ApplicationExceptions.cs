@@ -24,6 +24,19 @@ public sealed class UnauthenticatedException : Exception
     }
 }
 
+/// <summary>An outside service the request needs (e.g. Google Drive) cannot be reached. The API returns 503 with <see cref="Code"/>.</summary>
+public sealed class ServiceUnavailableException : Exception
+{
+    /// <summary>Initializes the exception.</summary>
+    /// <param name="code">A stable code for clients, e.g. <c>drive.unavailable</c>.</param>
+    /// <param name="message">A short explanation.</param>
+    public ServiceUnavailableException(string code, string message)
+        : base(message) => Code = code;
+
+    /// <summary>Gets the stable code.</summary>
+    public string Code { get; }
+}
+
 /// <summary>The requested record does not exist (or has nothing to return yet). The API returns 404.</summary>
 public sealed class NotFoundException : Exception
 {

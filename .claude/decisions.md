@@ -259,7 +259,23 @@ Last updated: 2026-10-29
   - **A submitted player waits for an admin.** Even a complete form creates a `Waiting` player owned by the analyst (`AnalystId`), and only an admin publishes it (§5). The analyst cannot publish.
   - **Category (Men/Women) is a required choice at the top of the form** (the owner gave no preference, so Claude's proposal stands), because every player needs it.
   - **Duplicates:** a Volleybox id that already exists is refused with `player.volleybox_taken` and the live check says so (switching to Update mode is T-5). A Drive folder already linked to a player is refused with `drive_folder.taken`.
-  - **Until T-4c** the Drive link is only checked for its format, and the folder is stored with its Drive id as a provisional name. T-4c (and later sync) replaces it with the real name.
+  - **Until T-4c** the Drive link was only checked for its format, and the folder was stored with its Drive id as a provisional name. Since T-4c (below), the folder is read from Drive and linked under its real name.
+- **Live Drive folder check (T-4c, owner, 2026-10-29):**
+  - **Only folders in the agency's Shared Drive** (`GoogleDrive__SharedDriveId`) are accepted. Anything else is refused with `drive_folder.outside_shared_drive`.
+  - **If Drive cannot be reached, creation stops** with 503 `drive.unavailable`. This covers a network failure, a timeout, a Google error, bad credentials and missing settings. No player is ever created with an unchecked folder.
+  - **What is checked:**
+    - The service account reads the folder (read-only scope) and walks it breadth-first, at most 6 levels deep and 2000 files.
+    - Files are counted by kind with the ingest rules (`AssetFile`): videos, documents, scout files and others, plus the total size.
+    - The analyst sees `name · N videos · N documents · N scout files · size` before **Create player** turns on.
+  - **Other refusals:**
+    - `drive_folder.no_access`: Drive answers "not found" both for a missing folder and for one the service account cannot see.
+    - `drive_folder.not_a_folder`: the link opens a file.
+    - `drive_folder.taken`: the folder already belongs to a player.
+  - **Creating a player reads the folder again** and links it under its real Drive name, which replaces the T-4a placeholder id.
+  - **Google needs a VPN locally:** `GoogleDrive__Proxy` (e.g. `http://127.0.0.1:10808`) sends every Google call through it, token requests included. It stays empty on the VPS.
+  - **Tests:**
+    - The walking and counting logic is tested against a stand-in Drive API, and the API tests use a stand-in reader.
+    - A read-only live test against the real Shared Drive runs only when `SSD_LIVE_DRIVE_KEY_PATH` and `SSD_LIVE_SHARED_DRIVE_ID` are set (owner-approved). It ran green on 2026-10-29 through the VPN proxy. CI never runs it.
 - **Player photo upload (T-4b, owner, 2026-10-29):**
   - **When:** after the player is created. The confirmation screen offers **Add photo** (camera or gallery). My players (T-7) reuses the same step.
   - **Who:** the analyst who owns the player, and every admin, whether the player is Waiting or Published. Anyone else gets 403.

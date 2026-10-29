@@ -57,7 +57,7 @@ Every request signs in with Telegram-signed `initData` (`Authorization: tma <ini
 | `profile` | `GET /miniapp/me` | 200 | < 150 ms (p99 < 300 ms) |
 | `countries` | `GET /miniapp/countries` | 200, 245 countries | < 150 ms |
 | `volleybox` | `GET /miniapp/volleybox?url=…` (a new id each time) | 200 | < 150 ms |
-| `create_player` | `POST /miniapp/players` (a new name, Volleybox id and Drive folder each time) | 201 | < 400 ms (p99 < 800 ms) |
+| `create_player` (opt-in, `CREATE_PLAYERS=1`) | `POST /miniapp/players` (a new name, Volleybox id and Drive folder each time) | 201 | < 400 ms (p99 < 800 ms) |
 | `forged` | `GET /miniapp/me` signed for another bot | 401, no database work | < 100 ms |
 | `not_member` | `GET /miniapp/me` as a Telegram user outside the team | 403 | < 150 ms |
 
@@ -111,6 +111,7 @@ Every threshold passed with a wide margin, even at 4× the default peak. A handf
 
 ### Notes
 
+- **`create_player` is opt-in since T-4c.** Creating a player now reads its folder from Google Drive with the service account, and the script's made-up folder ids do not exist there, so against real Drive they are refused with 422. The results above were measured before T-4c, without that Drive call. Benchmark creation on staging with real folders (K-1), or with a test double for the Drive reader.
 - **It writes data.** Each `create_player` iteration adds a player and a Drive folder; a peak-200 `load` run adds about 4 000 of each. Run it on a throwaway database or on staging only, never on production.
 - **Each run gets its own Volleybox id window** of 100 000 ids, chosen by the start minute. Two runs started in the same minute share a window, and `create_player` would then hit `player.volleybox_taken`. Wait a minute between runs.
 - **The bot token never leaves the machine:** k6 only uses it to sign. It is not logged, and the API logs only rejection reasons.

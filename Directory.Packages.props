@@ -39,6 +39,8 @@
     <!-- Player photos (T-4b): Magick.NET (Apache-2.0) reads HEIC/JPEG/PNG/WebP and writes WebP; S3 client for RustFS / R2. -->
     <PackageVersion Include="Magick.NET-Q8-AnyCPU" Version="14.17.2" />
     <PackageVersion Include="AWSSDK.S3" Version="4.0.104.4" />
+    <!-- Live Drive folder check (T-4c): the Google Drive API with the service account, read-only. -->
+    <PackageVersion Include="Google.Apis.Drive.v3" Version="1.77.0.4276" />
   </ItemGroup>
 
   <ItemGroup Label="Testing">

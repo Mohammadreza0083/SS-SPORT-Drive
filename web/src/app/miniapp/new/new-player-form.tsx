@@ -3,12 +3,15 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   POSITIONS,
+  checkDriveFolder,
   checkVolleybox,
   createPlayer,
   fetchCountries,
+  formatBytes,
   isDriveFolderLink,
   togglePosition,
   type Country,
+  type DriveFolderCheck,
   type NewPlayerForm as NewPlayerFormValues,
   type PositionCode,
   type VolleyboxCheck,
@@ -56,8 +59,9 @@ function loadDraft(): Draft {
 }
 
 /**
- * The new-player form (T-4a): category, name, nationality, positions, Volleybox link (checked live) and Drive folder
- * link. **Create player** stays disabled until every field is valid. The draft is saved as the analyst types.
+ * The new-player form (T-4a, T-4c): category, name, nationality, positions, Volleybox link and Drive folder link, both
+ * checked live (the folder with the service account). **Create player** stays disabled until every check is green.
+ * The draft is saved as the analyst types.
  *
  * @param props - `initData`: the signed initData every API call carries.
  * @returns The form, or the confirmation once the player is saved.
@@ -67,6 +71,7 @@ export function NewPlayerForm({ initData }: { initData: string }) {
   const [countries, setCountries] = useState<Country[]>([]);
   const [countryQuery, setCountryQuery] = useState("");
   const [volleybox, setVolleybox] = useState<VolleyboxCheck>({ kind: "empty" });
+  const [driveFolder, setDriveFolder] = useState<DriveFolderCheck | { kind: "checking" }>({ kind: "empty" });
   const [submit, setSubmit] = useState<SubmitState>({ kind: "idle" });
 
   useEffect(() => {
@@ -95,6 +100,24 @@ export function NewPlayerForm({ initData }: { initData: string }) {
     };
   }, [restoredVolleybox, initData]);
 
+  // The same for a restored Drive link: access or the folder itself may have changed.
+  const [restoredDriveFolder] = useState(draft.driveFolderUrl);
+  useEffect(() => {
+    if (!isDriveFolderLink(restoredDriveFolder)) {
+      return;
+    }
+
+    let cancelled = false;
+    void checkDriveFolder(restoredDriveFolder, initData).then((result) => {
+      if (!cancelled) {
+        setDriveFolder(result);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [restoredDriveFolder, initData]);
+
   useEffect(() => {
     try {
       window.localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
@@ -117,7 +140,7 @@ export function NewPlayerForm({ initData }: { initData: string }) {
     draft.nationalityCode !== "" &&
     draft.positions.length > 0 &&
     volleybox.kind === "new" &&
-    driveValid &&
+    driveFolder.kind === "found" &&
     submit.kind !== "sending";
 
   /**
@@ -133,6 +156,16 @@ export function NewPlayerForm({ initData }: { initData: string }) {
   /** Checks the Volleybox link once the analyst leaves the field. */
   async function onVolleyboxBlur() {
     setVolleybox(await checkVolleybox(draft.volleyboxUrl, initData));
+  }
+
+  /** Checks the Drive folder with the service account once the analyst leaves the field (a well-formed link only). */
+  async function onDriveBlur() {
+    if (!isDriveFolderLink(draft.driveFolderUrl)) {
+      return;
+    }
+
+    setDriveFolder({ kind: "checking" });
+    setDriveFolder(await checkDriveFolder(draft.driveFolderUrl, initData));
   }
 
   /** Sends the form. */
@@ -247,8 +280,31 @@ export function NewPlayerForm({ initData }: { initData: string }) {
       {volleybox.kind === "invalid" && <p role="alert">{ruleMessages[volleybox.code ?? ""] ?? ruleMessages["player.volleybox_url_invalid"]}</p>}
 
       <label htmlFor="player-drive">{copy.drive}</label>
-      <input id="player-drive" inputMode="url" value={draft.driveFolderUrl} onChange={(event) => update({ driveFolderUrl: event.target.value })} />
+      <input
+        id="player-drive"
+        inputMode="url"
+        value={draft.driveFolderUrl}
+        onChange={(event) => {
+          update({ driveFolderUrl: event.target.value });
+          setDriveFolder({ kind: "empty" });
+        }}
+        onBlur={() => void onDriveBlur()}
+      />
       {draft.driveFolderUrl.trim() !== "" && !driveValid && <p role="alert">{ruleMessages["drive_folder.link_invalid"]}</p>}
+      {driveFolder.kind === "checking" && <p role="status">{copy.driveChecking}</p>}
+      {driveFolder.kind === "found" && (
+        <p role="status">
+          {copy.driveFound(
+            driveFolder.preview.name,
+            driveFolder.preview.videoCount,
+            driveFolder.preview.documentCount,
+            driveFolder.preview.scoutCount,
+            formatBytes(driveFolder.preview.totalBytes),
+            driveFolder.preview.isTruncated,
+          )}
+        </p>
+      )}
+      {driveFolder.kind === "invalid" && <p role="alert">{ruleMessages[driveFolder.code ?? ""] ?? ruleMessages["drive.unavailable"]}</p>}
 
       <p>{copy.photoLater}</p>
       {submit.kind === "rejected" && <p role="alert">{ruleMessages[submit.code ?? ""] ?? copy.rejected}</p>}

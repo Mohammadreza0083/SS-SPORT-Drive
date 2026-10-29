@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  checkDriveFolder,
   checkVolleybox,
   createPlayer,
   fetchCountries,
@@ -10,6 +11,7 @@ import {
   togglePosition,
   uploadPhoto,
   fetchPhotoUrl,
+  formatBytes,
   type NewPlayerForm,
 } from "./miniapp";
 
@@ -112,6 +114,55 @@ describe("checkVolleybox", () => {
 
     expect(await checkVolleybox("  ", "x", fetchMock)).toEqual({ kind: "empty" });
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("checkDriveFolder", () => {
+  const preview = {
+    folderId: "1AbC-dEf_GhIjKlMnOp",
+    name: "SS-SPORT Arash Tehrani",
+    videoCount: 14,
+    documentCount: 3,
+    scoutCount: 2,
+    otherCount: 0,
+    totalBytes: 4831838208,
+    isTruncated: false,
+  };
+
+  it("returns the folder preview", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(Response.json(preview));
+
+    expect(await checkDriveFolder(" https://drive.google.com/drive/folders/1AbC-dEf_GhIjKlMnOp ", "user=1&hash=ab", fetchMock)).toEqual({ kind: "found", preview });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/miniapp/drive-folder?url=https%3A%2F%2Fdrive.google.com%2Fdrive%2Ffolders%2F1AbC-dEf_GhIjKlMnOp",
+      tma,
+    );
+  });
+
+  it("passes on why the folder cannot be used, including Drive being down", async () => {
+    expect(await checkDriveFolder("x", "x", vi.fn().mockResolvedValue(problem(422, { code: "drive_folder.no_access" })))).toEqual({
+      kind: "invalid",
+      code: "drive_folder.no_access",
+    });
+    expect(await checkDriveFolder("x", "x", vi.fn().mockResolvedValue(problem(503, { code: "drive.unavailable" })))).toEqual({
+      kind: "invalid",
+      code: "drive.unavailable",
+    });
+  });
+
+  it("does not call the API for an empty link", async () => {
+    const fetchMock = vi.fn();
+
+    expect(await checkDriveFolder("", "x", fetchMock)).toEqual({ kind: "empty" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("formatBytes", () => {
+  it("shows sizes in the largest whole unit", () => {
+    expect(formatBytes(512)).toBe("512 B");
+    expect(formatBytes(1536)).toBe("1.5 KB");
+    expect(formatBytes(4831838208)).toBe("4.5 GB");
   });
 });
 

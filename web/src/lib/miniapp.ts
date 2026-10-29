@@ -185,6 +185,62 @@ export async function createPlayer(form: NewPlayerForm, initData: string, fetchI
   }
 }
 
+/** What the live Drive check says about a pasted folder. */
+export interface DriveFolderPreview {
+  folderId: string;
+  name: string;
+  videoCount: number;
+  documentCount: number;
+  scoutCount: number;
+  otherCount: number;
+  totalBytes: number;
+  isTruncated: boolean;
+}
+
+/** The outcome of checking a Drive folder link. */
+export type DriveFolderCheck = { kind: "empty" } | { kind: "found"; preview: DriveFolderPreview } | { kind: "invalid"; code: string | null };
+
+/**
+ * Checks a pasted Drive folder link live: the API reads the folder with the service account (T-4c).
+ *
+ * @param url - The pasted link or folder id.
+ * @param initData - The raw initData from Telegram.
+ * @param fetchImpl - The fetch to use (tests pass a stub).
+ * @returns The folder preview, or the code of why it cannot be used (`drive.unavailable` when Drive is down).
+ */
+export async function checkDriveFolder(url: string, initData: string, fetchImpl: typeof fetch = fetch): Promise<DriveFolderCheck> {
+  const link = url.trim();
+  if (!link) {
+    return { kind: "empty" };
+  }
+
+  try {
+    const response = await fetchImpl(`/api/miniapp/drive-folder?url=${encodeURIComponent(link)}`, signedRequest(initData));
+    return response.ok ? { kind: "found", preview: (await response.json()) as DriveFolderPreview } : { kind: "invalid", code: await problemCode(response) };
+  } catch {
+    return { kind: "invalid", code: null };
+  }
+}
+
+/**
+ * Shows a size in the largest whole unit, with one decimal below 10 (`4.5 GB`, `512 B`).
+ *
+ * @param bytes - The size in bytes.
+ * @returns The size as text.
+ */
+export function formatBytes(bytes: number): string {
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+
+  const shown = unit === 0 || value >= 10 ? Math.round(value).toString() : (Math.round(value * 10) / 10).toString();
+  return `${shown} ${units[unit]}`;
+}
+
 /** The largest photo the API accepts: 15 MB. */
 export const MAX_PHOTO_BYTES = 15 * 1024 * 1024;
 

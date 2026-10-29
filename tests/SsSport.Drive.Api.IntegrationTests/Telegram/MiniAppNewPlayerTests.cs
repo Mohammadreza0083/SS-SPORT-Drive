@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
+using SsSport.Drive.Application.Abstractions.Drive;
 using SsSport.Drive.Application.Abstractions.Persistence;
 using SsSport.Drive.Application.Telegram;
 using SsSport.Drive.Domain.Users;
@@ -35,6 +36,9 @@ public sealed class MiniAppNewPlayerTests : IAsyncLifetime
     /// <summary>The throwaway database.</summary>
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:17-alpine").Build();
 
+    /// <summary>Stands in for Google Drive.</summary>
+    private readonly FakeDriveFolderReader _drive = new();
+
     /// <summary>The API under test.</summary>
     private WebApplicationFactory<Program> _api = null!;
 
@@ -54,7 +58,11 @@ public sealed class MiniAppNewPlayerTests : IAsyncLifetime
                 ["Telegram:BotToken"] = BotToken,
                 ["Telegram:Mode"] = "Webhook",
             }));
-            builder.ConfigureTestServices(services => services.Replace(ServiceDescriptor.Singleton<ITelegramMessenger>(new RecordingMessenger())));
+            builder.ConfigureTestServices(services =>
+            {
+                services.Replace(ServiceDescriptor.Singleton<ITelegramMessenger>(new RecordingMessenger()));
+                services.Replace(ServiceDescriptor.Singleton<IDriveFolderReader>(_drive));
+            });
         });
         await DatabaseMigrator.MigrateAsync(_api.Services, TestContext.Current.CancellationToken);
 
@@ -93,6 +101,7 @@ public sealed class MiniAppNewPlayerTests : IAsyncLifetime
     [Theory]
     [InlineData("GET", "/miniapp/countries")]
     [InlineData("GET", "/miniapp/volleybox?url=volleybox.net/a-p1")]
+    [InlineData("GET", "/miniapp/drive-folder?url=1AbC-dEf_GhIjKlMnOp")]
     [InlineData("POST", "/miniapp/players")]
     public async Task Form_endpoints_need_sign_in(string method, string path)
     {
@@ -172,6 +181,7 @@ public sealed class MiniAppNewPlayerTests : IAsyncLifetime
 
         (await ScalarAsync<Guid>("SELECT analyst_id FROM players WHERE id = @id", id)).Should().Be(_analystId);
         (await ScalarAsync<string>("SELECT drive_folder_id FROM drive_folders WHERE player_id = @id", id)).Should().Be(FolderId);
+        (await ScalarAsync<string>("SELECT name FROM drive_folders WHERE player_id = @id", id)).Should().Be($"SS-SPORT {FolderId}", "the real folder name is read from Drive");
     }
 
     /// <summary>Two players with the same name get distinct slugs.</summary>
@@ -263,6 +273,73 @@ public sealed class MiniAppNewPlayerTests : IAsyncLifetime
         body.RootElement.GetProperty("errors").TryGetProperty("positions", out _).Should().BeTrue();
     }
 
+    /// <summary>The live Drive check shows the folder's name and what is in it.</summary>
+    [Fact]
+    public async Task Drive_check_previews_the_folder()
+    {
+        using var response = await SendAsync(HttpMethod.Get, "/miniapp/drive-folder?url=" + Uri.EscapeDataString("https://drive.google.com/drive/folders/" + FolderId));
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var body = await ReadJsonAsync(response);
+        var root = body.RootElement;
+        root.GetProperty("folderId").GetString().Should().Be(FolderId);
+        root.GetProperty("name").GetString().Should().Be($"SS-SPORT {FolderId}");
+        root.GetProperty("videoCount").GetInt32().Should().Be(12);
+        root.GetProperty("documentCount").GetInt32().Should().Be(3);
+        root.GetProperty("scoutCount").GetInt32().Should().Be(1);
+        root.GetProperty("totalBytes").GetInt64().Should().Be(4_500_000_000);
+        root.GetProperty("isTruncated").GetBoolean().Should().BeFalse();
+    }
+
+    /// <summary>Folders Drive will not give us are refused with a code that says why.</summary>
+    /// <param name="status">What Drive answers.</param>
+    /// <param name="code">The expected code.</param>
+    [Theory]
+    [InlineData(DriveFolderStatus.NotFound, "drive_folder.no_access")]
+    [InlineData(DriveFolderStatus.OutsideSharedDrive, "drive_folder.outside_shared_drive")]
+    [InlineData(DriveFolderStatus.NotAFolder, "drive_folder.not_a_folder")]
+    public async Task Drive_check_refuses_unusable_folders(DriveFolderStatus status, string code)
+    {
+        _drive.Set(FolderId, status);
+
+        using var check = await SendAsync(HttpMethod.Get, "/miniapp/drive-folder?url=" + FolderId);
+        using var create = await SendAsync(HttpMethod.Post, "/miniapp/players", NewPlayer());
+
+        await AssertCodeAsync(check, code);
+        await AssertCodeAsync(create, code);
+        (await ScalarAsync<long>("SELECT count(*) FROM players WHERE slug = @slug", "arash-tehrani")).Should().Be(0, "nothing is saved when Drive refuses the folder");
+    }
+
+    /// <summary>A folder that already belongs to a player is reported by the live check too.</summary>
+    [Fact]
+    public async Task Drive_check_reports_a_taken_folder()
+    {
+        using var first = await SendAsync(HttpMethod.Post, "/miniapp/players", NewPlayer());
+
+        using var check = await SendAsync(HttpMethod.Get, "/miniapp/drive-folder?url=" + FolderId);
+
+        await AssertCodeAsync(check, "drive_folder.taken");
+    }
+
+    /// <summary>When Drive cannot be reached, the check and the creation both stop with 503 (owner, 2026-10-29).</summary>
+    [Fact]
+    public async Task Unreachable_drive_stops_creation()
+    {
+        _drive.Unavailable = true;
+
+        using var check = await SendAsync(HttpMethod.Get, "/miniapp/drive-folder?url=" + FolderId);
+        using var create = await SendAsync(HttpMethod.Post, "/miniapp/players", NewPlayer());
+
+        foreach (var response in new[] { check, create })
+        {
+            response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+            using var body = await ReadJsonAsync(response);
+            body.RootElement.GetProperty("code").GetString().Should().Be("drive.unavailable");
+        }
+
+        (await ScalarAsync<long>("SELECT count(*) FROM players WHERE slug = @slug", "arash-tehrani")).Should().Be(0);
+    }
+
     /// <summary>The three endpoints are documented under "Mini App" with the initData security scheme.</summary>
     [Fact]
     public async Task Endpoints_are_documented()
@@ -271,7 +348,7 @@ public sealed class MiniAppNewPlayerTests : IAsyncLifetime
         using var document = JsonDocument.Parse(await client.GetStringAsync(new Uri("/openapi/v1.json", UriKind.Relative), TestContext.Current.CancellationToken));
         var paths = document.RootElement.GetProperty("paths");
 
-        foreach (var (path, method, success) in new[] { ("/miniapp/countries", "get", "200"), ("/miniapp/volleybox", "get", "200"), ("/miniapp/players", "post", "201") })
+        foreach (var (path, method, success) in new[] { ("/miniapp/countries", "get", "200"), ("/miniapp/volleybox", "get", "200"), ("/miniapp/drive-folder", "get", "200"), ("/miniapp/players", "post", "201") })
         {
             var operation = paths.GetProperty(path).GetProperty(method);
             operation.GetProperty("summary").GetString().Should().NotBeNullOrWhiteSpace();
@@ -288,6 +365,8 @@ public sealed class MiniAppNewPlayerTests : IAsyncLifetime
         create.GetProperty("requestBody").GetProperty("content").GetProperty("application/json").TryGetProperty("example", out _).Should().BeTrue();
         create.GetProperty("responses").TryGetProperty("400", out _).Should().BeTrue();
         create.GetProperty("responses").TryGetProperty("422", out _).Should().BeTrue();
+        create.GetProperty("responses").TryGetProperty("503", out _).Should().BeTrue();
+        paths.GetProperty("/miniapp/drive-folder").GetProperty("get").GetProperty("responses").TryGetProperty("503", out _).Should().BeTrue();
     }
 
     /// <summary>Builds a valid form, with the parts the tests vary.</summary>
