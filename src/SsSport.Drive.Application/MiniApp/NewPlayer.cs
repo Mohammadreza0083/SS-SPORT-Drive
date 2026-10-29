@@ -78,20 +78,60 @@ public static partial class CountryMapper
     public static partial CountryDto ToDto(this Country country);
 }
 
-/// <summary>The player with a Volleybox id, read untracked.</summary>
+/// <summary>The player with a Volleybox id, read untracked; optionally leaving one player out (the one being edited).</summary>
 public sealed class PlayerByVolleyboxIdSpec : Specification<Player>, ISingleResultSpecification<Player>
 {
     /// <summary>Initializes the specification.</summary>
     /// <param name="volleyboxId">The Volleybox player id.</param>
-    public PlayerByVolleyboxIdSpec(int volleyboxId) => Query.Where(player => player.Volleybox!.PlayerId == volleyboxId).AsNoTracking();
+    /// <param name="exceptPlayerId">A player to leave out, or <see langword="null"/>.</param>
+    public PlayerByVolleyboxIdSpec(int volleyboxId, Guid? exceptPlayerId = null) =>
+        Query.Where(player => player.Volleybox!.PlayerId == volleyboxId && player.Id != exceptPlayerId).AsNoTracking();
 }
 
-/// <summary>Players using a slug.</summary>
+/// <summary>Players using a slug, optionally leaving one player out (the one being renamed).</summary>
 public sealed class PlayerBySlugSpec : Specification<Player>
 {
     /// <summary>Initializes the specification.</summary>
     /// <param name="slug">The slug.</param>
-    public PlayerBySlugSpec(Slug slug) => Query.Where(player => player.Slug == slug);
+    /// <param name="exceptPlayerId">A player to leave out, or <see langword="null"/>.</param>
+    public PlayerBySlugSpec(Slug slug, Guid? exceptPlayerId = null) => Query.Where(player => player.Slug == slug && player.Id != exceptPlayerId);
+}
+
+/// <summary>The uniqueness rules for players shared by creating (T-4a) and editing (T-5) a player.</summary>
+internal static class PlayerUniqueness
+{
+    /// <summary>Refuses a Volleybox id that another player already has.</summary>
+    /// <param name="players">The players.</param>
+    /// <param name="volleybox">The profile.</param>
+    /// <param name="exceptPlayerId">The player being edited, or <see langword="null"/> when creating.</param>
+    /// <param name="cancellationToken">Cancels the query.</param>
+    /// <returns>A task that completes when the id is free.</returns>
+    /// <exception cref="DomainException"><c>player.volleybox_taken</c>.</exception>
+    public static async Task EnsureVolleyboxFreeAsync(IRepository<Player, Guid> players, VolleyboxProfile volleybox, Guid? exceptPlayerId, CancellationToken cancellationToken)
+    {
+        if (await players.AnyAsync(new PlayerByVolleyboxIdSpec(volleybox.PlayerId, exceptPlayerId), cancellationToken))
+        {
+            throw new DomainException("player.volleybox_taken", "A player with this Volleybox page already exists.");
+        }
+    }
+
+    /// <summary>Finds the first free slug for a name: its slug, then <c>-2</c>, <c>-3</c>…</summary>
+    /// <param name="players">The players.</param>
+    /// <param name="name">The name.</param>
+    /// <param name="exceptPlayerId">The player being renamed, or <see langword="null"/> when creating.</param>
+    /// <param name="cancellationToken">Cancels the queries.</param>
+    /// <returns>A slug no other player uses.</returns>
+    public static async Task<Slug> FreeSlugAsync(IRepository<Player, Guid> players, FullName name, Guid? exceptPlayerId, CancellationToken cancellationToken)
+    {
+        var slug = Slug.FromName(name);
+        var candidate = slug;
+        for (var number = 2; await players.AnyAsync(new PlayerBySlugSpec(candidate, exceptPlayerId), cancellationToken); number++)
+        {
+            candidate = slug.WithSuffix(number);
+        }
+
+        return candidate;
+    }
 }
 
 /// <summary>The linked folder with a Drive folder id.</summary>
@@ -235,17 +275,14 @@ public sealed class CreatePlayerCommandHandler(
         var volleybox = VolleyboxProfile.Create(request.VolleyboxUrl);
         var folderLink = DriveFolderLink.Create(request.DriveFolderUrl);
 
-        if (await players.AnyAsync(new PlayerByVolleyboxIdSpec(volleybox.PlayerId), cancellationToken))
-        {
-            throw new DomainException("player.volleybox_taken", "A player with this Volleybox page already exists.");
-        }
+        await PlayerUniqueness.EnsureVolleyboxFreeAsync(players, volleybox, null, cancellationToken);
 
         await DriveFolderChecks.EnsureFreeAsync(folders, folderLink.FolderId, cancellationToken);
         var folder = await DriveFolderChecks.ReadUsableAsync(drive, folderLink.FolderId, cancellationToken);
 
         var now = timeProvider.GetUtcNow();
         var player = Player.Create(Enum.Parse<PlayerCategory>(request.Category!, ignoreCase: true), now);
-        player.Rename(name, await FreeSlugAsync(Slug.FromName(name), cancellationToken));
+        player.Rename(name, await PlayerUniqueness.FreeSlugAsync(players, name, null, cancellationToken));
         player.ChangeNationality(nationality);
         player.ChangePositions(positions);
         player.LinkVolleybox(volleybox);
@@ -254,21 +291,6 @@ public sealed class CreatePlayerCommandHandler(
 
         folders.Add(DriveFolder.Link(player.Id, folderLink.FolderId, folder.Name!, now));
         return player.ToDetailsDto();
-    }
-
-    /// <summary>Finds the first free slug: the name's slug, then <c>-2</c>, <c>-3</c>…</summary>
-    /// <param name="slug">The name's slug.</param>
-    /// <param name="cancellationToken">Cancels the queries.</param>
-    /// <returns>A slug no player uses.</returns>
-    private async Task<Slug> FreeSlugAsync(Slug slug, CancellationToken cancellationToken)
-    {
-        var candidate = slug;
-        for (var number = 2; await players.AnyAsync(new PlayerBySlugSpec(candidate), cancellationToken); number++)
-        {
-            candidate = slug.WithSuffix(number);
-        }
-
-        return candidate;
     }
 }
 
@@ -298,6 +320,20 @@ public sealed record DriveFolderCheckDto
 
     /// <summary>Gets a value indicating whether counting stopped at the limit, so the counts are a lower bound.</summary>
     public bool IsTruncated { get; init; }
+
+    /// <summary>Gets the player the folder already belongs to, or <see langword="null"/> for a free folder (T-5).</summary>
+    public Guid? ExistingPlayerId { get; init; }
+
+    /// <summary>Gets that player name, or <see langword="null"/>.</summary>
+    public string? ExistingPlayerName { get; init; }
+}
+
+/// <summary>The linked folder with a Drive folder id, read untracked.</summary>
+public sealed class LinkedDriveFolderSpec : Specification<DriveFolder>, ISingleResultSpecification<DriveFolder>
+{
+    /// <summary>Initializes the specification.</summary>
+    /// <param name="driveFolderId">The Google Drive folder id.</param>
+    public LinkedDriveFolderSpec(string driveFolderId) => Query.Where(folder => folder.DriveFolderId == driveFolderId).AsNoTracking();
 }
 
 /// <summary>The Drive folder rules shared by the live check and player creation (T-4a, T-4c).</summary>
@@ -349,20 +385,28 @@ public sealed record CheckDriveFolderQuery(string? Url) : IQuery<DriveFolderChec
 
 /// <summary>Handles <see cref="CheckDriveFolderQuery"/>.</summary>
 /// <param name="folders">The linked folders.</param>
+/// <param name="players">The players, to name the one a linked folder belongs to.</param>
 /// <param name="drive">Reads the folder with the service account.</param>
-public sealed class CheckDriveFolderQueryHandler(IRepository<DriveFolder, Guid> folders, IDriveFolderReader drive)
+public sealed class CheckDriveFolderQueryHandler(IRepository<DriveFolder, Guid> folders, IRepository<Player, Guid> players, IDriveFolderReader drive)
     : IQueryHandler<CheckDriveFolderQuery, DriveFolderCheckDto>
 {
-    /// <summary>Parses the link, checks the folder is free, and reads it from Drive.</summary>
+    /// <summary>
+    /// Parses the link; names the player a linked folder already belongs to (T-5), otherwise reads the folder from Drive.
+    /// </summary>
     /// <param name="request">The query.</param>
     /// <param name="cancellationToken">Cancels the work.</param>
-    /// <returns>The folder name and what is in it.</returns>
+    /// <returns>The folder name and what is in it, or the player who already has it.</returns>
     /// <exception cref="DomainException">The link or the folder cannot be used.</exception>
     /// <exception cref="ServiceUnavailableException">Google Drive cannot be reached.</exception>
     public async Task<DriveFolderCheckDto> Handle(CheckDriveFolderQuery request, CancellationToken cancellationToken)
     {
         var link = DriveFolderLink.Create(request.Url);
-        await DriveFolderChecks.EnsureFreeAsync(folders, link.FolderId, cancellationToken);
+        if (await folders.FirstOrDefaultAsync(new LinkedDriveFolderSpec(link.FolderId), cancellationToken) is { } linked)
+        {
+            var owner = await players.FirstOrDefaultAsync(new PlayerByIdReadOnlySpec(linked.PlayerId), cancellationToken);
+            return new DriveFolderCheckDto { FolderId = link.FolderId, Name = linked.Name, ExistingPlayerId = linked.PlayerId, ExistingPlayerName = owner?.Name?.Value };
+        }
+
         var summary = await DriveFolderChecks.ReadUsableAsync(drive, link.FolderId, cancellationToken);
         return new DriveFolderCheckDto
         {

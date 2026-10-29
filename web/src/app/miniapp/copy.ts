@@ -47,6 +47,31 @@ export const newPlayerCopy = {
   rejected: "The player could not be saved. Check the fields and try again.",
 } as const;
 
+/** UI copy of update mode (T-5). */
+export const updateCopy = {
+  title: "Update player",
+  loading: "Loading the player…",
+  notFound: "This player could not be loaded.",
+  owner: (name: string | null) => (name ? `Analyst: ${name}` : "Archive player, no analyst yet"),
+  folders: (count: number) => `${count} Drive folder${count === 1 ? "" : "s"}`,
+  addFolderTab: "Add this folder",
+  detailsTab: "Update photo & details",
+  openTab: "Just open the existing page",
+  addFolder: "Add folder",
+  adding: "Adding…",
+  folderAdded: (name: string) => `Folder added: ${name}. New videos appear once they are processed.`,
+  save: "Save changes",
+  saving: "Saving…",
+  saved: "Changes saved.",
+  nothingChanged: "Nothing has changed yet.",
+  onlyOwner: (owner: string | null) => `Only ${owner ?? "the player's analyst"} or an admin can change the details.`,
+  onlyAdminAfterPublish: "The player is published, so only an admin can change the details.",
+  pageLater: "The player page opens here once the viewer site is live. Until then, this card shows what the player has.",
+  takenFolder: (name: string) => `This folder already belongs to ${name}.`,
+  openPlayer: (name: string) => `Open ${name}`,
+  back: "Back to the new-player form",
+} as const;
+
 /** UI copy of the photo step (T-4b). */
 export const photoCopy = {
   label: "Player photo",

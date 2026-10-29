@@ -49,6 +49,7 @@ How it works:
 /help: show this message
 
 Questions? info@ss-sport.co</value></data>
+  <data name="FolderAddedByOther" xml:space="preserve"><value>📁 {1} added a Drive folder to {0}: {2}</value></data>
   <data name="ComingSoon" xml:space="preserve"><value>Coming soon.</value></data>
   <data name="FirstAdminNeedsEmail" xml:space="preserve"><value>You are the configured admin, but Telegram__AdminEmail is not set. Add it to the settings to finish the first-admin setup.</value></data>
 </root>

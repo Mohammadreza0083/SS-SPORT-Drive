@@ -98,6 +98,11 @@ public static class BotTexts
     /// <returns>The text.</returns>
     public static string FormatAdminNeedsEmail(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("AdminNeedsEmail"), args);
 
+    /// <summary>Formats the "FolderAddedByOther" text: {0} the player, {1} who added it, {2} the folder name.</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatFolderAddedByOther(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("FolderAddedByOther"), args);
+
     /// <summary>Formats the "WelcomeApproved" text.</summary>
     /// <param name="args">The values for its placeholders.</param>
     /// <returns>The text.</returns>

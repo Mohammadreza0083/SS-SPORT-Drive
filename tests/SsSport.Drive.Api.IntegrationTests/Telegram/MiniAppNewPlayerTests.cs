@@ -310,15 +310,20 @@ public sealed class MiniAppNewPlayerTests : IAsyncLifetime
         (await ScalarAsync<long>("SELECT count(*) FROM players WHERE slug = @slug", "arash-tehrani")).Should().Be(0, "nothing is saved when Drive refuses the folder");
     }
 
-    /// <summary>A folder that already belongs to a player is reported by the live check too.</summary>
+    /// <summary>A folder that already belongs to a player is named by the live check (T-5) and refused on creation.</summary>
     [Fact]
-    public async Task Drive_check_reports_a_taken_folder()
+    public async Task Taken_folder_is_named_by_the_check_and_refused_on_create()
     {
         using var first = await SendAsync(HttpMethod.Post, "/miniapp/players", NewPlayer());
+        using var firstBody = await ReadJsonAsync(first);
 
         using var check = await SendAsync(HttpMethod.Get, "/miniapp/drive-folder?url=" + FolderId);
+        using var create = await SendAsync(HttpMethod.Post, "/miniapp/players", NewPlayer(name: "Someone Else", volleybox: "https://volleybox.net/someone-else-p50002"));
 
-        await AssertCodeAsync(check, "drive_folder.taken");
+        check.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var checkBody = await ReadJsonAsync(check);
+        checkBody.RootElement.GetProperty("existingPlayerId").GetGuid().Should().Be(firstBody.RootElement.GetProperty("id").GetGuid());
+        await AssertCodeAsync(create, "drive_folder.taken");
     }
 
     /// <summary>When Drive cannot be reached, the check and the creation both stop with 503 (owner, 2026-10-29).</summary>

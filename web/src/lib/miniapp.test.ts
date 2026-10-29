@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  addFolder,
   checkDriveFolder,
+  fetchPlayer,
+  updatePlayer,
   checkVolleybox,
   createPlayer,
   fetchCountries,
@@ -100,7 +103,7 @@ describe("checkVolleybox", () => {
       Response.json({ volleyboxId: 7, url: "u", existingPlayerId: "p1", existingPlayerName: "Arash Tehrani" }),
     );
 
-    expect(await checkVolleybox("u", "x", fetchMock)).toEqual({ kind: "existing", volleyboxId: 7, playerName: "Arash Tehrani" });
+    expect(await checkVolleybox("u", "x", fetchMock)).toEqual({ kind: "existing", volleyboxId: 7, playerId: "p1", playerName: "Arash Tehrani" });
   });
 
   it("passes on the rule the link broke", async () => {
@@ -139,6 +142,12 @@ describe("checkDriveFolder", () => {
     );
   });
 
+  it("names the player a linked folder belongs to", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({ ...preview, existingPlayerId: "p9", existingPlayerName: "Kian Moradi" }));
+
+    expect(await checkDriveFolder("x", "x", fetchMock)).toEqual({ kind: "taken", playerId: "p9", playerName: "Kian Moradi" });
+  });
+
   it("passes on why the folder cannot be used, including Drive being down", async () => {
     expect(await checkDriveFolder("x", "x", vi.fn().mockResolvedValue(problem(422, { code: "drive_folder.no_access" })))).toEqual({
       kind: "invalid",
@@ -163,6 +172,47 @@ describe("formatBytes", () => {
     expect(formatBytes(512)).toBe("512 B");
     expect(formatBytes(1536)).toBe("1.5 KB");
     expect(formatBytes(4831838208)).toBe("4.5 GB");
+  });
+});
+
+describe("update mode calls", () => {
+  const card = { id: "p1", name: "Arash Tehrani", canEditDetails: true, canChangePhoto: true, folderCount: 1 };
+
+  it("reads a player card", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(Response.json(card));
+
+    expect(await fetchPlayer("p1", "x", fetchMock)).toEqual(card);
+    expect(fetchMock).toHaveBeenCalledWith("/api/miniapp/players/p1", { headers: { Authorization: "tma x" }, cache: "no-store" });
+    expect(await fetchPlayer("p1", "x", vi.fn().mockResolvedValue(new Response(null, { status: 404 })))).toBeNull();
+  });
+
+  it("adds a folder, or says why not", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({ id: "f1", name: "SS-SPORT Arash 2" }, { status: 201 }));
+
+    expect(await addFolder("p1", "folderId_0001", "x", fetchMock)).toEqual({ kind: "added", folder: { id: "f1", name: "SS-SPORT Arash 2" } });
+    expect(fetchMock).toHaveBeenCalledWith("/api/miniapp/players/p1/folders", {
+      method: "POST",
+      headers: { Authorization: "tma x", "Content-Type": "application/json" },
+      body: JSON.stringify({ driveFolderUrl: "folderId_0001" }),
+      cache: "no-store",
+    });
+    expect(await addFolder("p1", "f", "x", vi.fn().mockResolvedValue(problem(422, { code: "drive_folder.taken" })))).toEqual({
+      kind: "rejected",
+      code: "drive_folder.taken",
+    });
+  });
+
+  it("sends only the changed details", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({ id: "p1", nationalityCode: "IT" }));
+
+    expect(await updatePlayer("p1", { nationalityCode: "IT" }, "x", fetchMock)).toEqual({ kind: "updated", player: { id: "p1", nationalityCode: "IT" } });
+    expect(fetchMock).toHaveBeenCalledWith("/api/miniapp/players/p1", {
+      method: "PATCH",
+      headers: { Authorization: "tma x", "Content-Type": "application/json" },
+      body: JSON.stringify({ nationalityCode: "IT" }),
+      cache: "no-store",
+    });
+    expect(await updatePlayer("p1", {}, "x", vi.fn().mockResolvedValue(problem(403)))).toEqual({ kind: "rejected", code: null });
   });
 });
 
