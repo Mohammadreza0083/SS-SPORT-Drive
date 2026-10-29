@@ -254,6 +254,12 @@ Last updated: 2026-10-29
   - **The browser never calls the API across origins:** the web app's `/api/miniapp/me` route forwards only the Authorization header to `API_BASE_URL`.
   - **Menu button:** `telegram-set-webhook` sets "Open Drive" to `Telegram__MiniAppUrl` (HTTPS only). Locally it stays unset, because Telegram cannot open a local URL.
   - initData and its hash are never logged, only the rejection reason and the Telegram id.
+- **New player from the Mini App (T-4, owner, 2026-10-29):**
+  - **Split into three slices:** T-4a (form, live Volleybox check, creating the player), T-4b (photo upload to R2/RustFS), T-4c (live Drive folder check with the service account). Each one is its own PR.
+  - **A submitted player waits for an admin.** Even a complete form creates a `Waiting` player owned by the analyst (`AnalystId`), and only an admin publishes it (§5). The analyst cannot publish.
+  - **Category (Men/Women) is a required choice at the top of the form** (the owner gave no preference, so Claude's proposal stands), because every player needs it.
+  - **Duplicates:** a Volleybox id that already exists is refused with `player.volleybox_taken` and the live check says so (switching to Update mode is T-5). A Drive folder already linked to a player is refused with `drive_folder.taken`.
+  - **Until T-4c** the Drive link is only checked for its format, and the folder is stored with its Drive id as a provisional name. T-4c (and later sync) replaces it with the real name.
 - .NET keys use `__` nesting (`Telegram__BotToken`, `Email__Resend__ApiKey`, `ConnectionStrings__DefaultConnection`), so they bind straight to configuration sections. This replaces the owner's flat sample names (`BREVO_API_KEY`, ...).
 - **Every environment-specific `appsettings.*.json` is git-ignored.** Only the secret-free base `appsettings.json` stays in git, because the build and Docker need it.
 - **Database: PostgreSQL**, as already decided, even though the owner's `.env` sample used SQL Server variables.
