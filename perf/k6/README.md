@@ -60,8 +60,10 @@ Every request signs in with Telegram-signed `initData` (`Authorization: tma <ini
 | `create_player` (opt-in, `CREATE_PLAYERS=1`) | `POST /miniapp/players` (a new name, Volleybox id and Drive folder each time) | 201 | < 400 ms (p99 < 800 ms) |
 | `forged` | `GET /miniapp/me` signed for another bot | 401, no database work | < 100 ms |
 | `not_member` | `GET /miniapp/me` as a Telegram user outside the team | 403 | < 150 ms |
-| `photo_upload` (opt-in, `PHOTO_PLAYERS`) | `PUT /miniapp/players/{id}/photo` with a photo-like 1200×1600 JPEG of 625 KB (`fixtures/`) | 200 | < 2000 ms |
-| `photo_read` (opt-in, `PHOTO_PLAYERS`) | `GET /miniapp/players/{id}/photo` | 200, WebP | < 150 ms |
+| `player_card` (opt-in, `SEEDED_PLAYERS`) | `GET /miniapp/players/{id}`, the update-mode card (T-5) | 200, editable by the owner | < 150 ms (p99 < 300 ms) |
+| `player_edit` (opt-in, `SEEDED_PLAYERS`) | `PATCH /miniapp/players/{id}`, nationality and positions (T-5) | 200 | < 300 ms (p99 < 600 ms) |
+| `photo_upload` (opt-in, `SEEDED_PLAYERS`) | `PUT /miniapp/players/{id}/photo` with a photo-like 1200×1600 JPEG of 625 KB (`fixtures/`) | 200 | < 2000 ms |
+| `photo_read` (opt-in, `SEEDED_PLAYERS`) | `GET /miniapp/players/{id}/photo` | 200, WebP | < 150 ms |
 | `drive_check` (opt-in, `DRIVE_FOLDER_ID`) | `GET /miniapp/drive-folder` against **real Google Drive**, fixed at 1/s (smoke) or 2/s (load) for the API quota | 200 | < 3000 ms |
 
 Across the whole run, fewer than 1 % of requests may fail and more than 99 % of checks must pass. The 401s and 403s count as expected.
@@ -131,7 +133,7 @@ These need object storage and, for `drive_check`, the real Shared Drive:
    docker exec ssd-bench-pg psql -U bench -d ss_sport_drive_bench -c "INSERT INTO players (id, category, created_at, status, analyst_id) SELECT ('0199f000-0000-7000-8000-' || lpad(n::text, 12, '0'))::uuid, 'Men', now(), 'Waiting', (SELECT id FROM users WHERE telegram_id = 777000001) FROM generate_series(1, 200) AS n;"
    ```
 
-4. **Run with `-e PHOTO_PLAYERS=200`**, and `-e DRIVE_FOLDER_ID=<a real, unlinked player folder id>` for the Drive check.
+4. **Run with `-e SEEDED_PLAYERS=200`** (the older `PHOTO_PLAYERS` still works), and `-e DRIVE_FOLDER_ID=<a real, unlinked player folder id>` for the Drive check.
 
 **Results (2026-10-29, same machine, Drive through the owner's VPN from Iran):**
 
@@ -143,6 +145,25 @@ These need object storage and, for `drive_check`, the real Shared Drive:
 All thresholds passed, and every one of the 200 players got its photo.
 - **Photo upload:** about 250–500 ms, almost all of it Magick decoding the JPEG and encoding the WebP.
 - **Drive check:** about 2 s, most of it the round trips to Google through the VPN. On the VPS (no VPN, close to Google) expect a fraction of that. Re-measure there with K-1.
+
+### Update-mode scenarios (T-5)
+
+`player_card` and `player_edit` use the same seeded players. Give each one a folder so the card has something to count:
+
+```bash
+docker exec ssd-bench-pg psql -U bench -d ss_sport_drive_bench -c "INSERT INTO drive_folders (id, player_id, drive_folder_id, name, linked_at, access) SELECT gen_random_uuid(), ('0199f000-0000-7000-8000-' || lpad(n::text, 12, '0'))::uuid, 'benchFolder_' || lpad(n::text, 6, '0'), 'SS-SPORT Bench ' || n, now(), 'Ok' FROM generate_series(1, 200) AS n;"
+```
+
+`POST /miniapp/players/{id}/folders` is not benchmarked here. Every call reads a real, unlinked Drive folder and links it for good, so it is measured on staging (K-1), like `create_player`.
+
+**Results (2026-10-29, same machine, without `drive_check`):**
+
+| Run | Requests | Failed | p95 card | p99 card | p95 edit | p99 edit | p95 upload |
+|---|---|---|---|---|---|---|---|
+| `smoke` | 990 | 1 (0.1 %) | 35 ms | 81 ms | 38 ms | 90 ms | 541 ms |
+| `load`, peak 50 | 23 058 | 1 (< 0.01 %) | 31 ms | 55 ms | 32 ms | 57 ms | 318 ms |
+
+Every threshold passed. **The benchmark found a bug:** the one failed request in each run was a photo upload that raced a details edit of the same player. The optimistic concurrency check (`xmin`) correctly refused the second write, but the API answered **500 instead of 409**. Fixing that, and no longer logging expected 401/403 responses as errors, is D-13 (SSD-113).
 
 ### Notes
 
