@@ -47,3 +47,70 @@ With k6 installed, drop the `docker run …` prefix and use `BASE_URL=http://loc
 - **No real Telegram traffic is involved.** The script talks to the API directly, so no VPN is needed.
 - **Each run gets its own `update_id` window** of 60 000 ids, chosen by the start minute, so ids stay 32-bit like Telegram's. Two runs started in the same minute share a window, so wait a minute between runs.
 - **CI runs the smoke profile** against staging after each deploy once K-1 is in place.
+
+## `miniapp.js`: the Mini App API (T-3, T-4a)
+
+Every request signs in with Telegram-signed `initData` (`Authorization: tma <initData>`). The script builds it exactly as Telegram does, with the bot token, so the API runs its full HMAC check and user lookup on every call. Six traffic shapes run at the same time:
+
+| Scenario | Endpoint | Expected | Threshold (p95) |
+|---|---|---|---|
+| `profile` | `GET /miniapp/me` | 200 | < 150 ms (p99 < 300 ms) |
+| `countries` | `GET /miniapp/countries` | 200, 245 countries | < 150 ms |
+| `volleybox` | `GET /miniapp/volleybox?url=…` (a new id each time) | 200 | < 150 ms |
+| `create_player` | `POST /miniapp/players` (a new name, Volleybox id and Drive folder each time) | 201 | < 400 ms (p99 < 800 ms) |
+| `forged` | `GET /miniapp/me` signed for another bot | 401, no database work | < 100 ms |
+| `not_member` | `GET /miniapp/me` as a Telegram user outside the team | 403 | < 150 ms |
+
+Across the whole run, fewer than 1 % of requests may fail and more than 99 % of checks must pass. The 401s and 403s count as expected.
+
+| Profile | Shape |
+|---|---|
+| `smoke` (default) | 30 s: 10 profile, 5 Volleybox, 3 countries, 2 create, 2 forged and 1 stranger request per second |
+| `load` | Ramps to `PEAK_RATE` profile reads/s (default 50) over 1 min, holds 2 min, ramps down 30 s. The other scenarios run at their share of the peak: Volleybox 40 %, countries 20 %, forged 20 %, create 10 %, stranger 10 % |
+
+### Run it locally (Docker)
+
+1. **Use a throwaway database and a test bot token.** The script creates players and folders, so don't run it against your dev data. It needs the API's bot token to sign, so give the API a test token, not the real one:
+
+   ```bash
+   docker run -d --name ssd-bench-pg -e POSTGRES_USER=bench -e POSTGRES_PASSWORD=bench -e POSTGRES_DB=ss_sport_drive_bench -p 127.0.0.1:55432:5432 postgres:17-alpine
+   ```
+
+2. **Start the API in Release mode against it.** Real environment variables win over `.env`:
+
+   ```bash
+   dotnet build src/SsSport.Drive.Api -c Release
+   export ASPNETCORE_ENVIRONMENT=Production ASPNETCORE_URLS=http://127.0.0.1:5081 Telegram__Mode=Webhook Telegram__BotToken=424242:k6-bench-token ConnectionStrings__DefaultConnection="Host=127.0.0.1;Port=55432;Database=ss_sport_drive_bench;Username=bench;Password=bench"
+   dotnet src/SsSport.Drive.Api/bin/Release/net10.0/SsSport.Drive.Api.dll migrate
+   dotnet src/SsSport.Drive.Api/bin/Release/net10.0/SsSport.Drive.Api.dll
+   ```
+
+3. **Add an active analyst for the script to sign in as:**
+
+   ```bash
+   docker exec ssd-bench-pg psql -U bench -d ss_sport_drive_bench -c "INSERT INTO users (id, telegram_id, username, display_name, role, status, requested_at) VALUES (gen_random_uuid(), 777000001, 'k6_analyst', 'K6 Analyst', 'Analyst', 'Active', now());"
+   ```
+
+4. **Run it:**
+
+   ```bash
+   docker run --rm -v "$PWD:/work" -w /work grafana/k6:2.2.0 run -e BASE_URL=http://host.docker.internal:5081 -e BOT_TOKEN=424242:k6-bench-token -e ANALYST_TELEGRAM_ID=777000001 -e PROFILE=smoke --summary-export k6-results/miniapp-smoke.json perf/k6/miniapp.js
+   ```
+
+   For the full run, use `-e PROFILE=load`, and optionally `-e PEAK_RATE=200`. Remove the database afterwards with `docker rm -f ssd-bench-pg`.
+
+### Results (2026-10-29, local Windows machine, API in Release, PostgreSQL 17 in Docker)
+
+| Run | Requests | Failed | p95 profile | p95 Volleybox | p95 create | p99 create | Rate |
+|---|---|---|---|---|---|---|---|
+| `smoke` | 695 | 0 | 13.6 ms | 12.8 ms | 38.1 ms | 185 ms (first requests, cold start) | 22/s |
+| `load`, peak 50 | 16 681 | 0 | 12.4 ms | 14.0 ms | 32.1 ms | 39.5 ms | 79/s avg |
+| `load`, peak 200 | 66 179 | 0 | 10.1 ms | 10.4 ms | 27.3 ms | 49.6 ms | 315/s avg |
+
+Every threshold passed with a wide margin, even at 4× the default peak. A handful of analysts will never come close to these rates. The 4 246 players created in the peak-200 run all got distinct slugs and folders.
+
+### Notes
+
+- **It writes data.** Each `create_player` iteration adds a player and a Drive folder; a peak-200 `load` run adds about 4 000 of each. Run it on a throwaway database or on staging only, never on production.
+- **Each run gets its own Volleybox id window** of 100 000 ids, chosen by the start minute. Two runs started in the same minute share a window, and `create_player` would then hit `player.volleybox_taken`. Wait a minute between runs.
+- **The bot token never leaves the machine:** k6 only uses it to sign. It is not logged, and the API logs only rejection reasons.

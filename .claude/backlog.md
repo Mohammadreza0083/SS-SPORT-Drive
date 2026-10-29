@@ -147,3 +147,4 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | K-3 | Benchmark the tracking heartbeat ingest | Both | Report reviewed |
 | K-4 | Benchmark the public search + request-access OTP endpoints | Both | Report reviewed |
 | K-5 | Benchmark the admin console APIs (players list, viewer analytics) | Both | Report reviewed |
+| K-6 | Benchmark the Mini App API: sign-in, countries, Volleybox check, create player (`perf/k6/miniapp.js`) | Both | Report reviewed |
