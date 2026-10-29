@@ -24,6 +24,24 @@ public sealed class UnauthenticatedException : Exception
     }
 }
 
+/// <summary>
+/// Someone else changed the same record while this request was working on it, so the save was refused to avoid
+/// overwriting their change (optimistic concurrency, D-13). The API returns 409 with <see cref="Code"/>; the client
+/// reloads and tries again.
+/// </summary>
+public sealed class ConcurrencyConflictException : Exception
+{
+    /// <summary>The stable code clients see.</summary>
+    public const string Code = "concurrency.conflict";
+
+    /// <summary>Initializes the exception.</summary>
+    /// <param name="innerException">The data store's own conflict error.</param>
+    public ConcurrencyConflictException(Exception innerException)
+        : base("This record was changed by someone else at the same time. Load it again and retry.", innerException)
+    {
+    }
+}
+
 /// <summary>An outside service the request needs (e.g. Google Drive) cannot be reached. The API returns 503 with <see cref="Code"/>.</summary>
 public sealed class ServiceUnavailableException : Exception
 {
