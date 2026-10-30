@@ -43,6 +43,7 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | D-11 | Pagination building blocks (decisions §2b): `PageRequest` / `CursorRequest` DTOs + validators (size 20 default, 100 max), `PagedResult<T>` / `CursorResult<T>`, paging in specifications with a stable order, Scalar schemas; every list endpoint uses them | Claude | Tests green; no list endpoint returns an unbounded collection |
 | D-12 | Fix the EF shadow-FK warning on the owned Volleybox profile (`VolleyboxProfile.PlayerId1`): explicit owner key on `players.id`, model test with warning 10625 as an error | Claude | No EF model warnings; tests green |
 | D-13 | Concurrent edits answer 500: map optimistic concurrency conflicts to 409 (`concurrency.conflict`); log expected 4xx at Information/Warning, not Error (found by K-8) | Claude | Tests green |
+| D-14 | Stop logging every SQL statement at Information: EF Core to Warning in the base config, then re-measure (found by K-9) | Claude | Tests green; owner approved the log levels |
 
 ## EPIC 2 — Telegram bot & Mini App
 | Key | Task | Assignee | Done when |
@@ -57,6 +58,7 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | T-4d | Player photo straight from the bot chat: reply to the player's progress message, or pick from the analyst's players without a photo (paged); same checks as T-4b | Claude | Tests green |
 | T-5 | Update-player mode for a known Volleybox ID | Claude | Tests green |
 | T-6a | One progress message per player, edited in place: links, folders, photo, missing details, waiting for an admin / published | Claude | Tests green |
+| T-6c | Send progress messages after the response, not inside the request (found by K-9: player edit p95 929 ms, about 1 s per Telegram round trip) | Claude | Tests green; player edit p95 < 300 ms in k6 |
 | T-6b | Build steps in the same message (copy, transcode, thumbnails, % and ETA) + result card + QR (needs Epic 3, admin Publish, short links) | Claude | Demo |
 | T-7a | My players list (search, All / Live / Processing / Needs attention, paged) + player detail (card, folders, files in page order) + bot My players button | Claude | Demo |
 | T-7b | Edit video bottom sheet: title, tags, set as hero; Hide/Show for admins only | Claude | Demo |
@@ -155,3 +157,4 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | K-6 | Benchmark the Mini App API: sign-in, countries, Volleybox check, create player (`perf/k6/miniapp.js`) | Both | Report reviewed |
 | K-7 | Benchmark the Mini App photo upload/read and the live Drive folder check (same script, opt-in scenarios) | Both | Report reviewed |
 | K-8 | Benchmark the Mini App update mode: player card and details edit (same script, opt-in scenarios) | Both | Report reviewed |
+| K-9 | Benchmark My players, the player files and the edit-video sheet (same script, opt-in scenarios); fix the Volleybox id window and the run recipe | Both | Report reviewed |
