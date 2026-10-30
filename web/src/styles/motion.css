@@ -84,7 +84,6 @@
 @keyframes ss-card-in { from { opacity: 0; transform: translateY(40px) scale(.96); } to { opacity: 1; transform: none; } }
 @keyframes ss-modal-in { from { opacity: 0; transform: translateY(30px) scale(.97); } to { opacity: 1; transform: none; } }
 @keyframes ss-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
-@keyframes ss-wm-move { 0% { left: 8%; top: 24%; } 20% { left: 50%; top: 60%; } 40% { left: 12%; top: 68%; } 60% { left: 56%; top: 18%; } 80% { left: 28%; top: 42%; } }
 
 /* Page load: glow → mark → photo from blur → name letters (50 ms stagger) → buttons */
 .viewer .ss-fu { animation: ss-fade-up var(--ss-fu-duration) var(--ss-ease-out) both; }
@@ -139,7 +138,6 @@
 .viewer .ss-eqb { display: block; width: 3px; height: 12px; background: var(--ss-red-light); border-radius: 2px; transform-origin: bottom; animation: ss-eq .9s ease-in-out infinite; }
 .viewer .ss-pan { animation: ss-pan 18s linear infinite; }
 .viewer .ss-pan.is-paused { animation-play-state: paused; }
-.viewer .ss-wm { animation: ss-wm-move 24s steps(1, end) infinite; }
 
 /* Email gate and modals */
 .viewer .ss-si { animation: ss-slide-in .55s var(--ss-ease-intro) both; }

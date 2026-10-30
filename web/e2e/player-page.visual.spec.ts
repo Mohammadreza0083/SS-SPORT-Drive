@@ -20,11 +20,21 @@ for (const viewport of viewports) {
 
     await expect(page).toHaveScreenshot(`player-page-${viewport.name}.png`, {
       fullPage: true,
-      // The Next.js dev indicator is not part of the page.
-      mask: [page.locator("nextjs-portal")],
+      // The Next.js dev indicator is not part of the page; the email overlay moves to a random spot.
+      mask: [page.locator("nextjs-portal"), page.locator(".ss-wm")],
     });
   });
 }
+
+test("the viewer's email lies over the video, faint and unclickable", async ({ page }) => {
+  await page.route("**/*.m3u8", (route) => route.abort());
+  await page.goto("/design/player-page");
+
+  const overlay = page.locator(".ss-player-frame .ss-wm");
+  await expect(overlay).toHaveText("j.demir@aurora-volley.example");
+  await expect(overlay).toHaveCSS("opacity", "0.2");
+  await expect(overlay).toHaveCSS("pointer-events", "none");
+});
 
 test("player page has no horizontal scroll on a phone", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });

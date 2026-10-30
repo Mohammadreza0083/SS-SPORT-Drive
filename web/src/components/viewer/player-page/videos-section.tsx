@@ -20,6 +20,8 @@ const PLACEHOLDER_TINTS: Record<string, string> = {
 type VideosSectionProps = {
   /** The page's videos, in display order. */
   videos: PlayerVideo[];
+  /** The signed-in viewer's email, laid over the player (V-4). */
+  viewerEmail?: string;
 };
 
 /**
@@ -30,7 +32,7 @@ type VideosSectionProps = {
  * @param props - See {@link VideosSectionProps}.
  * @returns The section.
  */
-export function VideosSection({ videos }: VideosSectionProps) {
+export function VideosSection({ videos, viewerEmail }: VideosSectionProps) {
   const headingId = useId();
   const [tag, setTag] = useState<string>(pageCopy.allTag);
   const [selectedId, setSelectedId] = useState(videos[0]?.id);
@@ -60,7 +62,9 @@ export function VideosSection({ videos }: VideosSectionProps) {
 
       <div className="pp-videos-body">
         <div className="pp-videos-player ss-sr">
-          <VideoPlayer src={current.src} title={current.title} tag={current.tag} fps={current.fps} autoPlay={autoPlay} />
+          <VideoPlayer src={current.src} title={current.title} tag={current.tag} fps={current.fps} autoPlay={autoPlay}
+            viewerEmail={viewerEmail}
+          />
         </div>
 
         <ul className="pp-playlist ss-sr" aria-label={pageCopy.playlist}>

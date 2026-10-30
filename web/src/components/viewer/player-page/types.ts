@@ -18,6 +18,8 @@ export type PlayerPageData = {
     /** Cut-out photo on a transparent background; a silhouette is shown while missing. */
     photoUrl?: string;
   };
+  /** The signed-in viewer's email, laid faintly over the videos (V-4). */
+  viewerEmail?: string;
   /** Who the personal link was prepared for; absent on links without a named recipient. */
   recipient?: { organisation: string; name: string };
   /** The personal note an admin wrote on the link. */

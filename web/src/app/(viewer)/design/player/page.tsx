@@ -22,7 +22,7 @@ export default function PlayerPreviewPage() {
     <>
       <SiteNav />
       <section className="ss-container" style={{ padding: "30px var(--ss-gutter) 80px", maxWidth: 900 }}>
-        <VideoPlayer src={TEST_STREAM} title="Highlights 2026" tag="Highlight" fps={24} />
+        <VideoPlayer src={TEST_STREAM} title="Highlights 2026" tag="Highlight" fps={24} viewerEmail="j.demir@aurora-volley.example" />
       </section>
     </>
   );
