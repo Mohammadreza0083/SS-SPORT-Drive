@@ -157,6 +157,16 @@ describe("VideoPlayer", () => {
     expect(container.querySelector("media-rendition-menu")).not.toBeNull();
   });
 
+  it("starts playing on its own only when asked (after a pick from the playlist)", async () => {
+    desktop();
+    const { container, rerender } = render(<VideoPlayer src="https://example.test/v/a.m3u8" title="A" />);
+    expect((await mediaElement(container)).hasAttribute("autoplay")).toBe(false);
+
+    rerender(<VideoPlayer src="https://example.test/v/b.m3u8" title="B" autoPlay />);
+
+    await waitFor(() => expect(container.querySelector("[slot=media]")?.hasAttribute("autoplay")).toBe(true));
+  });
+
   it("states that the stream is protected", async () => {
     desktop();
     render(<VideoPlayer src="https://example.test/v/master.m3u8" title="Highlights 2026" />);

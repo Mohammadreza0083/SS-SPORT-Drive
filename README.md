@@ -111,6 +111,16 @@ cd web && npm ci && npm run dev        # http://localhost:3000
 cd edge && npm ci && npm test
 ```
 
+### Viewer design previews and visual tests
+
+In development, `/design/shell`, `/design/player` and `/design/player-page` show the viewer pages with the design canvas's sample player (production answers 404). Playwright compares them at 1440 / 834 / 390 px with motion reduced. The baselines are Linux screenshots, so run the tests, or regenerate the baselines after an intended design change, in the same Docker image CI uses. From `web/`:
+
+```bash
+docker run --rm --ipc=host -v "$PWD:/work" -v /work/node_modules -v /work/.next -w /work -e CI=1 mcr.microsoft.com/playwright:v1.64.1-noble bash -c "npm ci && npx playwright test"
+```
+
+Add `--update-snapshots` after `npx playwright test` to rewrite the baselines in `web/e2e/__screenshots__/`.
+
 ### Configuration (.env)
 
 All settings live in one git-ignored `.env` at the repository root. Docker Compose, the API and workers ([DotNetEnv](https://github.com/tonerdo/dotnet-env)) and the web app (`web/next.config.ts`) all read it. `.env.example` lists every key.
@@ -207,7 +217,7 @@ SS-SPORT Drive/
 | 1 | Core domain & persistence | ✅ Done |
 | 2 | Telegram bot & Mini App | 🚧 In progress |
 | 3 | Ingest, transcode & sync | ⏳ Planned |
-| 4 | Viewer site & media protection | 🚧 In progress (V-1 shell, V-3 player done) |
+| 4 | Viewer site & media protection | 🚧 In progress (V-1 shell, V-2 player page, V-3 player done) |
 | 5 | Personal links, OTP & tracking | ⏳ Planned |
 | 6 | Public search & access requests | ⏳ Planned |
 | 7 | Admin console | ⏳ Planned |

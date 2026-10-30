@@ -621,6 +621,14 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
     - No download anywhere: context menu blocked, no download button, `controlslist="nodownload"`, and picture-in-picture and casting are off (the moving email overlay of V-4 cannot follow the video into those).
     - Controls auto-hide while playing. On phones the mute button and volume slider are hidden (the device's buttons are used) so the controls fit one row of 44 px targets.
     - `/design/player` is a development-only preview using a public Mux HLS test stream; production answers 404.
+- **V-2 player page (2026-10-30):**
+  - Built from the canvas's Main, Tablet and Mobile artboards. Desktop rules come first; tablet (≤1024 px) and phone (≤640 px) restyle the same markup. Pieces that move between breakpoints (the "Prepared for" ribbon, the personal note) are rendered in each place and shown only where they belong.
+  - Data contract `PlayerPageData` (player, recipient, note, stats, videos, documents). Until L-1 serves real personal links, `/design/player-page` shows the canvas's sample player (development only, 404 in production).
+  - Missing media fall back to the canvas look: a silhouette until the cut-out photo exists (I-7), tinted gradients until thumbnails exist (I-4), drawn page cards for PDFs until previews exist (I-4).
+  - Flags: `country-flag-icons` (MIT), drawn as inline SVG on the server, so no flag code reaches the browser.
+  - The canvas has no sticky mini-player on phones (the brief mentions one), so none was built; it can be added later if wanted.
+  - On phones the short player shows only the big play button before the first play, then the control bar (play, time, speed, quality, fullscreen). That matches the mobile canvas and keeps the two from overlapping.
+  - Picking a video from the playlist plays it straight away. Playwright visual tests at 1440 / 834 / 390 px are the "visual pass"; their Linux baselines are generated and checked in the Playwright Docker image, in CI as well.
 - Brand tokens, page structure and the motion system are as in brief §10, except for the fonts and contact changes above.
 - **The design canvas is matched exactly, down to every detail** (owner, 2026-10-29, for V-1 and every later viewer page). Where the canvas and the brief differ on a value, the canvas wins; the brief still sets behaviour the canvas cannot show (for example counters start when visible).
 - **V-1 implementation choices (2026-10-29):**
