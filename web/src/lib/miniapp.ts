@@ -269,6 +269,10 @@ export interface MiniAppPlayer {
   folders: { id: string; name: string; access?: "Ok" | "Lost" }[];
   canEditDetails: boolean;
   canChangePhoto: boolean;
+  /** Whether the caller may edit the files' titles, tags and hero (T-7b). */
+  canEditFiles?: boolean;
+  /** Whether the caller may hide and show files: admins only (T-7b). */
+  canHideFiles?: boolean;
 }
 
 /** The details to change; fields left out stay as they are. */
@@ -495,6 +499,45 @@ export async function fetchMyPlayers(
  */
 export async function fetchPlayerFiles(playerId: string, page: number, initData: string, fetchImpl: typeof fetch = fetch): Promise<Page<PlayerFile> | null> {
   return readPage<PlayerFile>(`/api/miniapp/players/${encodeURIComponent(playerId)}/files?page=${page}`, initData, fetchImpl);
+}
+
+/** The tags a file can have, in the order the sheet shows them and the API lists them. */
+export const FILE_TAGS = ["Highlight", "Spike", "Serve", "Block", "Reception", "Defence", "FullMatch", "Stats"] as const;
+
+/** The edit-video sheet's changes; fields left out stay as they are. */
+export interface FileChanges {
+  title?: string;
+  tags?: string[];
+  isHero?: boolean;
+  hidden?: boolean;
+}
+
+/**
+ * Saves the edit-video sheet (T-7b): only the fields that changed.
+ *
+ * @param playerId - The player.
+ * @param fileId - The file.
+ * @param changes - The changed fields.
+ * @param initData - The raw initData from Telegram.
+ * @param fetchImpl - The fetch to use (tests pass a stub).
+ * @returns The file after the edit, or the code of the rule it broke.
+ */
+export async function editPlayerFile(
+  playerId: string,
+  fileId: string,
+  changes: FileChanges,
+  initData: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<{ kind: "saved"; file: PlayerFile } | { kind: "rejected"; code: string | null }> {
+  try {
+    const response = await fetchImpl(
+      `/api/miniapp/players/${encodeURIComponent(playerId)}/files/${encodeURIComponent(fileId)}`,
+      signedJson("PATCH", changes, initData),
+    );
+    return response.ok ? { kind: "saved", file: (await response.json()) as PlayerFile } : { kind: "rejected", code: await problemCode(response) };
+  } catch {
+    return { kind: "rejected", code: null };
+  }
 }
 
 /**

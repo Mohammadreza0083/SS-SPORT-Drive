@@ -1,4 +1,6 @@
+using SsSport.Drive.Domain.Assets;
 using SsSport.Drive.Domain.Players;
+using SsSport.Drive.Domain.Primitives;
 
 namespace SsSport.Drive.Domain.UnitTests.Players;
 
@@ -82,19 +84,53 @@ public sealed class PlayerTests
     public void Hero_can_be_set_and_cleared()
     {
         var player = Player.Create(PlayerCategory.Men, _now);
-        var assetId = Guid.CreateVersion7(_now);
+        var video = FileOf(player.Id, "highlights.mp4");
         player.ClearDomainEvents();
 
-        player.SetHero(assetId);
-        player.SetHero(assetId);
+        player.SetHero(video);
+        player.SetHero(video);
 
-        player.HeroAssetId.Should().Be(assetId);
+        player.HeroAssetId.Should().Be(video.Id);
         player.DomainEvents.Should().ContainSingle().Which.Should().Be(new PlayerDetailsChanged(player.Id));
 
         player.ClearHero();
 
         player.HeroAssetId.Should().BeNull();
     }
+
+    /// <summary>Only a visible video of the same player can be the hero (owner, 2026-10-31).</summary>
+    /// <param name="case">What is wrong with the file.</param>
+    /// <param name="code">The rule it breaks.</param>
+    [Theory]
+    [InlineData("document", "asset.hero_not_video")]
+    [InlineData("hidden", "asset.hero_hidden")]
+    [InlineData("other_player", "asset.hero_other_player")]
+    public void Hero_must_be_a_visible_video_of_the_player(string @case, string code)
+    {
+        var player = Player.Create(PlayerCategory.Men, _now);
+        var file = @case switch
+        {
+            "document" => FileOf(player.Id, "stats.pdf"),
+            "other_player" => FileOf(Guid.CreateVersion7(_now), "highlights.mp4"),
+            _ => FileOf(player.Id, "highlights.mp4"),
+        };
+        if (@case == "hidden")
+        {
+            file.Hide();
+        }
+
+        var choose = () => player.SetHero(file);
+
+        choose.Should().Throw<DomainException>().Which.Code.Should().Be(code);
+        player.HeroAssetId.Should().BeNull();
+    }
+
+    /// <summary>Builds a queued file of a player.</summary>
+    /// <param name="playerId">The player.</param>
+    /// <param name="fileName">The file name; its extension gives the kind.</param>
+    /// <returns>The asset.</returns>
+    private static Asset FileOf(Guid playerId, string fileName) =>
+        Asset.Add(playerId, null, AssetSource.Drive, null, AssetFile.Create(fileName, "9e107d9d372bb6826bd81d3542a419d6", 1024), fileName, AssetTags.Untagged, 0, _now);
 
     /// <summary>A player starts without an analyst (archive players) and can be assigned or reassigned to one.</summary>
     [Fact]

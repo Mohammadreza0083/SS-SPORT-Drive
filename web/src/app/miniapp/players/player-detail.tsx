@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { fetchPhotoUrl, fetchPlayer, fetchPlayerFiles, type MiniAppPlayer, type Page, type PlayerFile } from "@/lib/miniapp";
-import { myPlayersCopy as copy, updateCopy } from "../copy";
+import { editVideoCopy, myPlayersCopy as copy, updateCopy } from "../copy";
 import { UpdatePlayer } from "../new/update-player";
+import { EditVideoSheet } from "./edit-video-sheet";
 
 /**
  * The player detail (T-7a): the player card with its photo, the linked Drive folders and the files in page order
- * (hero starred, hidden ones marked). "Edit player" opens the T-4b/T-5 photo, details and folder steps.
+ * (hero starred, hidden ones marked). "Edit player" opens the T-4b/T-5 photo, details and folder steps, and each
+ * file opens the edit-video sheet (T-7b) for whoever may edit files.
  *
  * @param props - `playerId` and `initData` for the API.
  * @returns The detail screen.
@@ -77,7 +79,7 @@ export function PlayerDetail({ playerId, initData }: { playerId: string; initDat
         </ul>
       </section>
 
-      <FileList playerId={player.id} initData={initData} />
+      <FileList playerId={player.id} initData={initData} canEdit={player.canEditFiles === true} canHide={player.canHideFiles === true} />
     </main>
   );
 }
@@ -113,13 +115,16 @@ function PlayerPhoto({ playerId, name, initData }: { playerId: string; name: str
 }
 
 /**
- * The player's files in page order, one page at a time.
+ * The player's files in page order, one page at a time. For whoever may edit files, each file opens the edit-video
+ * sheet; after a save the page is read again, since choosing a hero changes the other files too.
  *
- * @param props - `playerId` and `initData`.
+ * @param props - `playerId`, `initData`, `canEdit` (owner or admin) and `canHide` (admins).
  * @returns The file list.
  */
-function FileList({ playerId, initData }: { playerId: string; initData: string }) {
+function FileList({ playerId, initData, canEdit, canHide }: { playerId: string; initData: string; canEdit: boolean; canHide: boolean }) {
   const [page, setPage] = useState(1);
+  const [reload, setReload] = useState(0);
+  const [editing, setEditing] = useState<PlayerFile | null>(null);
   const [files, setFiles] = useState<Page<PlayerFile> | null | undefined>(undefined);
 
   useEffect(() => {
@@ -132,7 +137,7 @@ function FileList({ playerId, initData }: { playerId: string; initData: string }
     return () => {
       cancelled = true;
     };
-  }, [playerId, page, initData]);
+  }, [playerId, page, initData, reload]);
 
   return (
     <section aria-label={copy.filesTitle}>
@@ -147,6 +152,11 @@ function FileList({ playerId, initData }: { playerId: string; initData: string }
               <li key={file.id} aria-label={`file ${file.title}`}>
                 <strong>{file.isHero ? `${copy.hero} ${file.title}` : file.title}</strong>{" "}
                 <span>{[file.kind, ...file.tags, file.state, file.visibility === "Hidden" ? copy.hidden : null].filter(Boolean).join(" · ")}</span>
+                {canEdit && (
+                  <button type="button" onClick={() => setEditing(file)}>
+                    {editVideoCopy.editFile(file.title)}
+                  </button>
+                )}
               </li>
             ))}
           </ul>
@@ -162,6 +172,19 @@ function FileList({ playerId, initData }: { playerId: string; initData: string }
             </nav>
           )}
         </>
+      )}
+      {editing && (
+        <EditVideoSheet
+          playerId={playerId}
+          file={editing}
+          canHide={canHide}
+          initData={initData}
+          onSaved={() => {
+            setEditing(null);
+            setReload(reload + 1);
+          }}
+          onClose={() => setEditing(null)}
+        />
       )}
     </section>
   );

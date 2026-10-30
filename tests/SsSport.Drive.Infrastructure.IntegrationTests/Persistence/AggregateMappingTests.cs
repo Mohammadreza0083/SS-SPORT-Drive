@@ -27,7 +27,7 @@ public sealed class AggregateMappingTests(AppDbContextFixture fixture) : IClassF
     public async Task Player_round_trips()
     {
         var player = CompletePlayer("Arash Tehrani", 48213);
-        var hero = Guid.CreateVersion7(_now);
+        var hero = Asset.Add(player.Id, null, AssetSource.Drive, null, AssetFile.Create("highlights.mp4", Md5, 1024), "Highlights", AssetTags.Highlight, 0, _now);
         var analyst = Guid.CreateVersion7(_now);
         player.Publish(_now.AddHours(1));
         player.SetHero(hero);
@@ -48,7 +48,7 @@ public sealed class AggregateMappingTests(AppDbContextFixture fixture) : IClassF
         loaded.Photo!.StorageKey.Should().Be("players/p1/photo.webp");
         loaded.Status.Should().Be(PlayerStatus.Published);
         loaded.PublishedAt.Should().Be(_now.AddHours(1));
-        loaded.HeroAssetId.Should().Be(hero);
+        loaded.HeroAssetId.Should().Be(hero.Id);
         loaded.AnalystId.Should().Be(analyst);
         loaded.QrCode!.Value.Should().Be($"qr/{player.Id}.png");
         loaded.CreatedAt.Should().Be(_now);

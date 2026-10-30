@@ -221,10 +221,31 @@ public sealed class Player : AggregateRoot<Guid>
         QrCode = qrCode;
     }
 
-    /// <summary>Chooses the hero video. The caller ensures the asset is a ready video of this player.</summary>
-    /// <param name="assetId">The asset.</param>
-    public void SetHero(Guid assetId)
+    /// <summary>
+    /// Chooses the hero video that autoplays at the top of the page. Only a visible video of this player qualifies
+    /// (owner, 2026-10-31); it does not have to be processed yet.
+    /// </summary>
+    /// <param name="hero">The asset.</param>
+    /// <exception cref="DomainException"><c>asset.hero_other_player</c>, <c>asset.hero_not_video</c> or <c>asset.hero_hidden</c>.</exception>
+    public void SetHero(Assets.Asset hero)
     {
+        ArgumentNullException.ThrowIfNull(hero);
+        if (hero.PlayerId != Id)
+        {
+            throw new DomainException("asset.hero_other_player", "The hero must be one of this player's videos.");
+        }
+
+        if (hero.Kind != Assets.AssetKind.Video)
+        {
+            throw new DomainException("asset.hero_not_video", "Only a video can be the hero.");
+        }
+
+        if (hero.Visibility == Assets.AssetVisibility.Hidden)
+        {
+            throw new DomainException("asset.hero_hidden", "A hidden video cannot be the hero. Show it first.");
+        }
+
+        var assetId = hero.Id;
         if (assetId == HeroAssetId)
         {
             return;

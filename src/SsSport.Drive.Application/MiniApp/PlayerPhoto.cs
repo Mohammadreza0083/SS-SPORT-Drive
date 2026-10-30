@@ -57,6 +57,17 @@ internal static class PlayerAccess
     public static bool CanEditDetails(Player player, ICurrentUser currentUser) =>
         currentUser.IsInRole(Role.Admin.Name) || (IsOwner(player, currentUser) && player.Status == PlayerStatus.Waiting);
 
+    /// <summary>Tells whether the caller may edit a player's files (title, tags, hero): the owning analyst or an admin.</summary>
+    /// <param name="player">The player.</param>
+    /// <param name="currentUser">The caller.</param>
+    /// <returns><see langword="true"/> when they may.</returns>
+    public static bool CanEditFiles(Player player, ICurrentUser currentUser) => CanChangePhoto(player, currentUser);
+
+    /// <summary>Tells whether the caller may hide and show files: admins only (owner, 2026-10-30).</summary>
+    /// <param name="currentUser">The caller.</param>
+    /// <returns><see langword="true"/> for an admin.</returns>
+    public static bool CanHideFiles(ICurrentUser currentUser) => currentUser.IsInRole(Role.Admin.Name);
+
     /// <summary>Refuses the caller unless they own the player or are an admin.</summary>
     /// <param name="player">The player.</param>
     /// <param name="currentUser">The caller.</param>
