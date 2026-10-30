@@ -1,5 +1,5 @@
 /**
- * k6 benchmark for the Telegram Mini App API (backlog T-3, T-4a).
+ * k6 benchmark for the Telegram Mini App API (backlog T-3, T-4a, T-5, T-7a, T-7b).
  *
  * Every request signs in with Telegram-signed initData (`Authorization: tma <initData>`), built here exactly as
  * Telegram builds it, so the API does its full HMAC check and user lookup on each call. Six traffic shapes run side by side:
@@ -14,6 +14,10 @@
  *  - player_card:    GET  /miniapp/players/{id}            → 200 (opt-in with SEEDED_PLAYERS; update-mode card, T-5)
  *  - player_edit:    PATCH /miniapp/players/{id}           → 200 (opt-in with SEEDED_PLAYERS; nationality + positions, T-5)
  *  - drive_check:    GET  /miniapp/drive-folder?url=…      → 200 (opt-in with DRIVE_FOLDER_ID; reads real Google Drive)
+ *  - my_players:     GET  /miniapp/players?page=…          → 200 (opt-in with SEEDED_PLAYERS; My players, T-7a)
+ *  - my_players_filter: GET /miniapp/players?filter=…&search=… → 200 (opt-in; the chips and the search, T-7a)
+ *  - player_files:   GET  /miniapp/players/{id}/files      → 200 (opt-in with SEEDED_PLAYERS; files in page order, T-7a)
+ *  - file_edit:      PATCH /miniapp/players/{id}/files/{fileId} → 200 (opt-in; title + tags from the sheet, T-7b)
  *
  * Usage (see perf/k6/README.md):
  *   k6 run -e BASE_URL=http://localhost:5080 -e BOT_TOKEN=... -e ANALYST_TELEGRAM_ID=... -e PROFILE=smoke perf/k6/miniapp.js
@@ -27,9 +31,11 @@
  *   CREATE_PLAYERS       1 to include create_player. Since T-4c every new player's Drive folder is read from Google
  *                        Drive, so this only works against an API whose Drive reader accepts the generated folder ids
  *                        (a test double); against real Drive the made-up folders are refused with 422.
- *   SEEDED_PLAYERS       how many seeded players the photo and update-mode scenarios use (0 = skip them; the older
- *                        name PHOTO_PLAYERS still works). Their ids must follow
+ *   SEEDED_PLAYERS       how many seeded players the photo, update-mode and My players scenarios use (0 = skip them;
+ *                        the older name PHOTO_PLAYERS still works). Their ids must follow
  *                        0199f000-0000-7000-8000-000000000001 … and they must belong to ANALYST_TELEGRAM_ID (see README).
+ *                        The My players scenarios also need FILES_PER_PLAYER seeded files per player, with ids
+ *                        0199f100-0000-7000-8000-{player × 10 + file} (see README).
  *   DRIVE_FOLDER_ID      a real, unlinked player folder in the Shared Drive (empty = skip drive_check). Every check
  *                        calls Google, so this scenario runs at a fixed, low rate (1/s smoke, 2/s load) to respect
  *                        the Drive API quota.
@@ -47,6 +53,12 @@ const PEAK_RATE = Number(__ENV.PEAK_RATE || 50);
 const CREATE_PLAYERS = __ENV.CREATE_PLAYERS === '1';
 const PHOTO_PLAYERS = Number(__ENV.SEEDED_PLAYERS || __ENV.PHOTO_PLAYERS || 0);
 const DRIVE_FOLDER_ID = __ENV.DRIVE_FOLDER_ID || '';
+
+/** How many files the README's seed SQL gives each seeded player (ids 0199f100-…-{player × 10 + file}). */
+const FILES_PER_PLAYER = 5;
+
+/** The filter chips of My players, used in turn by the filter scenario. */
+const FILTERS = ['all', 'live', 'processing', 'needsAttention'];
 
 /** How many players get a photo in setup, so the read scenario always finds one. */
 const READ_PLAYERS = Math.min(PHOTO_PLAYERS, 20);
@@ -121,6 +133,11 @@ export const options = {
         photo_read: scenario('photoRead', 3, 0.3),
         player_card: scenario('playerCard', 5, 0.4),
         player_edit: scenario('playerEdit', 2, 0.1),
+        // Opening My players and paging is the commonest; editing a file in the sheet is rare.
+        my_players: scenario('myPlayers', 5, 0.4),
+        my_players_filter: scenario('myPlayersFilter', 3, 0.2),
+        player_files: scenario('playerFiles', 5, 0.4),
+        file_edit: scenario('fileEdit', 2, 0.1),
       }
       : {}),
     ...(DRIVE_FOLDER_ID ? { drive_check: fixedRate('driveCheck', PROFILE === 'load' ? 2 : 1) } : {}),
@@ -144,6 +161,12 @@ export const options = {
         // The card reads the player, its owner and two folder queries; an edit reads, checks and saves one player.
         'http_req_duration{scenario:player_card}': ['p(95)<150', 'p(99)<300'],
         'http_req_duration{scenario:player_edit}': ['p(95)<300', 'p(99)<600'],
+        // One SQL query per page: players with correlated counts of their files and folders, then the total.
+        'http_req_duration{scenario:my_players}': ['p(95)<150', 'p(99)<300'],
+        'http_req_duration{scenario:my_players_filter}': ['p(95)<200', 'p(99)<400'],
+        'http_req_duration{scenario:player_files}': ['p(95)<150', 'p(99)<300'],
+        // Reads the player and the file, checks who may edit, saves the file.
+        'http_req_duration{scenario:file_edit}': ['p(95)<300', 'p(99)<600'],
       }
       : {}),
     ...(DRIVE_FOLDER_ID ? { 'http_req_duration{scenario:drive_check}': ['p(95)<3000'] } : {}),
@@ -222,9 +245,10 @@ export function setup() {
     }
   }
 
-  // Volleybox ids are 32-bit: each minute of the clock gets its own window of 100 000 ids. Runs started in the same
-  // minute share a window, so wait a minute between runs.
-  return { base: 100000000 + (Math.floor(Date.now() / 60000) % 18000) * 100000 };
+  // Volleybox ids have at most 9 digits (the domain's rule): each minute of the clock gets its own window of 100 000
+  // ids between 100 000 000 and 999 999 999. Runs started in the same minute share a window, so wait a minute between
+  // runs. (The windows used to run up to 1.9 billion, so in about half of all minutes every id was refused.)
+  return { base: 100000000 + (Math.floor(Date.now() / 60000) % 8999) * 100000 };
 }
 
 /** profile: the signed-in analyst reads their profile. */
@@ -333,4 +357,50 @@ export function playerEdit() {
   const body = JSON.stringify({ nationalityCode: i % 2 === 0 ? 'IT' : 'IR', positions: i % 3 === 0 ? ['OH', 'OPP'] : ['MB'] });
   const response = http.patch(`${BASE_URL}/miniapp/players/${playerId(1 + (i % PHOTO_PLAYERS))}`, body, signed(initData(ANALYST_ID)));
   check(response, { 'player edit: 200': (r) => r.status === 200 });
+}
+
+/**
+ * The id of a seeded file, as the README's seed SQL creates them.
+ * @param {number} player the player number (1-based).
+ * @param {number} file the file number (1 to FILES_PER_PLAYER).
+ * @returns {string} the file id.
+ */
+function fileId(player, file) {
+  return `0199f100-0000-7000-8000-${String(player * 10 + file).padStart(12, '0')}`;
+}
+
+/** my_players: the analyst opens My players and pages through it (T-7a). */
+export function myPlayers() {
+  const pages = Math.max(1, Math.ceil(PHOTO_PLAYERS / 20));
+  const page = 1 + (exec.scenario.iterationInTest % pages);
+  const response = http.get(`${BASE_URL}/miniapp/players?page=${page}`, signed(initData(ANALYST_ID)));
+  check(response, { 'my players: 200 with a page': (r) => r.status === 200 && r.json().items.length > 0 && r.json().page === page });
+}
+
+/** my_players_filter: the analyst taps a filter chip, and every other time also searches (T-7a). */
+export function myPlayersFilter() {
+  const i = exec.scenario.iterationInTest;
+  const search = i % 2 === 0 ? '&search=bench' : '';
+  const response = http.get(`${BASE_URL}/miniapp/players?filter=${FILTERS[i % FILTERS.length]}${search}`, signed(initData(ANALYST_ID)));
+  check(response, { 'my players filter: 200': (r) => r.status === 200 && Array.isArray(r.json().items) });
+}
+
+/** player_files: the player detail lists the files in page order (T-7a). */
+export function playerFiles() {
+  const n = 1 + (exec.scenario.iterationInTest % PHOTO_PLAYERS);
+  const response = http.get(`${BASE_URL}/miniapp/players/${playerId(n)}/files`, signed(initData(ANALYST_ID)));
+  check(response, { 'player files: 200 with the files': (r) => r.status === 200 && r.json().totalCount === FILES_PER_PLAYER });
+}
+
+/**
+ * file_edit: the owner saves the edit-video sheet with a new title and tags (T-7b). It spreads over every seeded file,
+ * so two edits rarely meet on one file; when they do, the second is a 409 (D-13), which counts as a failure here.
+ */
+export function fileEdit() {
+  const i = exec.scenario.iterationInTest;
+  const player = 1 + (i % PHOTO_PLAYERS);
+  const file = 1 + (Math.floor(i / PHOTO_PLAYERS) % FILES_PER_PLAYER);
+  const body = JSON.stringify({ title: `Bench clip ${i}`, tags: i % 2 === 0 ? ['Highlight', 'Spike'] : ['FullMatch'] });
+  const response = http.patch(`${BASE_URL}/miniapp/players/${playerId(player)}/files/${fileId(player, file)}`, body, signed(initData(ANALYST_ID)));
+  check(response, { 'file edit: 200': (r) => r.status === 200 && r.json().title === `Bench clip ${i}` });
 }

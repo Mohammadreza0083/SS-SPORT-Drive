@@ -48,7 +48,7 @@ With k6 installed, drop the `docker run …` prefix and use `BASE_URL=http://loc
 - **Each run gets its own `update_id` window** of 60 000 ids, chosen by the start minute, so ids stay 32-bit like Telegram's. Two runs started in the same minute share a window, so wait a minute between runs.
 - **CI runs the smoke profile** against staging after each deploy once K-1 is in place.
 
-## `miniapp.js`: the Mini App API (T-3, T-4a)
+## `miniapp.js`: the Mini App API (T-3, T-4a, T-5, T-7a, T-7b)
 
 Every request signs in with Telegram-signed `initData` (`Authorization: tma <initData>`). The script builds it exactly as Telegram does, with the bot token, so the API runs its full HMAC check and user lookup on every call. Six traffic shapes run at the same time:
 
@@ -64,6 +64,10 @@ Every request signs in with Telegram-signed `initData` (`Authorization: tma <ini
 | `player_edit` (opt-in, `SEEDED_PLAYERS`) | `PATCH /miniapp/players/{id}`, nationality and positions (T-5) | 200 | < 300 ms (p99 < 600 ms) |
 | `photo_upload` (opt-in, `SEEDED_PLAYERS`) | `PUT /miniapp/players/{id}/photo` with a photo-like 1200×1600 JPEG of 625 KB (`fixtures/`) | 200 | < 2000 ms |
 | `photo_read` (opt-in, `SEEDED_PLAYERS`) | `GET /miniapp/players/{id}/photo` | 200, WebP | < 150 ms |
+| `my_players` (opt-in, `SEEDED_PLAYERS`) | `GET /miniapp/players?page=…`, paging through My players (T-7a) | 200, a non-empty page | < 150 ms (p99 < 300 ms) |
+| `my_players_filter` (opt-in, `SEEDED_PLAYERS`) | `GET /miniapp/players?filter=…` with the four chips in turn, half of them with `search=bench` (T-7a) | 200 | < 200 ms (p99 < 400 ms) |
+| `player_files` (opt-in, `SEEDED_PLAYERS`) | `GET /miniapp/players/{id}/files`, the player detail's files in page order (T-7a) | 200, 5 files | < 150 ms (p99 < 300 ms) |
+| `file_edit` (opt-in, `SEEDED_PLAYERS`) | `PATCH /miniapp/players/{id}/files/{fileId}`, a new title and tags from the edit-video sheet (T-7b) | 200 | < 300 ms (p99 < 600 ms) |
 | `drive_check` (opt-in, `DRIVE_FOLDER_ID`) | `GET /miniapp/drive-folder` against **real Google Drive**, fixed at 1/s (smoke) or 2/s (load) for the API quota | 200 | < 3000 ms |
 
 Across the whole run, fewer than 1 % of requests may fail and more than 99 % of checks must pass. The 401s and 403s count as expected.
@@ -81,14 +85,16 @@ Across the whole run, fewer than 1 % of requests may fail and more than 99 % of 
    docker run -d --name ssd-bench-pg -e POSTGRES_USER=bench -e POSTGRES_PASSWORD=bench -e POSTGRES_DB=ss_sport_drive_bench -p 127.0.0.1:55432:5432 postgres:17-alpine
    ```
 
-2. **Start the API in Release mode against it.** Real environment variables win over `.env`:
+2. **Start the API in Release mode against it.** Real environment variables win over `.env`. Set **both** `ASPNETCORE_ENVIRONMENT` and `DOTNET_ENVIRONMENT`: the API loads the repository's `.env` (it walks up from the current folder), and a `DOTNET_ENVIRONMENT=Development` there would otherwise put the API in Development mode. Also keep EF Core's SQL logging at Warning; at Information it writes every statement to the console and slows the whole API down under load. Bash cannot `export` a name with a dot, so pass that one through `env`:
 
    ```bash
    dotnet build src/SsSport.Drive.Api -c Release
-   export ASPNETCORE_ENVIRONMENT=Production ASPNETCORE_URLS=http://127.0.0.1:5081 Telegram__Mode=Webhook Telegram__BotToken=424242:k6-bench-token ConnectionStrings__DefaultConnection="Host=127.0.0.1;Port=55432;Database=ss_sport_drive_bench;Username=bench;Password=bench"
+   export DOTNET_ENVIRONMENT=Production ASPNETCORE_ENVIRONMENT=Production ASPNETCORE_URLS=http://127.0.0.1:5081 Telegram__Mode=Webhook Telegram__BotToken=424242:k6-bench-token ConnectionStrings__DefaultConnection="Host=127.0.0.1;Port=55432;Database=ss_sport_drive_bench;Username=bench;Password=bench"
    dotnet src/SsSport.Drive.Api/bin/Release/net10.0/SsSport.Drive.Api.dll migrate
-   dotnet src/SsSport.Drive.Api/bin/Release/net10.0/SsSport.Drive.Api.dll
+   env 'Logging__LogLevel__Microsoft.EntityFrameworkCore=Warning' dotnet src/SsSport.Drive.Api/bin/Release/net10.0/SsSport.Drive.Api.dll
    ```
+
+   Check that the log says `Hosting environment: Production` before you start k6.
 
 3. **Add an active analyst for the script to sign in as:**
 
@@ -165,9 +171,47 @@ docker exec ssd-bench-pg psql -U bench -d ss_sport_drive_bench -c "INSERT INTO d
 
 Every threshold passed. **The benchmark found a bug:** the one failed request in each run was a photo upload that raced a details edit of the same player. The optimistic concurrency check (`xmin`) correctly refused the second write, but the API answered **500 instead of 409**. Fixing that, and no longer logging expected 401/403 responses as errors, is D-13 (SSD-113).
 
+### My players scenarios (T-7a, T-7b)
+
+`my_players`, `my_players_filter`, `player_files` and `file_edit` use the same seeded players and folders as the update-mode scenarios. They also need names, so the search has something to match, and 5 files per player with the ids the script expects (`0199f100-0000-7000-8000-{player × 10 + file}`). Every 7th player gets a failed file and every 10th a folder that lost access, so each filter chip has rows:
+
+```bash
+docker exec -i ssd-bench-pg psql -U bench -d ss_sport_drive_bench <<'SQL'
+UPDATE players SET full_name = 'Bench ' || initcap(chr(97 + (n % 26)) || chr(97 + ((n / 26) % 26)) || 'player')
+FROM (SELECT generate_series(1, 200) AS n) AS s
+WHERE players.id = ('0199f000-0000-7000-8000-' || lpad(s.n::text, 12, '0'))::uuid;
+UPDATE drive_folders SET access = 'Lost' WHERE drive_folder_id IN (SELECT 'benchFolder_' || lpad(n::text, 6, '0') FROM generate_series(10, 200, 10) AS n);
+INSERT INTO assets (id, player_id, created_at, source, state, failure_reason, tags, title, title_is_custom, version, visibility,
+                    sort_order, kind, md5, original_name, size_bytes)
+SELECT ('0199f100-0000-7000-8000-' || lpad((p * 10 + f)::text, 12, '0'))::uuid,
+       ('0199f000-0000-7000-8000-' || lpad(p::text, 12, '0'))::uuid, now(), 'Drive',
+       CASE WHEN f = 5 AND p % 7 = 0 THEN 'Failed' WHEN f >= 4 THEN 'Queued' ELSE 'Ready' END,
+       CASE WHEN f = 5 AND p % 7 = 0 THEN 'ffmpeg exited with code 1' END,
+       1, 'Bench clip ' || f, false, 1, 'Visible', f - 1, 'Video', md5(p || '-' || f), 'clip-' || f || '.mp4', 1048576
+FROM generate_series(1, 200) AS p, generate_series(1, 5) AS f;
+SQL
+```
+
+Keep the seeded players Waiting: the update-mode scenarios edit their details, which only an admin may do once a player is published.
+
+**Results (2026-10-31, same machine, API in Release, without `drive_check`):**
+
+| Run | Requests | Failed | p95 / p99 list | p95 / p99 filter + search | p95 / p99 files | p95 / p99 file edit |
+|---|---|---|---|---|---|---|
+| `smoke` (Development mode, SQL logged; before the recipe fix) | 1 421 | 0 | 38 / 57 ms | 47 / 65 ms | 33 / 54 ms | 33 / 54 ms |
+| `load`, peak 50 (Production mode, SQL logging at Warning) | 32 226 | 2 (photo uploads) | 66 / 133 ms | 67 / 142 ms | 64 / 142 ms | 59 / 134 ms |
+
+Every T-7 threshold passed with a wide margin. The list runs one SQL query with correlated counts of each player's files and folders, plus the total, and stays near the single-player card's time.
+
+**One older threshold now fails: `player_edit` (T-5).** Its p95 was 845 ms (smoke, Development mode) and 929 ms (load, Production mode), against 300 ms. This is not T-7. Since T-6a, every saved player change sends or edits the analyst's progress message in Telegram **inside the request**. With the bench's fake token, each call is a round trip to `api.telegram.org` that ends in 401, and from this machine that round trip takes about 1 s. Photo uploads pay the same cost (p95 1.7 s, against 0.5 s on 10-29). On the VPS, Telegram is close and the token is real, but the request still waits for Telegram. Sending progress messages after the response (an outbox or a background job) would remove it.
+
+**Two run-recipe traps found on the way, now fixed above:**
+- **Development mode.** The API loaded the repository's `.env` and ran in **Development** mode. In that mode, with every SQL statement logged (90 MB of console output in one load run), even a 401 that never touches the database took 686 ms at p95. In Production mode with SQL logging at Warning, the same load gives it a p95 of 22 ms.
+- **Volleybox ids.** The script's Volleybox ids went up to 10 digits in about half of all minutes, and the domain allows 9, so every `volleybox` check was refused with 422. The id window now stays within 9 digits.
+
 ### Notes
 
 - **`create_player` is opt-in since T-4c.** Creating a player now reads its folder from Google Drive with the service account, and the script's made-up folder ids do not exist there, so against real Drive they are refused with 422. The results above were measured before T-4c, without that Drive call. Benchmark creation on staging with real folders (K-1), or with a test double for the Drive reader.
 - **It writes data.** Each `create_player` iteration adds a player and a Drive folder; a peak-200 `load` run adds about 4 000 of each. Run it on a throwaway database or on staging only, never on production.
-- **Each run gets its own Volleybox id window** of 100 000 ids, chosen by the start minute. Two runs started in the same minute share a window, and `create_player` would then hit `player.volleybox_taken`. Wait a minute between runs.
+- **Each run gets its own Volleybox id window** of 100 000 ids between 100 000 000 and 999 999 999 (Volleybox ids have at most 9 digits), chosen by the start minute. Two runs started in the same minute share a window, and `create_player` would then hit `player.volleybox_taken`. Wait a minute between runs.
 - **The bot token never leaves the machine:** k6 only uses it to sign. It is not logged, and the API logs only rejection reasons.
