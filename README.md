@@ -207,7 +207,7 @@ SS-SPORT Drive/
 | 1 | Core domain & persistence | ✅ Done |
 | 2 | Telegram bot & Mini App | 🚧 In progress |
 | 3 | Ingest, transcode & sync | ⏳ Planned |
-| 4 | Viewer site & media protection | 🚧 In progress (V-1 shell done) |
+| 4 | Viewer site & media protection | 🚧 In progress (V-1 shell, V-3 player done) |
 | 5 | Personal links, OTP & tracking | ⏳ Planned |
 | 6 | Public search & access requests | ⏳ Planned |
 | 7 | Admin console | ⏳ Planned |

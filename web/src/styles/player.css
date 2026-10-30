@@ -1,0 +1,288 @@
+/*
+ * Video player skin (backlog V-3), matched to the player on the design canvas: rounded stage, red play
+ * button with a pulsing ring while paused, red progress bar and a dark gradient control bar.
+ * Media Chrome is themed through its CSS variables.
+ */
+
+.viewer .ss-player-frame {
+  position: relative;
+}
+
+.viewer .ss-player-stage {
+  display: flex;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--ss-radius-xl);
+  overflow: hidden;
+  border: 1px solid var(--ss-border);
+  background: radial-gradient(circle at 50% 120%, #2b3a52 0, #111722 55%, #0A0D13 100%);
+  --media-font-family: var(--ss-font-sans);
+  --media-primary-color: #E6E9EF;
+  --media-secondary-color: transparent;
+  --media-control-background: transparent;
+  --media-control-hover-background: rgba(255, 255, 255, .08);
+  --media-range-track-background: rgba(255, 255, 255, .18);
+  --media-range-bar-color: var(--ss-red-light);
+  --media-range-track-height: 4px;
+  --media-range-track-border-radius: 2px;
+  --media-range-thumb-background: #fff;
+  --media-range-thumb-width: 12px;
+  --media-range-thumb-height: 12px;
+  --media-menu-background: rgba(15, 17, 23, .96);
+  --media-menu-border-radius: 14px;
+  --media-menu-item-checked-indicator-color: var(--ss-red-light);
+  --media-tooltip-display: none;
+}
+
+.viewer .ss-player-stage video,
+.viewer .ss-player-stage hls-video {
+  width: 100%;
+  height: 100%;
+}
+
+.viewer .ss-player-unsupported {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 24px;
+  text-align: center;
+  color: var(--ss-text-soft);
+  font-size: 14px;
+}
+
+/* Big play button: 92 px red disc; the ring pulses while paused */
+.viewer .ss-player-big {
+  position: relative;
+  width: 92px;
+  height: 92px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--ss-red);
+  color: #fff;
+  box-shadow: 0 20px 50px -10px rgba(204, 0, 0, .9);
+  --media-button-icon-width: 30px;
+  --media-button-icon-height: 30px;
+  --media-control-hover-background: var(--ss-red);
+}
+
+.viewer .ss-player-big[mediapaused]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--ss-red-light);
+  animation: ss-ring 1.8s ease-out infinite;
+  pointer-events: none;
+}
+
+.viewer .ss-player-big:not([mediapaused]) {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s;
+}
+
+/* Control bar: gradient band at the bottom, progress on top, one row of controls */
+.viewer .ss-player-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  /* Pinned to the bottom of Media Chrome's vertical layer. */
+  margin-top: auto;
+  width: 100%;
+  height: auto;
+  box-sizing: border-box;
+  padding: 18px 22px 10px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, .88));
+}
+
+.viewer .ss-player-progress {
+  flex: 0 0 16px;
+  width: 100%;
+  height: 16px;
+  min-height: 0;
+  padding: 0;
+  margin-bottom: 4px;
+}
+
+.viewer .ss-player-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: #E6E9EF;
+}
+
+.viewer .ss-player-btn {
+  min-width: var(--ss-tap);
+  min-height: var(--ss-tap);
+  padding: 0 10px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #E6E9EF;
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  --media-button-icon-width: 20px;
+  --media-button-icon-height: 20px;
+}
+
+.viewer .ss-player-btn:hover {
+  background: rgba(255, 255, 255, .08);
+}
+
+.viewer .ss-player-btn:focus-visible,
+.viewer .ss-player-chip:focus-visible {
+  outline: 2px solid var(--ss-red-light);
+  outline-offset: 2px;
+}
+
+.viewer .ss-player-time {
+  font-family: var(--ss-font-mono);
+  font-size: 13px;
+  padding: 0 6px;
+}
+
+.viewer .ss-player-spacer {
+  flex: 1;
+}
+
+.viewer .ss-player-label {
+  color: #aeb6c6;
+  margin-right: 2px;
+}
+
+/* Speed and quality: the canvas's small grey chips, inside a 44 px tap target */
+.viewer .ss-player-chip {
+  min-height: var(--ss-tap);
+  padding: 8px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, .1);
+  background-clip: content-box;
+  font-size: 13px;
+  color: #E6E9EF;
+  --media-button-icon-width: 18px;
+  --media-button-icon-height: 18px;
+  --media-control-hover-background: transparent;
+}
+
+.viewer .ss-player-volume {
+  width: 90px;
+  --media-range-bar-color: #fff;
+}
+
+.viewer .ss-player-menu {
+  font-size: 14px;
+}
+
+/* A closed menu takes no space, so the control bar stays at the bottom (Media Chrome sets display !important through this variable). */
+.viewer .ss-player-menu[hidden] {
+  --media-menu-display: none;
+}
+
+/* Title row under the player */
+.viewer .ss-player-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.viewer .ss-player-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.viewer .ss-player-tag {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 4px 9px;
+  border-radius: 6px;
+  background: rgba(204, 0, 0, .18);
+  color: var(--ss-red-soft);
+}
+
+.viewer .ss-player-note {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--ss-font-mono);
+  font-size: 12px;
+  color: var(--ss-muted);
+}
+
+/* Tablet (canvas: 84 px play button, tighter bar) */
+@media (max-width: 1024px) {
+  .viewer .ss-player-big {
+    width: 84px;
+    height: 84px;
+  }
+
+  .viewer .ss-player-bar {
+    padding: 14px 18px 8px;
+  }
+}
+
+/* Phones: lighter controls (volume is the device's), 64 px play button */
+@media (max-width: 640px) {
+  .viewer .ss-player-stage {
+    border-radius: 18px;
+  }
+
+  .viewer .ss-player-big {
+    width: 64px;
+    height: 64px;
+    box-shadow: 0 16px 40px -10px rgba(204, 0, 0, .9);
+    --media-button-icon-width: 24px;
+    --media-button-icon-height: 24px;
+  }
+
+  .viewer .ss-player-bar {
+    padding: 10px 12px 6px;
+  }
+
+  .viewer .ss-player-volume,
+  .viewer .ss-player-label,
+  .viewer .ss-player-mute {
+    display: none;
+  }
+
+  /* One row: narrower buttons, still 44 px tall */
+  .viewer .ss-player-row {
+    flex-wrap: nowrap;
+    gap: 2px;
+  }
+
+  .viewer .ss-player-btn {
+    min-width: 36px;
+    padding: 0 4px;
+  }
+
+  .viewer .ss-player-chip {
+    padding: 8px 4px;
+  }
+
+  .viewer .ss-player-time {
+    font-size: 12px;
+    padding: 0 4px;
+    white-space: nowrap;
+  }
+
+  .viewer .ss-player-title {
+    font-size: 17px;
+  }
+
+  .viewer .ss-player-note {
+    margin-left: 0;
+    width: 100%;
+  }
+}
