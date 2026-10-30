@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1414" viewBox="0 0 1000 1414" font-family="Arial, Helvetica, sans-serif">
+<!-- Sample page for the development preview (V-6); real pages are rendered from PDFs by ingest (I-4). -->
+<rect width="1000" height="1414" fill="#FBFBF9"/>
+<rect width="1000" height="57" fill="#CC0000"/>
+<text x="70" y="190" font-size="40" font-weight="700" fill="#15171c">Attack zones</text>
+<rect x="70" y="250" width="860" height="430" fill="none" stroke="#15171c" stroke-width="4"/>
+<rect x="72" y="252" width="285" height="426" fill="#CC0000" fill-opacity=".55"/><rect x="357" y="252" width="287" height="426" fill="#CC0000" fill-opacity=".18"/><rect x="644" y="252" width="284" height="426" fill="#CC0000" fill-opacity=".32"/>
+<line x1="357" y1="252" x2="357" y2="678" stroke="#c9c9c9" stroke-dasharray="10 8" stroke-width="2"/><line x1="644" y1="252" x2="644" y2="678" stroke="#c9c9c9" stroke-dasharray="10 8" stroke-width="2"/>
+<text x="70" y="720" font-size="20" fill="#6b7280" font-family="Courier New, monospace">Zone 4 · 46%</text><text x="500" y="720" font-size="20" fill="#6b7280" text-anchor="middle" font-family="Courier New, monospace">Zone 3 · 15%</text><text x="930" y="720" font-size="20" fill="#6b7280" text-anchor="end" font-family="Courier New, monospace">Zone 2 · 27%</text>
+<text x="70" y="830" font-size="26" font-weight="700" fill="#15171c">Scout notes</text>
+<rect x="70" y="870" width="860" height="12" rx="6" fill="#d9dbe0"/><rect x="70" y="910" width="790" height="12" rx="6" fill="#d9dbe0"/><rect x="70" y="950" width="720" height="12" rx="6" fill="#d9dbe0"/><rect x="70" y="990" width="826" height="12" rx="6" fill="#d9dbe0"/><rect x="70" y="1030" width="516" height="12" rx="6" fill="#d9dbe0"/><rect x="70" y="1070" width="760" height="12" rx="6" fill="#d9dbe0"/><rect x="70" y="1110" width="680" height="12" rx="6" fill="#d9dbe0"/>
+<text x="930" y="1380" font-size="18" fill="#9aa0ab" text-anchor="end" font-family="Courier New, monospace">2 / 2</text>
+</svg>

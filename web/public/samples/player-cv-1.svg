@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1414" viewBox="0 0 1000 1414" font-family="Arial, Helvetica, sans-serif">
+<!-- Sample page for the development preview (V-6); real pages are rendered from PDFs by ingest (I-4). -->
+<rect width="1000" height="1414" fill="#FBFBF9"/>
+<rect width="1000" height="127" fill="#CC0000"/>
+<text x="70" y="82" font-size="46" font-weight="800" fill="#fff">PLAYER CV</text>
+<text x="70" y="230" font-size="40" font-weight="700" fill="#15171c">Arash Tehrani</text>
+<text x="70" y="270" font-size="20" fill="#6b7280">Opposite · Iran · 198 cm · Right-handed</text>
+<text x="70" y="370" font-size="26" font-weight="700" fill="#15171c">Clubs</text>
+<text x="70" y="420" font-size="22" fill="#6b7280" font-family="Courier New, monospace">2024–</text><text x="300" y="420" font-size="22" fill="#15171c">Club Aurora (sample)</text>
+<text x="70" y="480" font-size="22" fill="#6b7280" font-family="Courier New, monospace">2021–2024</text><text x="300" y="480" font-size="22" fill="#15171c">Paykan (sample)</text>
+<text x="70" y="540" font-size="22" fill="#6b7280" font-family="Courier New, monospace">2018–2021</text><text x="300" y="540" font-size="22" fill="#15171c">Youth team (sample)</text>
+<text x="70" y="660" font-size="26" font-weight="700" fill="#15171c">Profile</text>
+<rect x="70" y="700" width="860" height="12" rx="6" fill="#d9dbe0"/><rect x="70" y="740" width="800" height="12" rx="6" fill="#d9dbe0"/><rect x="70" y="780" width="840" height="12" rx="6" fill="#d9dbe0"/><rect x="70" y="820" width="620" height="12" rx="6" fill="#d9dbe0"/><rect x="70" y="860" width="780" height="12" rx="6" fill="#d9dbe0"/><rect x="70" y="900" width="700" height="12" rx="6" fill="#d9dbe0"/><rect x="70" y="940" width="520" height="12" rx="6" fill="#d9dbe0"/>
+<text x="930" y="1380" font-size="18" fill="#9aa0ab" text-anchor="end" font-family="Courier New, monospace">1 / 1</text>
+</svg>

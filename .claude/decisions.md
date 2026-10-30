@@ -541,6 +541,8 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
   - Remove the `AllowDownloads` link setting and every download button.
   - Disable the context menu on the player.
   - The PDF viewer is view-only (pages are rendered, no file is offered).
+  - **V-6 implementation (2026-10-31):** only page images are shown (`pages: string[]` per document, rendered by I-4 and signed by the edge in V-5b); the PDF file never reaches the browser. No download, no print (the viewer prints as nothing), no context menu, images cannot be dragged or long-pressed. Escape closes, Tab stays inside the dialog, focus returns to the document card. Until I-4 exists the preview uses sample page images in `web/public/samples/`.
+  - **PDF viewer design and watermark (owner, 2026-10-31):** the viewer follows the canvas artboards `DocViewer` (desktop: modal with page thumbnails, page counter, zoom 50–200 % and Fit) and `DocViewerMobile` (sheet that slides up, one page at a time, Prev / Next, pinch or tap to zoom). **The viewer's email overlay (20 % opacity, moving every 8 s) also lies on every PDF page**, as on the videos.
 - **Streaming:** HLS segments only. Originals are never exposed.
 - **Signed tokens:**
   - HLS URLs are HMAC-signed and **expire after 30 minutes**.

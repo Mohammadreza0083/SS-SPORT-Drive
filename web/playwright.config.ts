@@ -28,6 +28,8 @@ export default defineConfig({
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
     command: `npm run dev -- --port ${PORT}`,
+    // Hides the Next.js dev indicator and its toasts, which would make screenshots flaky.
+    env: { VISUAL_TESTS: "1" },
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,

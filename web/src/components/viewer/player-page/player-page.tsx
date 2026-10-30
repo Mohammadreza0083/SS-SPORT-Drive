@@ -9,6 +9,7 @@ import { Spotlight } from "@/components/viewer/spotlight";
 import { Ticker } from "@/components/viewer/ticker";
 import { pageCopy } from "./copy";
 import { Flag } from "./flag";
+import { DocumentsSection } from "./documents-section";
 import { tickerItems } from "./format";
 import { PlayerPhoto } from "./player-photo";
 import type { PlayerPageData } from "./types";
@@ -153,46 +154,7 @@ export function PlayerPage({ data }: PlayerPageProps) {
       <VideosSection videos={data.videos} viewerEmail={data.viewerEmail} />
 
       {documents.length > 0 ? (
-        <section id="docs" className="pp-docs" aria-labelledby="pp-docs-title">
-          <h2 id="pp-docs-title" className="ss-h2 ss-sr">
-            {pageCopy.documents}
-          </h2>
-          <div className="pp-doc-grid">
-            {documents.map((doc, i) => (
-              <a key={doc.id} href={doc.href} className="pp-doc ss-doc ss-press ss-sr">
-                <span className={i % 2 === 0 ? "pp-page pp-page-chart" : "pp-page pp-page-text"} aria-hidden="true">
-                  <span className="pp-page-head" />
-                  <span className="pp-page-line" />
-                  <span className="pp-page-line" />
-                  {i % 2 === 0 ? (
-                    <span className="pp-page-bars">
-                      <i style={{ height: "40%" }} />
-                      <i style={{ height: "70%" }} />
-                      <i style={{ height: "55%" }} />
-                      <i style={{ height: "90%" }} />
-                    </span>
-                  ) : (
-                    <>
-                      <span className="pp-page-line pp-page-line-short" />
-                      <span className="pp-page-line" />
-                    </>
-                  )}
-                </span>
-                <span className="pp-doc-text">
-                  <span className="pp-doc-title">{doc.title}</span>
-                  <span className="pp-doc-meta">
-                    {pageCopy.pdfPages(doc.pageCount)}
-                    <span className="pp-doc-meta-mobile"> · {pageCopy.viewOnlyShort}</span>
-                  </span>
-                  <span className="pp-doc-open">{pageCopy.viewOnly}</span>
-                </span>
-                <span className="pp-doc-view" aria-hidden="true">
-                  {pageCopy.view}
-                </span>
-              </a>
-            ))}
-          </div>
-        </section>
+        <DocumentsSection documents={documents} playerName={player.name} viewerEmail={data.viewerEmail} />
       ) : null}
 
       <section id="contact" className="pp-contact">

@@ -11,11 +11,16 @@ if (existsSync(rootEnvFile)) {
   process.loadEnvFile(rootEnvFile);
 }
 
-/** Next.js configuration. `standalone` output produces a minimal server bundle for the Docker image. */
+/**
+ * Next.js configuration. `standalone` output produces a minimal server bundle for the Docker image.
+ * The Playwright visual tests set `VISUAL_TESTS=1`: the dev indicator and its toasts come and go with timing,
+ * so they are switched off there to keep screenshots stable.
+ */
 const nextConfig: NextConfig = {
   output: "standalone",
   cacheComponents: true,
   partialPrefetching: true,
+  ...(process.env.VISUAL_TESTS === "1" ? { devIndicators: false as const } : {}),
 };
 
 export default nextConfig;

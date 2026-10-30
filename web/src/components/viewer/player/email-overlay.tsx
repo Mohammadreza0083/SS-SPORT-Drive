@@ -9,6 +9,8 @@ type EmailOverlayProps = {
   email: string;
   /** Random numbers in [0, 1), for tests; `Math.random` by default. */
   random?: () => number;
+  /** White text over video (default) or dark text over white document pages (V-6). */
+  tone?: "light" | "dark";
 };
 
 /** The class that carries the overlay's look; tampering with it is undone. */
@@ -26,7 +28,7 @@ const CLASS_NAME = "ss-wm";
  * @param props - See {@link EmailOverlayProps}.
  * @returns The overlay element, positioned inside the player frame.
  */
-export function EmailOverlay({ email, random = Math.random }: EmailOverlayProps) {
+export function EmailOverlay({ email, random = Math.random, tone = "light" }: EmailOverlayProps) {
   const ref = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
@@ -41,7 +43,8 @@ export function EmailOverlay({ email, random = Math.random }: EmailOverlayProps)
 
     /** Writes the overlay's expected text, class, visibility and position onto the element. */
     const apply = () => {
-      const className = fading ? `${CLASS_NAME} is-fading` : CLASS_NAME;
+      const base = tone === "dark" ? `${CLASS_NAME} ss-wm-dark` : CLASS_NAME;
+      const className = fading ? `${base} is-fading` : base;
       if (node.className !== className) {
         node.className = className;
       }
@@ -97,7 +100,7 @@ export function EmailOverlay({ email, random = Math.random }: EmailOverlayProps)
       clearInterval(moveTimer);
       clearTimeout(fadeTimer);
     };
-  }, [email, random]);
+  }, [email, random, tone]);
 
-  return <span ref={ref} className={CLASS_NAME} aria-hidden="true" />;
+  return <span ref={ref} className={tone === "dark" ? `${CLASS_NAME} ss-wm-dark` : CLASS_NAME} aria-hidden="true" />;
 }

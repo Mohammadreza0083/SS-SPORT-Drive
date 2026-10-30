@@ -97,6 +97,20 @@ describe("PlayerPage", () => {
     expect(screen.getByRole("contentinfo").textContent).toContain("Shared privately with Club Aurora");
   });
 
+  it("opens a document in the in-page viewer and brings focus back to its card on close", () => {
+    render(<PlayerPage data={samplePlayerPage} />);
+
+    const card = screen.getByRole("button", { name: /Season stats 2026/ });
+    fireEvent.click(card);
+    const dialog = screen.getByRole("dialog", { name: "Season stats 2026, view-only document" });
+    expect(within(dialog).getAllByRole("img", { name: /Page \d of 2/ })).toHaveLength(2);
+    expect(dialog.querySelector(".ss-wm")?.textContent).toBe("j.demir@aurora-volley.example");
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Close document" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(card);
+  });
+
   it("hides the documents section when there are none", () => {
     render(<PlayerPage data={{ ...samplePlayerPage, documents: [] }} />);
 

@@ -27,7 +27,7 @@ export const samplePlayerPage: PlayerPageData = {
     { id: "v5", title: "Full match vs Paykan", tag: "Full match", durationSeconds: 6490, src: TEST_STREAM, fps: 24 },
   ],
   documents: [
-    { id: "d1", title: "Season stats 2026", pageCount: 2, href: "#docs" },
-    { id: "d2", title: "Player CV", pageCount: 1, href: "#docs" },
+    { id: "d1", title: "Season stats 2026", pageCount: 2, pages: ["/samples/season-stats-1.svg", "/samples/season-stats-2.svg"] },
+    { id: "d2", title: "Player CV", pageCount: 1, pages: ["/samples/player-cv-1.svg"] },
   ],
 };
