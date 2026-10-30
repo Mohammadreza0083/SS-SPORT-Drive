@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1414" viewBox="0 0 1000 1414" font-family="Arial, Helvetica, sans-serif">
+<!-- Sample page for the development preview (V-6); real pages are rendered from PDFs by ingest (I-4). -->
+<rect width="1000" height="1414" fill="#FBFBF9"/>
+<rect width="1000" height="127" fill="#CC0000"/>
+<text x="70" y="82" font-size="46" font-weight="800" fill="#fff" letter-spacing="1">ARASH TEHRANI</text>
+<text x="930" y="78" font-size="20" fill="#FFD0D0" text-anchor="end" letter-spacing="4" font-family="Courier New, monospace">SEASON 2026</text>
+<text x="70" y="230" font-size="40" font-weight="700" fill="#15171c">Season statistics</text>
+<text x="70" y="270" font-size="20" fill="#6b7280">Opposite · Iran · 26 matches · 94 sets</text>
+<rect x="70" y="330" width="190" height="5" fill="#CC0000"/><text x="70" y="395" font-size="44" fill="#15171c" font-family="Courier New, monospace">412</text><text x="70" y="430" font-size="17" fill="#6b7280" letter-spacing="2">POINTS</text>
+<rect x="290" y="330" width="190" height="5" fill="#CC0000"/><text x="290" y="395" font-size="44" fill="#15171c" font-family="Courier New, monospace">51%</text><text x="290" y="430" font-size="17" fill="#6b7280" letter-spacing="2">ATTACK</text>
+<rect x="510" y="330" width="190" height="5" fill="#CC0000"/><text x="510" y="395" font-size="44" fill="#15171c" font-family="Courier New, monospace">38</text><text x="510" y="430" font-size="17" fill="#6b7280" letter-spacing="2">ACES</text>
+<rect x="730" y="330" width="190" height="5" fill="#CC0000"/><text x="730" y="395" font-size="44" fill="#15171c" font-family="Courier New, monospace">29</text><text x="730" y="430" font-size="17" fill="#6b7280" letter-spacing="2">BLOCKS</text>
+<text x="70" y="540" font-size="26" font-weight="700" fill="#15171c">Points per match</text>
+<rect x="70" y="782" width="72" height="138" fill="#CC0000"/><rect x="156" y="719" width="72" height="201" fill="#CC0000"/><rect x="242" y="739" width="72" height="181" fill="#CC0000"/><rect x="328" y="663" width="72" height="257" fill="#CC0000"/><rect x="414" y="759" width="72" height="161" fill="#CC0000"/><rect x="500" y="630" width="72" height="290" fill="#660000"/><rect x="586" y="699" width="72" height="221" fill="#CC0000"/><rect x="672" y="680" width="72" height="240" fill="#CC0000"/><rect x="758" y="729" width="72" height="191" fill="#CC0000"/><rect x="844" y="610" width="72" height="310" fill="#660000"/>
+<line x1="70" y1="921" x2="930" y2="921" stroke="#d9dbe0" stroke-width="2"/>
+<text x="70" y="1010" font-size="22" fill="#6b7280">Match</text><text x="520" y="1010" font-size="22" fill="#6b7280">Pts</text><text x="660" y="1010" font-size="22" fill="#6b7280">Att%</text><text x="800" y="1010" font-size="22" fill="#6b7280">Ace</text><line x1="70" y1="1032" x2="930" y2="1032" stroke="#e5e7eb" stroke-width="2"/>
+<text x="70" y="1072" font-size="22" fill="#15171c">vs Paykan</text><text x="520" y="1072" font-size="22" fill="#15171c">24</text><text x="660" y="1072" font-size="22" fill="#15171c">56</text><text x="800" y="1072" font-size="22" fill="#15171c">3</text><line x1="70" y1="1094" x2="930" y2="1094" stroke="#e5e7eb" stroke-width="2"/>
+<text x="70" y="1134" font-size="22" fill="#15171c">vs Northbridge</text><text x="520" y="1134" font-size="22" fill="#15171c">19</text><text x="660" y="1134" font-size="22" fill="#15171c">49</text><text x="800" y="1134" font-size="22" fill="#15171c">2</text><line x1="70" y1="1156" x2="930" y2="1156" stroke="#e5e7eb" stroke-width="2"/>
+<text x="70" y="1196" font-size="22" fill="#15171c">vs Saipa</text><text x="520" y="1196" font-size="22" fill="#15171c">21</text><text x="660" y="1196" font-size="22" fill="#15171c">53</text><text x="800" y="1196" font-size="22" fill="#15171c">4</text><line x1="70" y1="1218" x2="930" y2="1218" stroke="#e5e7eb" stroke-width="2"/>
+<text x="930" y="1380" font-size="18" fill="#9aa0ab" text-anchor="end" font-family="Courier New, monospace">1 / 2</text>
+</svg>

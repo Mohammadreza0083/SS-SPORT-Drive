@@ -64,7 +64,8 @@ afterEach(() => {
  */
 async function mediaElement(container: HTMLElement): Promise<HTMLVideoElement> {
   // The first dynamic import of hls-video-element can take longer than the 1 s default.
-  await waitFor(() => expect(container.querySelector("[slot=media]")).not.toBeNull(), { timeout: 5000 });
+  // Wait for the set-up effect too: it writes the config and then the src, a moment after the element appears.
+  await waitFor(() => expect(container.querySelector("[slot=media][src]")).not.toBeNull(), { timeout: 5000 });
   return container.querySelector("[slot=media]") as HTMLVideoElement;
 }
 

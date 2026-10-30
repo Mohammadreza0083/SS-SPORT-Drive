@@ -58,6 +58,6 @@ export type PlayerDocument = {
   title: string;
   /** Number of pages. */
   pageCount: number;
-  /** Where the in-page viewer opens (V-6). */
-  href: string;
+  /** One image URL per page, in order: rendered by ingest (I-4) and signed by the edge (V-5b). The PDF file itself never reaches the browser. */
+  pages: string[];
 };

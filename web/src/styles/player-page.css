@@ -298,6 +298,10 @@
 }
 
 .viewer .pp-doc {
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
   display: flex;
   gap: 20px;
   align-items: center;

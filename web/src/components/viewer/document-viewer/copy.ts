@@ -1,0 +1,23 @@
+/** UI copy of the document viewer (English; kept out of the component). */
+export const viewerDocCopy = {
+  dialogLabel: (title: string) => `${title}, view-only document`,
+  pdfPages: (pages: number) => `PDF · ${pages} ${pages === 1 ? "page" : "pages"}`,
+  viewOnly: "View only",
+  page: "Page",
+  pages: "Pages",
+  pageOf: (n: number, total: number) => `Page ${n} of ${total}`,
+  goTo: (n: number) => `Go to page ${n}`,
+  zoomIn: "Zoom in",
+  zoomOut: "Zoom out",
+  zoomTo: (factor: number) => `Zoom to ${Math.round(factor * 100)}%`,
+  fit: "Fit",
+  fitWidth: "Fit page to width",
+  close: "Close document",
+  previous: "Previous page",
+  next: "Next page",
+  prev: "Prev",
+  nextShort: "Next",
+  pinch: "Pinch to zoom",
+  protectedLong: "Protected document · view only · no downloads or printing",
+  protectedShort: "Protected document · view only",
+} as const;
