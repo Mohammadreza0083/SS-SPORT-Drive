@@ -1,5 +1,6 @@
 "use client";
 
+import { use } from "react";
 import { miniAppCopy } from "../copy";
 import { useInitData } from "../telegram";
 import { MyPlayersList } from "./my-players-list";
@@ -21,11 +22,14 @@ export function MyPlayersScreen() {
 
 /**
  * Waits for Telegram's initData, then shows one player's detail, or explains that the page needs Telegram.
+ * The route params arrive as a promise and are read here, inside the page's `<Suspense>` boundary, so the page
+ * itself never awaits request data while it is prerendered (`cacheComponents`).
  *
- * @param props - `playerId`: the player to show.
+ * @param props - `params`: the route params with the player id.
  * @returns The screen.
  */
-export function PlayerDetailScreen({ playerId }: { playerId: string }) {
+export function PlayerDetailScreen({ params }: { params: Promise<{ id: string }> }) {
+  const playerId = use(params).id;
   const initData = useInitData();
   if (initData === undefined) {
     return <p role="status">{miniAppCopy.signingIn}</p>;
