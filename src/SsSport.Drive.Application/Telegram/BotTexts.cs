@@ -150,6 +150,46 @@ public static class BotTexts
     /// <returns>The text.</returns>
     public static string FormatProgressStillMissing(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("ProgressStillMissing"), args);
 
+    /// <summary>Formats the "PhotoSaved" text (T-4d photo in the chat).</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatPhotoSaved(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("PhotoSaved"), args);
+
+    /// <summary>Gets the "PhotoPickPlayer" text (T-4d photo in the chat).</summary>
+    public static string PhotoPickPlayer => Get(nameof(PhotoPickPlayer));
+
+    /// <summary>Gets the "PhotoNoPlayers" text (T-4d photo in the chat).</summary>
+    public static string PhotoNoPlayers => Get(nameof(PhotoNoPlayers));
+
+    /// <summary>Gets the "PhotoNeedsAccess" text (T-4d photo in the chat).</summary>
+    public static string PhotoNeedsAccess => Get(nameof(PhotoNeedsAccess));
+
+    /// <summary>Gets the "PhotoTooSmall" text (T-4d photo in the chat).</summary>
+    public static string PhotoTooSmall => Get(nameof(PhotoTooSmall));
+
+    /// <summary>Gets the "PhotoUnreadable" text (T-4d photo in the chat).</summary>
+    public static string PhotoUnreadable => Get(nameof(PhotoUnreadable));
+
+    /// <summary>Gets the "PhotoTooLarge" text (T-4d photo in the chat).</summary>
+    public static string PhotoTooLarge => Get(nameof(PhotoTooLarge));
+
+    /// <summary>Formats the "PhotoNotYours" text (T-4d photo in the chat).</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatPhotoNotYours(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("PhotoNotYours"), args);
+
+    /// <summary>Gets the "PhotoPlayerGone" text (T-4d photo in the chat).</summary>
+    public static string PhotoPlayerGone => Get(nameof(PhotoPlayerGone));
+
+    /// <summary>Gets the "PhotoFailed" text (T-4d photo in the chat).</summary>
+    public static string PhotoFailed => Get(nameof(PhotoFailed));
+
+    /// <summary>Gets the "PreviousButton" text (T-4d photo in the chat).</summary>
+    public static string PreviousButton => Get(nameof(PreviousButton));
+
+    /// <summary>Gets the "NextButton" text (T-4d photo in the chat).</summary>
+    public static string NextButton => Get(nameof(NextButton));
+
     /// <summary>Formats the "WelcomeApproved" text.</summary>
     /// <param name="args">The values for its placeholders.</param>
     /// <returns>The text.</returns>

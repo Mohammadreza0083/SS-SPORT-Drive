@@ -14,9 +14,12 @@ internal sealed record BotCall(string Kind, long? ChatId, int? MessageId, string
 {
     /// <summary>Gets every button's callback data, row by row.</summary>
     public IEnumerable<string> ButtonData => Keyboard?.Rows.SelectMany(row => row).Select(button => button.CallbackData) ?? [];
+
+    /// <summary>Gets the message a Send replies to, or <see langword="null"/>.</summary>
+    public int? ReplyTo { get; init; }
 }
 
-/// <summary>Stands in for Telegram: records every message the bot sends, edits or answers.</summary>
+/// <summary>Stands in for Telegram: records every message the bot sends, edits or answers, and serves files.</summary>
 internal sealed class RecordingMessenger : ITelegramMessenger
 {
     /// <summary>The next message id.</summary>
@@ -24,6 +27,9 @@ internal sealed class RecordingMessenger : ITelegramMessenger
 
     /// <summary>Gets every call, in order.</summary>
     public ConcurrentQueue<BotCall> Calls { get; } = new();
+
+    /// <summary>Gets the files users sent, by Telegram file id, for <see cref="DownloadFileAsync"/>.</summary>
+    public ConcurrentDictionary<string, byte[]> Files { get; } = new(StringComparer.Ordinal);
 
     /// <summary>Gets or sets a value indicating whether sends fail, as when Telegram is unreachable.</summary>
     public bool FailSends { get; set; }
@@ -37,7 +43,11 @@ internal sealed class RecordingMessenger : ITelegramMessenger
     public IReadOnlyList<BotCall> ToChat(long chatId) => Calls.Where(call => call.ChatId == chatId).ToList();
 
     /// <inheritdoc />
-    public Task<int> SendAsync(long chatId, string text, BotKeyboard? keyboard, CancellationToken cancellationToken)
+    public Task<int> SendAsync(long chatId, string text, BotKeyboard? keyboard, CancellationToken cancellationToken) =>
+        SendReplyAsync(chatId, null, text, keyboard, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<int> SendReplyAsync(long chatId, int? replyToMessageId, string text, BotKeyboard? keyboard, CancellationToken cancellationToken)
     {
         if (FailSends)
         {
@@ -45,7 +55,7 @@ internal sealed class RecordingMessenger : ITelegramMessenger
         }
 
         var id = Interlocked.Increment(ref _nextMessageId);
-        Calls.Enqueue(new BotCall("Send", chatId, id, text, keyboard, false));
+        Calls.Enqueue(new BotCall("Send", chatId, id, text, keyboard, false) { ReplyTo = replyToMessageId });
         return Task.FromResult(id);
     }
 
@@ -67,4 +77,8 @@ internal sealed class RecordingMessenger : ITelegramMessenger
         Calls.Enqueue(new BotCall("Answer", null, null, text, null, showAlert));
         return Task.CompletedTask;
     }
+
+    /// <inheritdoc />
+    public Task<byte[]> DownloadFileAsync(string fileId, CancellationToken cancellationToken) =>
+        Files.TryGetValue(fileId, out var bytes) ? Task.FromResult(bytes) : throw new InvalidOperationException($"Unknown file {fileId}.");
 }

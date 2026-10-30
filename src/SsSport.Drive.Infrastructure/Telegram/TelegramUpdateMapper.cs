@@ -22,6 +22,9 @@ public static partial class TelegramUpdateMapper
         var user = update.Message?.From ?? update.CallbackQuery?.From ?? update.MyChatMember?.From;
         var chatId = update.Message?.Chat.Id ?? update.CallbackQuery?.Message?.Chat.Id ?? user?.Id;
 
+        // A button on the bot's photo picker carries the photo through the message the picker replies to.
+        var photoMessage = update.Message ?? update.CallbackQuery?.Message?.ReplyToMessage;
+
         return new HandleTelegramUpdateCommand(update.Id, update.Type.ToString(), user?.Id)
         {
             Sender = user is null ? null : new TelegramSender(user.Id, chatId ?? user.Id, user.Username, DisplayName(user)),
@@ -29,7 +32,28 @@ public static partial class TelegramUpdateMapper
             CallbackData = update.CallbackQuery?.Data,
             CallbackQueryId = update.CallbackQuery?.Id,
             CallbackMessageId = update.CallbackQuery?.Message?.MessageId,
+            Photo = PhotoOf(photoMessage),
+            MessageId = photoMessage?.MessageId,
+            ReplyToMessageId = update.Message?.ReplyToMessage?.MessageId,
         };
+    }
+
+    /// <summary>
+    /// Reads the photo of a message (T-4d): the largest Telegram photo size, or an image sent as a File.
+    /// </summary>
+    /// <param name="message">The message, or <see langword="null"/>.</param>
+    /// <returns>The photo, or <see langword="null"/> when the message has none.</returns>
+    private static IncomingPhoto? PhotoOf(Message? message)
+    {
+        if (message?.Photo is { Length: > 0 } sizes)
+        {
+            var largest = sizes.MaxBy(size => (long)size.Width * size.Height)!;
+            return new IncomingPhoto(largest.FileId, largest.FileSize, IsFile: false);
+        }
+
+        return message?.Document is { MimeType: { } type } document && type.StartsWith("image/", StringComparison.OrdinalIgnoreCase)
+            ? new IncomingPhoto(document.FileId, document.FileSize, IsFile: true)
+            : null;
     }
 
     /// <summary>Builds a display name from first and last name (falling back to the username or the id).</summary>
