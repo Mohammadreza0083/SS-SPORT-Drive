@@ -17,7 +17,10 @@ async function openDocument(page: Page) {
   await page.route("**/*.m3u8", (route) => route.abort());
   await page.goto("/design/player-page");
   await page.evaluate(() => document.fonts.ready);
-  await page.getByRole("button", { name: /Season stats 2026/ }).click();
+  // Put the card at the top first, so the page behind the viewer is always in the same place.
+  const card = page.getByRole("button", { name: /Season stats 2026/ });
+  await card.evaluate((element) => element.scrollIntoView({ block: "start" }));
+  await card.click();
   const dialog = page.getByRole("dialog", { name: "Season stats 2026, view-only document" });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole("img", { name: "Page 1 of 2" })).toBeVisible();
