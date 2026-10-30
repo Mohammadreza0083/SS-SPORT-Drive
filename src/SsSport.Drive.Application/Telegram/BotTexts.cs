@@ -103,6 +103,53 @@ public static class BotTexts
     /// <returns>The text.</returns>
     public static string FormatFolderAddedByOther(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("FolderAddedByOther"), args);
 
+    /// <summary>Gets the "ProgressUnnamed" text (T-6a progress message).</summary>
+    public static string ProgressUnnamed => Get(nameof(ProgressUnnamed));
+
+    /// <summary>Gets the "ProgressLinksVerified" text (T-6a progress message).</summary>
+    public static string ProgressLinksVerified => Get(nameof(ProgressLinksVerified));
+
+    /// <summary>Gets the "ProgressOneFolder" text (T-6a progress message).</summary>
+    public static string ProgressOneFolder => Get(nameof(ProgressOneFolder));
+
+    /// <summary>Gets the "ProgressNoFolder" text (T-6a progress message).</summary>
+    public static string ProgressNoFolder => Get(nameof(ProgressNoFolder));
+
+    /// <summary>Gets the "ProgressPhotoAdded" text (T-6a progress message).</summary>
+    public static string ProgressPhotoAdded => Get(nameof(ProgressPhotoAdded));
+
+    /// <summary>Gets the "ProgressPhotoMissing" text (T-6a progress message).</summary>
+    public static string ProgressPhotoMissing => Get(nameof(ProgressPhotoMissing));
+
+    /// <summary>Gets the "ProgressWaitingDetails" text (T-6a progress message).</summary>
+    public static string ProgressWaitingDetails => Get(nameof(ProgressWaitingDetails));
+
+    /// <summary>Gets the "ProgressWaitingAdmin" text (T-6a progress message).</summary>
+    public static string ProgressWaitingAdmin => Get(nameof(ProgressWaitingAdmin));
+
+    /// <summary>Gets the "ProgressPublished" text (T-6a progress message).</summary>
+    public static string ProgressPublished => Get(nameof(ProgressPublished));
+
+    /// <summary>Formats the "ProgressHeaderWaiting" text.</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatProgressHeaderWaiting(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("ProgressHeaderWaiting"), args);
+
+    /// <summary>Formats the "ProgressHeaderPublished" text.</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatProgressHeaderPublished(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("ProgressHeaderPublished"), args);
+
+    /// <summary>Formats the "ProgressFolders" text.</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatProgressFolders(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("ProgressFolders"), args);
+
+    /// <summary>Formats the "ProgressStillMissing" text.</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatProgressStillMissing(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("ProgressStillMissing"), args);
+
     /// <summary>Formats the "WelcomeApproved" text.</summary>
     /// <param name="args">The values for its placeholders.</param>
     /// <returns>The text.</returns>

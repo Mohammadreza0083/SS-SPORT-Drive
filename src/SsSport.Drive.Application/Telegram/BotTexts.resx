@@ -50,6 +50,19 @@ How it works:
 
 Questions? info@ss-sport.co</value></data>
   <data name="FolderAddedByOther" xml:space="preserve"><value>📁 {1} added a Drive folder to {0}: {2}</value></data>
+  <data name="ProgressHeaderWaiting" xml:space="preserve"><value>⏳ {0}</value></data>
+  <data name="ProgressHeaderPublished" xml:space="preserve"><value>✅ {0}</value></data>
+  <data name="ProgressUnnamed" xml:space="preserve"><value>New player</value></data>
+  <data name="ProgressLinksVerified" xml:space="preserve"><value>✅ Links verified</value></data>
+  <data name="ProgressOneFolder" xml:space="preserve"><value>✅ 1 Drive folder linked</value></data>
+  <data name="ProgressFolders" xml:space="preserve"><value>✅ {0} Drive folders linked</value></data>
+  <data name="ProgressNoFolder" xml:space="preserve"><value>⬜ Drive folder</value></data>
+  <data name="ProgressPhotoAdded" xml:space="preserve"><value>✅ Photo added</value></data>
+  <data name="ProgressPhotoMissing" xml:space="preserve"><value>⬜ Photo: add it in the Mini App</value></data>
+  <data name="ProgressStillMissing" xml:space="preserve"><value>⬜ Still missing: {0}</value></data>
+  <data name="ProgressWaitingDetails" xml:space="preserve"><value>⬜ Waiting for the details above</value></data>
+  <data name="ProgressWaitingAdmin" xml:space="preserve"><value>⏳ Waiting for an admin to publish</value></data>
+  <data name="ProgressPublished" xml:space="preserve"><value>✅ Published by an admin</value></data>
   <data name="ComingSoon" xml:space="preserve"><value>Coming soon.</value></data>
   <data name="FirstAdminNeedsEmail" xml:space="preserve"><value>You are the configured admin, but Telegram__AdminEmail is not set. Add it to the settings to finish the first-admin setup.</value></data>
 </root>

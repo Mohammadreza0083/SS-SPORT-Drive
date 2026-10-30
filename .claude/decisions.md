@@ -260,6 +260,29 @@ Last updated: 2026-10-29
   - **Category (Men/Women) is a required choice at the top of the form** (the owner gave no preference, so Claude's proposal stands), because every player needs it.
   - **Duplicates:** a Volleybox id that already exists is refused with `player.volleybox_taken` and the live check says so (switching to Update mode is T-5). A Drive folder already linked to a player is refused with `drive_folder.taken`.
   - **Until T-4c** the Drive link was only checked for its format, and the folder was stored with its Drive id as a provisional name. Since T-4c (below), the folder is read from Drive and linked under its real name.
+- **One progress message per player (T-6a, owner-approved 2026-10-29):**
+  - **Split:** T-6 is split in two.
+    - **T-6a (now):** one bot message per player for its analyst, edited in place for the steps that exist today.
+    - **T-6b:** waits for Epic 3, admin Publish and short links. It adds the copy, transcode and thumbnail steps with a progress bar and ETA, the result card and the QR code to the same message.
+  - **The message:** the player first, then one line per step: ✅ done, ⏳ waiting, ⬜ still to do.
+
+    ```
+    ⏳ Arash Tehrani
+    ✅ Links verified
+    ✅ 1 Drive folder linked
+    ⬜ Photo: add it in the Mini App
+    ⬜ Waiting for the details above
+    ```
+
+    - Once complete, the last line becomes **⏳ Waiting for an admin to publish**.
+    - After Publish, the header turns ✅ and the last line is **✅ Published by an admin**.
+    - Details other than the photo that are still missing are listed by name. The copy lives in `BotTexts.resx`.
+  - **When it is sent:** to the **owning analyst** only (archive players without an analyst get none, and neither do removed analysts). It goes out after every saved change the message shows: player created, details or photo changed, folder added, published.
+  - **Edits:** the same message is edited **only when its text changes**, so a change the message does not show (e.g. the nationality) sends nothing.
+  - **Storage:** the chat, the message id and the text it shows are stored in `progress_messages`, one row per player.
+  - **Failures:**
+    - **Message deleted:** if Telegram can no longer edit the message (the analyst deleted it), it is sent again and the new message is used from then on.
+    - **Telegram unreachable:** this never fails the request, because the change is already saved. The failure is logged as a Warning, and the next change tries again.
 - **Concurrent edits and log levels (D-13, owner-approved 2026-10-29; found by the K-8 benchmark):**
   - **Concurrent saves:** when two requests save the same aggregate at once, PostgreSQL's `xmin` check still refuses the later save, so nothing is overwritten. The unit of work now reports that as `ConcurrencyConflictException`, and the API answers **409** with `code: concurrency.conflict` (it used to be a raw 500). The Mini App tells the analyst to try again.
   - **Log levels** (`LoggingBehavior`): refusals the API answers on purpose (401, 403, 400, 404, 409, 422) are logged at **Information**, with the reason as a structured `Reason` property (the rule code or the refusal type) and no stack trace. An outside service being down (503) is a **Warning**. Only real failures are **Error**, so Grafana error alerts mean something.

@@ -25,6 +25,12 @@ internal sealed class RecordingMessenger : ITelegramMessenger
     /// <summary>Gets every call, in order.</summary>
     public ConcurrentQueue<BotCall> Calls { get; } = new();
 
+    /// <summary>Gets or sets a value indicating whether sends fail, as when Telegram is unreachable.</summary>
+    public bool FailSends { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether edits fail, as when the user deleted the message.</summary>
+    public bool FailEdits { get; set; }
+
     /// <summary>Gets the calls sent to or edited in a chat.</summary>
     /// <param name="chatId">The chat.</param>
     /// <returns>The calls.</returns>
@@ -33,6 +39,11 @@ internal sealed class RecordingMessenger : ITelegramMessenger
     /// <inheritdoc />
     public Task<int> SendAsync(long chatId, string text, BotKeyboard? keyboard, CancellationToken cancellationToken)
     {
+        if (FailSends)
+        {
+            throw new HttpRequestException("Telegram is unreachable.");
+        }
+
         var id = Interlocked.Increment(ref _nextMessageId);
         Calls.Enqueue(new BotCall("Send", chatId, id, text, keyboard, false));
         return Task.FromResult(id);
@@ -41,6 +52,11 @@ internal sealed class RecordingMessenger : ITelegramMessenger
     /// <inheritdoc />
     public Task EditAsync(long chatId, int messageId, string text, BotKeyboard? keyboard, CancellationToken cancellationToken)
     {
+        if (FailEdits)
+        {
+            throw new InvalidOperationException("Bad Request: message to edit not found");
+        }
+
         Calls.Enqueue(new BotCall("Edit", chatId, messageId, text, keyboard, false));
         return Task.CompletedTask;
     }

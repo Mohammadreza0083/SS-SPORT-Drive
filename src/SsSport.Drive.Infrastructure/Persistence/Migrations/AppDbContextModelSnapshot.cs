@@ -1529,6 +1529,50 @@ namespace SsSport.Drive.Infrastructure.Persistence.Migrations
                     b.ToTable("drive_folders", (string)null);
                 });
 
+            modelBuilder.Entity("SsSport.Drive.Domain.Notifications.ProgressMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long>("ChatId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("chat_id");
+
+                    b.Property<int>("MessageId")
+                        .HasColumnType("integer")
+                        .HasColumnName("message_id");
+
+                    b.Property<Guid>("PlayerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("player_id");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(4096)
+                        .HasColumnType("character varying(4096)")
+                        .HasColumnName("text");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_progress_messages");
+
+                    b.HasIndex("PlayerId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_progress_messages_player_id");
+
+                    b.ToTable("progress_messages", (string)null);
+                });
+
             modelBuilder.Entity("SsSport.Drive.Domain.Players.Player", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1766,7 +1810,7 @@ namespace SsSport.Drive.Infrastructure.Persistence.Migrations
                 {
                     b.OwnsOne("SsSport.Drive.Domain.Players.VolleyboxProfile", "Volleybox", b1 =>
                         {
-                            b1.Property<Guid>("PlayerId1")
+                            b1.Property<Guid>("OwnerId")
                                 .HasColumnType("uuid")
                                 .HasColumnName("id");
 
@@ -1780,7 +1824,8 @@ namespace SsSport.Drive.Infrastructure.Persistence.Migrations
                                 .HasColumnType("character varying(300)")
                                 .HasColumnName("volleybox_url");
 
-                            b1.HasKey("PlayerId1");
+                            b1.HasKey("OwnerId")
+                                .HasName("pk_players");
 
                             b1.HasIndex("PlayerId")
                                 .IsUnique()
@@ -1789,7 +1834,7 @@ namespace SsSport.Drive.Infrastructure.Persistence.Migrations
                             b1.ToTable("players");
 
                             b1.WithOwner()
-                                .HasForeignKey("PlayerId1")
+                                .HasForeignKey("OwnerId")
                                 .HasConstraintName("fk_players_players_id");
                         });
 

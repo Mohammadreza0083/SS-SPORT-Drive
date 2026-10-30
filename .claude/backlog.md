@@ -55,7 +55,8 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | T-4b | Player photo upload (min 800 px) to R2 / RustFS through an object-storage port; shown back in the form | Claude | Tests green |
 | T-4c | Drive folder live check with the service account: access, folder name, video/PDF count, total size | Claude | Tests green |
 | T-5 | Update-player mode for a known Volleybox ID | Claude | Tests green |
-| T-6 | One edited progress message + result card + QR | Claude | Demo |
+| T-6a | One progress message per player, edited in place: links, folders, photo, missing details, waiting for an admin / published | Claude | Tests green |
+| T-6b | Build steps in the same message (copy, transcode, thumbnails, % and ETA) + result card + QR (needs Epic 3, admin Publish, short links) | Claude | Demo |
 | T-7 | My players list, player detail, edit video sheet | Claude | Demo |
 | T-8 | Notification rules: grouping, 10-min throttle, quiet hours 23:00–08:00 Tehran | Claude | Tests green |
 
