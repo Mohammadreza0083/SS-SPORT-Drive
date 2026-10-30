@@ -1,0 +1,101 @@
+{
+  "description": "Shared test vectors for the HLS edge token (backlog V-5a). The .NET issuer must produce `token` exactly; the edge Worker must accept or reject each request as listed. See .claude/decisions.md \u00a76.",
+  "format": "base64url(JSON {v,p,s,e}) + '.' + base64url(HMAC-SHA256(key, ascii(first part))); s = base64url(first 16 bytes of SHA-256(session cookie value)); e = expiry, Unix seconds; URL = /hls/{token}/{p}/{file}",
+  "signingKeyBase64": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+  "sessionCookieName": "ssd_vs",
+  "issue": {
+    "pathPrefix": "players/7f1c2a9e/videos/3b5d8c41/hls",
+    "sessionCookie": "vs_9Jx2kQ7pL4mN8rT1",
+    "expiresAtUnix": 1793400000,
+    "sessionHash": "oa1t-6op70QGvjqF6fAc8A",
+    "token": "eyJ2IjoxLCJwIjoicGxheWVycy83ZjFjMmE5ZS92aWRlb3MvM2I1ZDhjNDEvaGxzIiwicyI6Im9hMXQtNm9wNzBRR3ZqcUY2ZkFjOEEiLCJlIjoxNzkzNDAwMDAwfQ.x97kzqZ0Y6FcKf1PFa7BrmEf6_159F5g9pAM8Ge-Wfc"
+  },
+  "requests": [
+    {
+      "name": "valid master playlist",
+      "path": "/hls/eyJ2IjoxLCJwIjoicGxheWVycy83ZjFjMmE5ZS92aWRlb3MvM2I1ZDhjNDEvaGxzIiwicyI6Im9hMXQtNm9wNzBRR3ZqcUY2ZkFjOEEiLCJlIjoxNzkzNDAwMDAwfQ.x97kzqZ0Y6FcKf1PFa7BrmEf6_159F5g9pAM8Ge-Wfc/players/7f1c2a9e/videos/3b5d8c41/hls/master.m3u8",
+      "cookie": "vs_9Jx2kQ7pL4mN8rT1",
+      "nowUnix": 1793399940,
+      "expect": 200,
+      "r2Key": "players/7f1c2a9e/videos/3b5d8c41/hls/master.m3u8"
+    },
+    {
+      "name": "valid segment",
+      "path": "/hls/eyJ2IjoxLCJwIjoicGxheWVycy83ZjFjMmE5ZS92aWRlb3MvM2I1ZDhjNDEvaGxzIiwicyI6Im9hMXQtNm9wNzBRR3ZqcUY2ZkFjOEEiLCJlIjoxNzkzNDAwMDAwfQ.x97kzqZ0Y6FcKf1PFa7BrmEf6_159F5g9pAM8Ge-Wfc/players/7f1c2a9e/videos/3b5d8c41/hls/720p/seg_00042.ts",
+      "cookie": "vs_9Jx2kQ7pL4mN8rT1",
+      "nowUnix": 1793399999,
+      "expect": 200,
+      "r2Key": "players/7f1c2a9e/videos/3b5d8c41/hls/720p/seg_00042.ts"
+    },
+    {
+      "name": "expired",
+      "path": "/hls/eyJ2IjoxLCJwIjoicGxheWVycy83ZjFjMmE5ZS92aWRlb3MvM2I1ZDhjNDEvaGxzIiwicyI6Im9hMXQtNm9wNzBRR3ZqcUY2ZkFjOEEiLCJlIjoxNzkzNDAwMDAwfQ.x97kzqZ0Y6FcKf1PFa7BrmEf6_159F5g9pAM8Ge-Wfc/players/7f1c2a9e/videos/3b5d8c41/hls/master.m3u8",
+      "cookie": "vs_9Jx2kQ7pL4mN8rT1",
+      "nowUnix": 1793400000,
+      "expect": 403
+    },
+    {
+      "name": "copied elsewhere: no session cookie",
+      "path": "/hls/eyJ2IjoxLCJwIjoicGxheWVycy83ZjFjMmE5ZS92aWRlb3MvM2I1ZDhjNDEvaGxzIiwicyI6Im9hMXQtNm9wNzBRR3ZqcUY2ZkFjOEEiLCJlIjoxNzkzNDAwMDAwfQ.x97kzqZ0Y6FcKf1PFa7BrmEf6_159F5g9pAM8Ge-Wfc/players/7f1c2a9e/videos/3b5d8c41/hls/master.m3u8",
+      "cookie": null,
+      "nowUnix": 1793399940,
+      "expect": 403
+    },
+    {
+      "name": "copied to another viewer: different session cookie",
+      "path": "/hls/eyJ2IjoxLCJwIjoicGxheWVycy83ZjFjMmE5ZS92aWRlb3MvM2I1ZDhjNDEvaGxzIiwicyI6Im9hMXQtNm9wNzBRR3ZqcUY2ZkFjOEEiLCJlIjoxNzkzNDAwMDAwfQ.x97kzqZ0Y6FcKf1PFa7BrmEf6_159F5g9pAM8Ge-Wfc/players/7f1c2a9e/videos/3b5d8c41/hls/master.m3u8",
+      "cookie": "vs_another_viewer",
+      "nowUnix": 1793399940,
+      "expect": 403
+    },
+    {
+      "name": "token for another viewer used with this cookie",
+      "path": "/hls/eyJ2IjoxLCJwIjoicGxheWVycy83ZjFjMmE5ZS92aWRlb3MvM2I1ZDhjNDEvaGxzIiwicyI6Ik8zWmZUdWhxQWo1aWpRUktOOWI4RGciLCJlIjoxNzkzNDAwMDAwfQ.Ukkem4NQ-EvTf20yA1EeCapoGqrSq9xJUAVn_lNe4T4/players/7f1c2a9e/videos/3b5d8c41/hls/master.m3u8",
+      "cookie": "vs_9Jx2kQ7pL4mN8rT1",
+      "nowUnix": 1793399940,
+      "expect": 403
+    },
+    {
+      "name": "path outside the token's video",
+      "path": "/hls/eyJ2IjoxLCJwIjoicGxheWVycy83ZjFjMmE5ZS92aWRlb3MvM2I1ZDhjNDEvaGxzIiwicyI6Im9hMXQtNm9wNzBRR3ZqcUY2ZkFjOEEiLCJlIjoxNzkzNDAwMDAwfQ.x97kzqZ0Y6FcKf1PFa7BrmEf6_159F5g9pAM8Ge-Wfc/players/7f1c2a9e/videos/other/hls/master.m3u8",
+      "cookie": "vs_9Jx2kQ7pL4mN8rT1",
+      "nowUnix": 1793399940,
+      "expect": 403
+    },
+    {
+      "name": "path traversal",
+      "path": "/hls/eyJ2IjoxLCJwIjoicGxheWVycy83ZjFjMmE5ZS92aWRlb3MvM2I1ZDhjNDEvaGxzIiwicyI6Im9hMXQtNm9wNzBRR3ZqcUY2ZkFjOEEiLCJlIjoxNzkzNDAwMDAwfQ.x97kzqZ0Y6FcKf1PFa7BrmEf6_159F5g9pAM8Ge-Wfc/players/7f1c2a9e/videos/3b5d8c41/hls/../../other/hls/master.m3u8",
+      "cookie": "vs_9Jx2kQ7pL4mN8rT1",
+      "nowUnix": 1793399940,
+      "expect": 403
+    },
+    {
+      "name": "payload changed, old signature",
+      "path": "/hls/eyJ2IjoxLCJwIjoicGxheWVycy9vdGhlci92aWRlb3MveC9obHMiLCJzIjoib2ExdC02b3A3MFFHdmpxRjZmQWM4QSIsImUiOjE3OTM0MDAwMDB9.x97kzqZ0Y6FcKf1PFa7BrmEf6_159F5g9pAM8Ge-Wfc/players/other/videos/x/hls/master.m3u8",
+      "cookie": "vs_9Jx2kQ7pL4mN8rT1",
+      "nowUnix": 1793399940,
+      "expect": 403
+    },
+    {
+      "name": "signature changed",
+      "path": "/hls/eyJ2IjoxLCJwIjoicGxheWVycy83ZjFjMmE5ZS92aWRlb3MvM2I1ZDhjNDEvaGxzIiwicyI6Im9hMXQtNm9wNzBRR3ZqcUY2ZkFjOEEiLCJlIjoxNzkzNDAwMDAwfQ.x97kzqZ0Y6FcKf1PFa7BrmEf6_159F5g9pAM8Ge-WAA/players/7f1c2a9e/videos/3b5d8c41/hls/master.m3u8",
+      "cookie": "vs_9Jx2kQ7pL4mN8rT1",
+      "nowUnix": 1793399940,
+      "expect": 403
+    },
+    {
+      "name": "malformed token",
+      "path": "/hls/not-a-token/players/7f1c2a9e/videos/3b5d8c41/hls/master.m3u8",
+      "cookie": "vs_9Jx2kQ7pL4mN8rT1",
+      "nowUnix": 1793399940,
+      "expect": 403
+    },
+    {
+      "name": "original file type not served",
+      "path": "/hls/eyJ2IjoxLCJwIjoicGxheWVycy83ZjFjMmE5ZS92aWRlb3MvM2I1ZDhjNDEvaGxzIiwicyI6Im9hMXQtNm9wNzBRR3ZqcUY2ZkFjOEEiLCJlIjoxNzkzNDAwMDAwfQ.x97kzqZ0Y6FcKf1PFa7BrmEf6_159F5g9pAM8Ge-Wfc/players/7f1c2a9e/videos/3b5d8c41/hls/original.mp4",
+      "cookie": "vs_9Jx2kQ7pL4mN8rT1",
+      "nowUnix": 1793399940,
+      "expect": 403
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import worker from "./index";
+import worker, { type Env } from "./index";
 
 /**
  * Sends a GET request for the given path to the worker.
@@ -8,7 +8,7 @@ import worker from "./index";
  * @returns The worker's response.
  */
 function get(path: string): Promise<Response> {
-  return Promise.resolve(worker.fetch(new Request(`https://drive.ss-sport.co${path}`)));
+  return worker.fetch(new Request(`https://drive.ss-sport.co${path}`), {} as Env);
 }
 
 describe("edge worker", () => {

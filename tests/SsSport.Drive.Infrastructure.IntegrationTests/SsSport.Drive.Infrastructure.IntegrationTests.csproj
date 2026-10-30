@@ -6,6 +6,10 @@
     <PackageReference Include="Microsoft.Extensions.Configuration" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Shared HLS edge-token vectors, also read by the edge Worker's tests (V-5a). -->
+    <None Include="..\..\contracts\hls-token-vectors.json" Link="hls-token-vectors.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\..\src\SsSport.Drive.Infrastructure\SsSport.Drive.Infrastructure.csproj" />
   </ItemGroup>
 </Project>

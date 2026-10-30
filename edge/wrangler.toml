@@ -3,3 +3,9 @@
 name = "ss-sport-drive-edge"
 main = "src/index.ts"
 compatibility_date = "2026-10-01"
+
+# Signed HLS delivery (V-5a). Enable when the HLS renditions bucket exists (I-3), then set the shared key:
+#   wrangler secret put HLS_SIGNING_KEY    # the same base64 value as the API's Edge__HlsSigningKey
+# [[r2_buckets]]
+# binding = "MEDIA"
+# bucket_name = "<hls renditions bucket>"

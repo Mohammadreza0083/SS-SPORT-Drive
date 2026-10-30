@@ -188,6 +188,7 @@ SS-SPORT Drive/
 │   ├── src/components/viewer/          # Shared viewer components (nav, footer, name reveal, ticker…)
 │   └── src/styles/                     # Brand tokens, motion system, shell styles
 ├── edge/                               # Cloudflare Worker
+├── contracts/                          # Formats shared across .NET, web and edge (HLS token test vectors)
 ├── deploy/                             # Staging/production deployment & operations
 ├── perf/k6/                            # k6 benchmarks (smoke + load profiles), see perf/k6/README.md
 ├── docker-compose.yml                  # Local stack (reads the root .env)
@@ -219,7 +220,7 @@ SS-SPORT Drive/
 | 1 | Core domain & persistence | ✅ Done |
 | 2 | Telegram bot & Mini App | 🚧 In progress |
 | 3 | Ingest, transcode & sync | ⏳ Planned |
-| 4 | Viewer site & media protection | 🚧 In progress (V-1 shell, V-2 player page, V-3 player, V-4 email overlay done) |
+| 4 | Viewer site & media protection | 🚧 In progress (V-1–V-4, V-5a edge tokens done) |
 | 5 | Personal links, OTP & tracking | ⏳ Planned |
 | 6 | Public search & access requests | ⏳ Planned |
 | 7 | Admin console | ⏳ Planned |
