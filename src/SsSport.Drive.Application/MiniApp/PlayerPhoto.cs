@@ -44,6 +44,12 @@ internal static class PlayerAccess
     public static bool CanChangePhoto(Player player, ICurrentUser currentUser) =>
         currentUser.IsInRole(Role.Admin.Name) || IsOwner(player, currentUser);
 
+    /// <summary>Tells whether a known team member may change the photo (the bot, which has no signed-in caller).</summary>
+    /// <param name="player">The player.</param>
+    /// <param name="user">The team member.</param>
+    /// <returns><see langword="true"/> for the owning analyst or an active admin.</returns>
+    public static bool CanChangePhoto(Player player, User user) => user.IsAdmin || player.AnalystId == user.Id;
+
     /// <summary>Tells whether the caller may edit the details: an admin, or the owning analyst while the player waits.</summary>
     /// <param name="player">The player.</param>
     /// <param name="currentUser">The caller.</param>
@@ -140,11 +146,34 @@ public sealed class UploadPlayerPhotoCommandHandler(
     {
         var player = await players.GetByIdAsync(request.PlayerId, cancellationToken) ?? throw new NotFoundException("Player");
         PlayerAccess.EnsureCanManage(player, currentUser);
+        return await PlayerPhotos.SaveAsync(player, request.Content, processor, storage, timeProvider, cancellationToken);
+    }
+}
 
-        var photo = processor.Process(new MemoryStream(request.Content, writable: false));
+/// <summary>Stores a player photo; shared by the Mini App upload (T-4b) and the bot chat (T-4d), so both follow one path.</summary>
+internal static class PlayerPhotos
+{
+    /// <summary>Processes the photo, stores the original and the WebP under new versioned keys, and points the player at the WebP.</summary>
+    /// <param name="player">The tracked player.</param>
+    /// <param name="content">The uploaded bytes.</param>
+    /// <param name="processor">Checks and converts the photo.</param>
+    /// <param name="storage">The media bucket.</param>
+    /// <param name="timeProvider">The clock; its milliseconds version the keys.</param>
+    /// <param name="cancellationToken">Cancels the uploads.</param>
+    /// <returns>The photo and what the player still misses.</returns>
+    /// <exception cref="Domain.Primitives.DomainException"><c>player.photo_too_small</c> or <c>player.photo_unreadable</c>.</exception>
+    public static async Task<PlayerPhotoDto> SaveAsync(
+        Player player,
+        byte[] content,
+        IPhotoProcessor processor,
+        IObjectStorage storage,
+        TimeProvider timeProvider,
+        CancellationToken cancellationToken)
+    {
+        var photo = processor.Process(new MemoryStream(content, writable: false));
         var version = timeProvider.GetUtcNow().ToUnixTimeMilliseconds();
         var key = $"players/{player.Id}/photo-{version}";
-        await storage.PutAsync($"{key}-original", new MemoryStream(request.Content, writable: false), photo.OriginalContentType, cancellationToken);
+        await storage.PutAsync($"{key}-original", new MemoryStream(content, writable: false), photo.OriginalContentType, cancellationToken);
         await storage.PutAsync($"{key}.webp", new MemoryStream(photo.Webp, writable: false), "image/webp", cancellationToken);
 
         player.ChangePhoto(PlayerPhoto.Create($"{key}.webp"));

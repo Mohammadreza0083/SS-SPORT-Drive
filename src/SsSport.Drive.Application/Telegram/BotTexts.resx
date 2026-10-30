@@ -50,6 +50,31 @@ How it works:
 
 Questions? info@ss-sport.co</value></data>
   <data name="FolderAddedByOther" xml:space="preserve"><value>📁 {1} added a Drive folder to {0}: {2}</value></data>
+  <data name="ProgressHeaderWaiting" xml:space="preserve"><value>⏳ {0}</value></data>
+  <data name="ProgressHeaderPublished" xml:space="preserve"><value>✅ {0}</value></data>
+  <data name="ProgressUnnamed" xml:space="preserve"><value>New player</value></data>
+  <data name="ProgressLinksVerified" xml:space="preserve"><value>✅ Links verified</value></data>
+  <data name="ProgressOneFolder" xml:space="preserve"><value>✅ 1 Drive folder linked</value></data>
+  <data name="ProgressFolders" xml:space="preserve"><value>✅ {0} Drive folders linked</value></data>
+  <data name="ProgressNoFolder" xml:space="preserve"><value>⬜ Drive folder</value></data>
+  <data name="ProgressPhotoAdded" xml:space="preserve"><value>✅ Photo added</value></data>
+  <data name="ProgressPhotoMissing" xml:space="preserve"><value>⬜ Photo: add it in the Mini App</value></data>
+  <data name="ProgressStillMissing" xml:space="preserve"><value>⬜ Still missing: {0}</value></data>
+  <data name="ProgressWaitingDetails" xml:space="preserve"><value>⬜ Waiting for the details above</value></data>
+  <data name="ProgressWaitingAdmin" xml:space="preserve"><value>⏳ Waiting for an admin to publish</value></data>
+  <data name="ProgressPublished" xml:space="preserve"><value>✅ Published by an admin</value></data>
+  <data name="PhotoSaved" xml:space="preserve"><value>✅ Photo saved for {0}.</value></data>
+  <data name="PhotoPickPlayer" xml:space="preserve"><value>Which player is this photo for?</value></data>
+  <data name="PhotoNoPlayers" xml:space="preserve"><value>No player of yours is waiting for a photo. To change a photo, reply to the player's progress message with the new one.</value></data>
+  <data name="PhotoNeedsAccess" xml:space="preserve"><value>Only active team members can add player photos. Send /start to ask for access.</value></data>
+  <data name="PhotoTooSmall" xml:space="preserve"><value>This photo is too small: it must be at least 800 px on its shorter side. Telegram shrinks photos, so send it as a File instead.</value></data>
+  <data name="PhotoUnreadable" xml:space="preserve"><value>Send a JPEG, PNG, WebP or HEIC photo.</value></data>
+  <data name="PhotoTooLarge" xml:space="preserve"><value>This photo is larger than 15 MB.</value></data>
+  <data name="PhotoNotYours" xml:space="preserve"><value>Only {0} or an admin can change this player's photo.</value></data>
+  <data name="PhotoPlayerGone" xml:space="preserve"><value>This player no longer exists.</value></data>
+  <data name="PhotoFailed" xml:space="preserve"><value>The photo could not be saved. Please send it again.</value></data>
+  <data name="PreviousButton" xml:space="preserve"><value>◀ Previous</value></data>
+  <data name="NextButton" xml:space="preserve"><value>Next ▶</value></data>
   <data name="ComingSoon" xml:space="preserve"><value>Coming soon.</value></data>
   <data name="FirstAdminNeedsEmail" xml:space="preserve"><value>You are the configured admin, but Telegram__AdminEmail is not set. Add it to the settings to finish the first-admin setup.</value></data>
 </root>

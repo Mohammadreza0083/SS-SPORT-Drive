@@ -45,7 +45,28 @@ public interface ITelegramMessenger
     /// <param name="cancellationToken">Cancels the call.</param>
     /// <returns>A task that completes when Telegram has the answer.</returns>
     Task AnswerCallbackAsync(string callbackQueryId, string? text, bool showAlert, CancellationToken cancellationToken);
+
+    /// <summary>Sends a message as a reply to another message in the chat (T-4d: the photo picker replies to the photo).</summary>
+    /// <param name="chatId">The chat.</param>
+    /// <param name="replyToMessageId">The message to reply to, or <see langword="null"/> for a plain message.</param>
+    /// <param name="text">The text.</param>
+    /// <param name="keyboard">Inline buttons, or <see langword="null"/>.</param>
+    /// <param name="cancellationToken">Cancels the call.</param>
+    /// <returns>The sent message's id.</returns>
+    Task<int> SendReplyAsync(long chatId, int? replyToMessageId, string text, BotKeyboard? keyboard, CancellationToken cancellationToken);
+
+    /// <summary>Downloads a file a user sent to the bot (the Bot API serves files up to 20 MB).</summary>
+    /// <param name="fileId">The Telegram file id.</param>
+    /// <param name="cancellationToken">Cancels the download.</param>
+    /// <returns>The file bytes.</returns>
+    Task<byte[]> DownloadFileAsync(string fileId, CancellationToken cancellationToken);
 }
+
+/// <summary>A photo a user sent to the bot: a Telegram photo (compressed) or an image sent as a File (full quality).</summary>
+/// <param name="FileId">The Telegram file id to download it with.</param>
+/// <param name="FileSize">The size Telegram reports, in bytes, or <see langword="null"/>.</param>
+/// <param name="IsFile">Whether it was sent as a File rather than as a photo.</param>
+public sealed record IncomingPhoto(string FileId, long? FileSize, bool IsFile);
 
 /// <summary>The configured first admin (<c>Telegram__AdminUserId</c>, <c>Telegram__AdminEmail</c>).</summary>
 public interface IBotAdminSettings
