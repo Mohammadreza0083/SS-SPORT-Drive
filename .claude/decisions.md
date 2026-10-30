@@ -260,6 +260,16 @@ Last updated: 2026-10-29
   - **Category (Men/Women) is a required choice at the top of the form** (the owner gave no preference, so Claude's proposal stands), because every player needs it.
   - **Duplicates:** a Volleybox id that already exists is refused with `player.volleybox_taken` and the live check says so (switching to Update mode is T-5). A Drive folder already linked to a player is refused with `drive_folder.taken`.
   - **Until T-4c** the Drive link was only checked for its format, and the folder was stored with its Drive id as a provisional name. Since T-4c (below), the folder is read from Drive and linked under its real name.
+- **Player photo straight from the bot chat (T-4d, owner request, 2026-10-29):**
+  - **The idea:** the analyst can send the photo in the bot chat instead of opening the Mini App. Both ways stay available.
+  - **Which player:**
+    - **Reply** to the player's progress message (T-6a) with the photo, and the bot knows the player.
+    - **Without a reply**, the bot answers the photo with buttons for the analyst's players that still have no photo (newest first, 5 per page, Previous/Next). The picker is itself a reply to the photo, so pressing a button finds the photo again; nothing is stored in between.
+  - **Accepted forms:** a Telegram **photo**, or an **image sent as a File**.
+    - Telegram compresses photos (the longer side is usually 1280 px). When such a photo is under 800 px on its shorter side, the bot says to send it **as a File**, which keeps full quality.
+  - **Rules:** the same checks and processing as T-4b (15 MB, 800 px, upright, metadata stripped, WebP next to the original) and the same rule on who may change the photo (the owning analyst or an admin).
+  - **The bot answers** with "✅ Photo saved for {player}" or with what to fix, and the progress message updates itself.
+  - **Access:** someone who is not an active team member is told to ask for access.
 - **One progress message per player (T-6a, owner-approved 2026-10-29):**
   - **Split:** T-6 is split in two.
     - **T-6a (now):** one bot message per player for its analyst, edited in place for the steps that exist today.
@@ -620,6 +630,15 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
 - **Contact CTA:** **email only** (`info@ss-sport.co`). **No WhatsApp.**
 - **Video player:** **Media Chrome + hls-video-element** (MIT, free, light). hls.js loads only where native HLS is missing; iOS Safari plays natively. Frame stepping (`,` `.`) is custom.
 - Brand tokens, page structure and the motion system are as in brief §10, except for the fonts and contact changes above.
+- **The design canvas is matched exactly, down to every detail** (owner, 2026-10-29, for V-1 and every later viewer page). Where the canvas and the brief differ on a value, the canvas wins; the brief still sets behaviour the canvas cannot show (for example counters start when visible).
+- **V-1 implementation choices (2026-10-29):**
+  - Fonts load through `next/font/google` with Latin + Latin Extended. They are downloaded at build time and served from our own origin, so viewers' browsers never call Google.
+  - The logo and infinity mark are the canvas's own PNGs (`web/public/brand/`), so the site looks exactly like the canvas.
+  - Tokens, motion and shell styles live in `web/src/styles/`, scoped to `.viewer`, so the Telegram Mini App keeps its own look.
+  - **Intro once per page:** the first visit to a page plays the full intro; later visits to that page get the 400 ms fade. The choice is remembered per page in `localStorage` and made by an inline script before the first paint. Blocked storage always gives the full intro.
+  - The name's light sweep keeps the canvas values (white 55 %, soft-light, 4.5 s after a 2.4 s delay) but does not repeat its gradient: the canvas's repeating gradient left a still grey box over the name between sweeps.
+  - Framer Motion is added only with the pieces that need it (mobile sheet, email gate steps), not in V-1.
+  - `/design/shell` is a development-only preview of the shell built from the canvas's sample player; production answers 404.
 
 ## 10. Brief OPEN items — resolution status
 

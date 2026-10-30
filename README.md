@@ -156,7 +156,7 @@ After a deploy, `dotnet SsSport.Drive.Api.dll telegram-set-webhook` registers th
 The Telegram Mini App lives at `/miniapp` in the web app. It signs in on every request with Telegram's signed `initData` (`Authorization: tma <initData>`, valid for 24 hours); only active analysts and admins get through. Telegram opens Mini Apps over HTTPS only, so trying it from the bot needs a public HTTPS URL.
 
 Analysts add a player at `/miniapp/new`: category, name, nationality, positions, Volleybox link and Drive folder link, both checked live. The folder is read with the service account (`GoogleDrive__*`), must be in the agency's Shared Drive, and is previewed with its name and file counts; where Google needs a VPN, set `GoogleDrive__Proxy`. The player waits on the admin waiting list until an admin publishes it. The browser only calls same-origin `/api/miniapp/*` routes, which forward to `API_BASE_URL`. Right after, the analyst adds the photo (JPEG, PNG, WebP or HEIC, at least 800 px on its shorter side); the API makes it upright, strips its metadata and stores it as WebP in the `Storage__*` bucket next to the original.
-Each player's analyst gets one progress message from the bot, edited in place as the player changes (links, folders, photo, waiting for an admin). When the Volleybox link already has a player, the form switches to update mode: the player card with **Add this folder** (any team member; the owning analyst is told by the bot), **Update photo & details** (the owning analyst while the player waits, an admin always) and **Just open the existing page**.
+Each player's analyst gets one progress message from the bot, edited in place as the player changes (links, folders, photo, waiting for an admin). The photo can also be sent straight in the bot chat: reply to the player's progress message with it (or pick the player from the bot's buttons); send it as a File to keep full quality. When the Volleybox link already has a player, the form switches to update mode: the player card with **Add this folder** (any team member; the owning analyst is told by the bot), **Update photo & details** (the owning analyst while the player waits, an admin always) and **Just open the existing page**.
 
 **My players** (`/miniapp/players`) lists an analyst's own players (every player for an admin), newest first, with a search on the name or Volleybox ID and the chips All / Live / Processing / Needs attention, paged in SQL. A player's detail shows the card, its Drive folders and its files in page order with the hero starred; **Edit player** opens the photo, details and folder steps. The bot's **New player** and **My players** buttons (and `/new`, `/players`) answer with a button that opens that Mini App page, which needs `Telegram__MiniAppUrl`.
 
@@ -174,6 +174,9 @@ SS-SPORT Drive/
 │   └── SsSport.Drive.Workers/          # Background job host (Hangfire)
 ├── tests/                              # Unit, architecture & integration tests
 ├── web/                                # Next.js front-end
+│   ├── src/app/(viewer)/               # Viewer site shell (dark brand layout, intro script)
+│   ├── src/components/viewer/          # Shared viewer components (nav, footer, name reveal, ticker…)
+│   └── src/styles/                     # Brand tokens, motion system, shell styles
 ├── edge/                               # Cloudflare Worker
 ├── deploy/                             # Staging/production deployment & operations
 ├── perf/k6/                            # k6 benchmarks (smoke + load profiles), see perf/k6/README.md
@@ -206,7 +209,7 @@ SS-SPORT Drive/
 | 1 | Core domain & persistence | ✅ Done |
 | 2 | Telegram bot & Mini App | 🚧 In progress |
 | 3 | Ingest, transcode & sync | ⏳ Planned |
-| 4 | Viewer site & media protection | ⏳ Planned |
+| 4 | Viewer site & media protection | 🚧 In progress (V-1 shell done) |
 | 5 | Personal links, OTP & tracking | ⏳ Planned |
 | 6 | Public search & access requests | ⏳ Planned |
 | 7 | Admin console | ⏳ Planned |

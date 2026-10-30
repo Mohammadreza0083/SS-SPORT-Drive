@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { fontVariables } from "./fonts";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -14,8 +15,11 @@ export const metadata: Metadata = {
  */
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    // The viewer shell's intro script sets data-ss-intro on <html> before hydration (see lib/viewer/intro),
+    // and browser extensions (e.g. ColorZilla's cz-shortcut-listen) add attributes to <body>. Both flags
+    // ignore attribute differences on these two tags only, never on the page content inside them.
+    <html lang="en" className={fontVariables} suppressHydrationWarning>
+      <body suppressHydrationWarning>{children}</body>
     </html>
   );
 }

@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using SsSport.Drive.Application.Abstractions.Messaging;
 using SsSport.Drive.Application.Telegram.Access;
+using SsSport.Drive.Application.Telegram.Photos;
 
 namespace SsSport.Drive.Application.Telegram;
 
@@ -61,6 +62,18 @@ public sealed record HandleTelegramUpdateCommand(long UpdateId, string Kind, lon
 
     /// <summary>Gets the id of the message the pressed button is on.</summary>
     public int? CallbackMessageId { get; init; }
+
+    /// <summary>
+    /// Gets the photo in the message, or for a button press the photo the pressed message replies to (T-4d);
+    /// <see langword="null"/> when there is none.
+    /// </summary>
+    public IncomingPhoto? Photo { get; init; }
+
+    /// <summary>Gets the id of the message carrying <see cref="Photo"/>, or <see langword="null"/>.</summary>
+    public int? MessageId { get; init; }
+
+    /// <summary>Gets the id of the message the user replied to, or <see langword="null"/>.</summary>
+    public int? ReplyToMessageId { get; init; }
 }
 
 /// <summary>Checks that an update has a valid id and a kind.</summary>
@@ -111,9 +124,18 @@ public sealed partial class HandleTelegramUpdateCommandHandler(
         LogAccepted(logger, request.UpdateId, request.Kind, request.TelegramUserId);
         if (request.Sender is { } from)
         {
-            if (request.CallbackData is { } data && request.CallbackQueryId is { } callbackId)
+            if (request.CallbackData is { } data && request.CallbackQueryId is { } callbackId && PhotoCallbacks.IsPhoto(data))
             {
-                await OnButtonAsync(from, data, callbackId, request.CallbackMessageId, cancellationToken);
+                await OnPhotoButtonAsync(from, data, callbackId, request, cancellationToken);
+            }
+            else if (request.CallbackData is { } buttonData && request.CallbackQueryId is { } buttonId)
+            {
+                await OnButtonAsync(from, buttonData, buttonId, request.CallbackMessageId, cancellationToken);
+            }
+            else if (request.Kind == "Message" && request.Photo is { } photo)
+            {
+                var reply = await sender.Send(new ReceiveBotPhotoCommand(from, photo, request.ReplyToMessageId, null), cancellationToken);
+                await bot.SendReplyAsync(from.ChatId, request.MessageId, reply.Text, reply.Keyboard, cancellationToken);
             }
             else if (request.Kind == "Message")
             {
@@ -267,6 +289,25 @@ public sealed partial class HandleTelegramUpdateCommandHandler(
         {
             await bot.SendAsync(to.ChatId, BotTexts.MiniAppNotSetUp, null, cancellationToken);
         }
+    }
+
+    /// <summary>
+    /// Handles a button on the photo picker (T-4d): saves the photo for the chosen player, or shows another page. The
+    /// photo comes from the message the picker replies to, and the picker itself becomes the answer.
+    /// </summary>
+    /// <param name="from">Who pressed.</param>
+    /// <param name="data">The button data.</param>
+    /// <param name="callbackId">The press, to answer.</param>
+    /// <param name="request">The update, with the photo and the picker message.</param>
+    /// <param name="cancellationToken">Cancels the work.</param>
+    /// <returns>A task that completes when the picker is updated.</returns>
+    private async Task OnPhotoButtonAsync(TelegramSender from, string data, string callbackId, HandleTelegramUpdateCommand request, CancellationToken cancellationToken)
+    {
+        await bot.AnswerCallbackAsync(callbackId, null, false, cancellationToken);
+        var reply = request.Photo is { } photo && PhotoCallbacks.TryParse(data, out var playerId, out var page)
+            ? await sender.Send(new ReceiveBotPhotoCommand(from, photo, null, playerId, page), cancellationToken)
+            : new BotPhotoReply(BotTexts.PhotoFailed);
+        await ReplyAsync(from, request.CallbackMessageId, reply.Text, reply.Keyboard, cancellationToken);
     }
 
     /// <summary>Edits the message the button was on, or sends a new one when it is unknown.</summary>
