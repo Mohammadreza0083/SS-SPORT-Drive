@@ -641,6 +641,11 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
   - Data contract `PlayerPageData` (player, recipient, note, stats, videos, documents). Until L-1 serves real personal links, `/design/player-page` shows the canvas's sample player (development only, 404 in production).
   - Missing media fall back to the canvas look: a silhouette until the cut-out photo exists (I-7), tinted gradients until thumbnails exist (I-4), drawn page cards for PDFs until previews exist (I-4).
   - Flags: `country-flag-icons` (MIT), drawn as inline SVG on the server, so no flag code reaches the browser.
+  - **V-4 email overlay (2026-10-31), as decided above:** the viewer's email at 20 % opacity, 2.2 % of the frame height (sized from the frame width with container units, so it scales with the player), moving every 8 s with a 0.5 s cross-fade to a random spot that is fully inside the frame and clear of the logo (top-left) and slogan (bottom-right) corners.
+    - Fullscreen takes the whole player frame (Media Chrome `fullscreenElement`), so the overlay stays on screen in fullscreen; picture-in-picture and casting are off (V-3).
+    - It cannot be clicked or selected, and screen readers skip it. Removing it, hiding it, changing its opacity, class or text in developer tools is undone at once (a MutationObserver guard).
+    - The canvas prototype's five fixed overlay positions are dropped in favour of the random spots above.
+    - The email comes from the OTP-verified session once L-2 lands; the previews use the canvas's `j.demir@aurora-volley.example`. The visual tests mask the overlay because its position is random.
   - The canvas has no sticky mini-player on phones (the brief mentions one), so none was built; it can be added later if wanted.
   - On phones the short player shows only the big play button before the first play, then the control bar (play, time, speed, quality, fullscreen). That matches the mobile canvas and keeps the two from overlapping.
   - Picking a video from the playlist plays it straight away. Playwright visual tests at 1440 / 834 / 390 px are the "visual pass"; their Linux baselines are generated and checked in the Playwright Docker image, in CI as well.

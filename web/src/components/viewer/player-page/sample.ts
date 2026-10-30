@@ -15,6 +15,7 @@ export const samplePlayerPage: PlayerPageData = {
     nationality: { code: "IR", name: "Iran" },
     volleyboxUrl: "https://volleybox.net",
   },
+  viewerEmail: "j.demir@aurora-volley.example",
   recipient: { organisation: "Club Aurora", name: "Jan Demir" },
   note: { text: "Hi Jan, as discussed: Arash's 2026 season. Full match vs Paykan included.", author: "SS-SPORT Scouting" },
   stats: { videos: 6, minutes: 117, documents: 2 },

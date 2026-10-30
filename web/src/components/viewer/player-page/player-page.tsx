@@ -150,7 +150,7 @@ export function PlayerPage({ data }: PlayerPageProps) {
         </div>
       </section>
 
-      <VideosSection videos={data.videos} />
+      <VideosSection videos={data.videos} viewerEmail={data.viewerEmail} />
 
       {documents.length > 0 ? (
         <section id="docs" className="pp-docs" aria-labelledby="pp-docs-title">

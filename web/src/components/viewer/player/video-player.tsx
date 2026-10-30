@@ -29,6 +29,7 @@ import {
   type PlaybackMode,
 } from "@/lib/viewer/player";
 import { playerCopy } from "./copy";
+import { EmailOverlay } from "./email-overlay";
 
 /** Props of {@link VideoPlayer}. */
 type VideoPlayerProps = {
@@ -44,6 +45,8 @@ type VideoPlayerProps = {
   fps?: number;
   /** Starts playing as soon as it can; used when a viewer picks a video from the playlist. */
   autoPlay?: boolean;
+  /** The signed-in viewer's email, laid faintly over the video (V-4); no overlay without it. */
+  viewerEmail?: string;
 };
 
 /** The media element the player drives: a native `<video>` or the `<hls-video>` custom element. */
@@ -56,14 +59,17 @@ const noSubscription = () => () => {};
  * The branded video player (backlog V-3): Media Chrome controls over hls.js (or the browser's own HLS on
  * iPhone and iPad), speed 0.25×–2×, quality, frame stepping with buttons and the `,` `.` keys, fullscreen.
  * There is no download anywhere: no button, no context menu, no picture-in-picture or casting, and the
- * native download control is switched off. Only HLS playlists are ever loaded.
+ * native download control is switched off. Only HLS playlists are ever loaded. With a viewer email the
+ * moving email overlay (V-4) sits over the video, and fullscreen takes the whole frame so it stays visible.
  *
  * @param props - See {@link VideoPlayerProps}.
  * @returns The player with its title row.
  */
-export function VideoPlayer({ src, title, tag, poster, fps = DEFAULT_FPS, autoPlay = false }: VideoPlayerProps) {
+export function VideoPlayer({ src, title, tag, poster, fps = DEFAULT_FPS, autoPlay = false, viewerEmail }: VideoPlayerProps) {
   const id = useId();
   const mediaRef = useRef<PlayerMedia | null>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
+  const controllerRef = useRef<HTMLElement & { fullscreenElement?: HTMLElement }>(null);
   const mode = useSyncExternalStore<PlaybackMode | null>(noSubscription, () => playbackMode(detectHlsSupport()), () => null);
   const [hlsReady, setHlsReady] = useState(false);
 
@@ -84,6 +90,13 @@ export function VideoPlayer({ src, title, tag, poster, fps = DEFAULT_FPS, autoPl
   }, [mode]);
 
   const ready = mode === "native" || (mode === "hls" && hlsReady);
+
+  useEffect(() => {
+    // Fullscreen takes the frame (controller + email overlay), not just the controller.
+    if (controllerRef.current && frameRef.current) {
+      controllerRef.current.fullscreenElement = frameRef.current;
+    }
+  }, [ready]);
 
   useEffect(() => {
     const media = mediaRef.current;
@@ -146,10 +159,11 @@ export function VideoPlayer({ src, title, tag, poster, fps = DEFAULT_FPS, autoPl
         role="region"
         aria-label={playerCopy.region(title)}
         className="ss-player-frame"
+        ref={frameRef}
         onKeyDown={onKeyDown}
         onContextMenu={blockMenu}
       >
-        <MediaController className="ss-player-stage" defaultStreamType="on-demand">
+        <MediaController ref={controllerRef as never} className="ss-player-stage" defaultStreamType="on-demand">
           {ready && mode === "hls" ? (
             <hls-video ref={(el: PlayerMedia | null) => void (mediaRef.current = el)} slot="media" poster={poster} />
           ) : null}
@@ -190,6 +204,7 @@ export function VideoPlayer({ src, title, tag, poster, fps = DEFAULT_FPS, autoPl
           </MediaControlBar>
 
         </MediaController>
+        {viewerEmail ? <EmailOverlay email={viewerEmail} /> : null}
       </div>
 
       <div className="ss-player-meta">

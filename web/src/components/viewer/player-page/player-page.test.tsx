@@ -3,8 +3,8 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 
 vi.mock("@/components/viewer/player/video-player", () => ({
   /** Stands in for the V-3 player: shows what it was asked to play. */
-  VideoPlayer: ({ title, tag, src, autoPlay }: { title: string; tag?: string; src: string; autoPlay?: boolean }) => (
-    <div data-testid="player" data-src={src} data-autoplay={autoPlay ? "true" : "false"}>
+  VideoPlayer: ({ title, tag, src, autoPlay, viewerEmail }: { title: string; tag?: string; src: string; autoPlay?: boolean; viewerEmail?: string }) => (
+    <div data-testid="player" data-src={src} data-autoplay={autoPlay ? "true" : "false"} data-email={viewerEmail}>
       {title} · {tag}
     </div>
   ),
@@ -135,6 +135,12 @@ describe("VideosSection", () => {
     const picked = screen.getByRole("button", { name: /Full match vs Paykan/ });
     expect(picked.getAttribute("aria-current")).toBe("true");
     expect(within(picked).getByLabelText("Now playing")).toBeTruthy();
+  });
+
+  it("hands the viewer's email to the player for the overlay", () => {
+    render(<PlayerPage data={samplePlayerPage} />);
+
+    expect(screen.getByTestId("player").dataset.email).toBe("j.demir@aurora-volley.example");
   });
 
   it("shows each video's duration", () => {

@@ -30,7 +30,6 @@ describe("motion system (brief §10, design canvas)", () => {
     "ss-card-in",
     "ss-modal-in",
     "ss-shimmer",
-    "ss-wm-move",
   ])("defines the @keyframes %s", (name) => {
     expect(motion).toMatch(new RegExp(`@keyframes ${name}\\s*\\{`));
   });

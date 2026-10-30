@@ -167,6 +167,36 @@ describe("VideoPlayer", () => {
     await waitFor(() => expect(container.querySelector("[slot=media]")?.hasAttribute("autoplay")).toBe(true));
   });
 
+  it("lays the viewer's email over the video when one is given", async () => {
+    desktop();
+    const { container } = render(
+      <VideoPlayer src="https://example.test/v/master.m3u8" title="Highlights 2026" viewerEmail="j.demir@aurora-volley.example" />,
+    );
+    await mediaElement(container);
+
+    const overlay = container.querySelector(".ss-player-frame .ss-wm");
+    expect(overlay?.textContent).toBe("j.demir@aurora-volley.example");
+  });
+
+  it("shows no overlay without a viewer email", async () => {
+    desktop();
+    const { container } = render(<VideoPlayer src="https://example.test/v/master.m3u8" title="Highlights 2026" />);
+    await mediaElement(container);
+
+    expect(container.querySelector(".ss-wm")).toBeNull();
+  });
+
+  it("takes the overlay into fullscreen by making the whole frame the fullscreen element", async () => {
+    desktop();
+    const { container } = render(
+      <VideoPlayer src="https://example.test/v/master.m3u8" title="Highlights 2026" viewerEmail="j.demir@aurora-volley.example" />,
+    );
+    await mediaElement(container);
+
+    const controller = container.querySelector("media-controller") as HTMLElement & { fullscreenElement?: HTMLElement };
+    expect(controller.fullscreenElement).toBe(container.querySelector(".ss-player-frame"));
+  });
+
   it("states that the stream is protected", async () => {
     desktop();
     render(<VideoPlayer src="https://example.test/v/master.m3u8" title="Highlights 2026" />);
