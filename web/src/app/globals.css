@@ -1,4 +1,4 @@
-/* Global styles. Brand tokens, fonts and the motion system arrive with backlog V-1. */
+/* Global styles shared by every route. The viewer's brand tokens, fonts and motion live in src/styles (V-1). */
 html,
 body {
   margin: 0;

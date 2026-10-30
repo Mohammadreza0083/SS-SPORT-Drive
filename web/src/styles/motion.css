@@ -1,0 +1,192 @@
+/*
+ * Motion system of the viewer site (backlog V-1), taken from the design canvas.
+ * Rules (brief §10): animate transform/opacity (one blur on the intro photo only), video is usable before
+ * the intro ends, the full intro plays once per page and returning viewers get a 400 ms fade,
+ * and prefers-reduced-motion turns all motion off.
+ * Every class is scoped to `.viewer` so the Telegram Mini App keeps its own look.
+ */
+
+@property --n {
+  syntax: "<integer>";
+  inherits: false;
+  initial-value: 0;
+}
+
+/* Breakpoint-tuned distances and durations (canvas: desktop 1440, tablet 834, mobile 390). */
+:root {
+  --ss-fu-y: 28px;
+  --ss-fu-duration: .9s;
+  --ss-drift-x: -30px;
+  --ss-drift-y: 18px;
+  --ss-drift-r0: -6deg;
+  --ss-drift-r1: 3deg;
+  --ss-drift-duration: 14s;
+  --ss-sil-y: 90px;
+  --ss-sil-scale: .95;
+  --ss-sil-blur: 14px;
+  --ss-marquee-duration: 26s;
+  --ss-pan-x: -400px;
+  --ss-sweep-delay: 2.4s;
+}
+
+@media (max-width: 1024px) {
+  :root {
+    --ss-fu-y: 26px;
+    --ss-fu-duration: .85s;
+    --ss-drift-x: -24px;
+    --ss-drift-y: 16px;
+    --ss-sil-y: 80px;
+    --ss-sil-scale: .96;
+    --ss-sil-blur: 12px;
+    --ss-marquee-duration: 24s;
+  }
+}
+
+@media (max-width: 640px) {
+  :root {
+    --ss-fu-y: 22px;
+    --ss-fu-duration: .8s;
+    --ss-drift-x: -16px;
+    --ss-drift-y: 12px;
+    --ss-drift-r0: -8deg;
+    --ss-drift-r1: 2deg;
+    --ss-drift-duration: 12s;
+    --ss-sil-y: 70px;
+    --ss-sil-scale: 1;
+    --ss-marquee-duration: 20s;
+    --ss-pan-x: -300px;
+    --ss-sweep-delay: 2.2s;
+  }
+}
+
+/* Keyframes */
+@keyframes ss-rise { from { transform: translateY(105%) skewY(6deg); } to { transform: none; } }
+@keyframes ss-fade-up { from { opacity: 0; transform: translateY(var(--ss-fu-y)); } to { opacity: 1; transform: none; } }
+@keyframes ss-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ss-glow { 0%, 100% { opacity: .7; transform: scale(1); } 50% { opacity: 1; transform: scale(1.1); } }
+@keyframes ss-drift { 0%, 100% { transform: translate(0, 0) rotate(var(--ss-drift-r0)); } 50% { transform: translate(var(--ss-drift-x), var(--ss-drift-y)) rotate(var(--ss-drift-r1)); } }
+@keyframes ss-sil-in { from { opacity: 0; transform: translateY(var(--ss-sil-y)) scale(var(--ss-sil-scale)); filter: blur(var(--ss-sil-blur)); } to { opacity: 1; transform: none; filter: blur(0); } }
+@keyframes ss-sweep { from { background-position: 180% 0; } to { background-position: -80% 0; } }
+@keyframes ss-marquee { to { transform: translateX(-50%); } }
+@keyframes ss-count { from { --n: 0; } }
+@keyframes ss-line-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes ss-cta-sweep { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
+@keyframes ss-floaty { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes ss-eq { 0%, 100% { transform: scaleY(.3); } 50% { transform: scaleY(1); } }
+@keyframes ss-pan { from { background-position: 0 0, 0 0; } to { background-position: var(--ss-pan-x) 0, 0 0; } }
+@keyframes ss-ring { 0% { transform: scale(1); opacity: .7; } 100% { transform: scale(1.9); opacity: 0; } }
+@keyframes ss-pulse { 0% { box-shadow: 0 0 0 0 rgba(204, 0, 0, .7); } 100% { box-shadow: 0 0 0 18px rgba(204, 0, 0, 0); } }
+@keyframes ss-slide-in { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: none; } }
+@keyframes ss-pop { 0% { transform: scale(.4); opacity: 0; } 60% { transform: scale(1.12); opacity: 1; } 100% { transform: scale(1); } }
+@keyframes ss-draw { from { stroke-dashoffset: 120; } to { stroke-dashoffset: 0; } }
+@keyframes ss-burst { from { transform: scale(.6); opacity: .9; } to { transform: scale(2.6); opacity: 0; } }
+@keyframes ss-shake { 0%, 100% { transform: none; } 20% { transform: translateX(-10px); } 40% { transform: translateX(9px); } 60% { transform: translateX(-6px); } 80% { transform: translateX(4px); } }
+@keyframes ss-card-in { from { opacity: 0; transform: translateY(40px) scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes ss-modal-in { from { opacity: 0; transform: translateY(30px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes ss-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@keyframes ss-wm-move { 0% { left: 8%; top: 24%; } 20% { left: 50%; top: 60%; } 40% { left: 12%; top: 68%; } 60% { left: 56%; top: 18%; } 80% { left: 28%; top: 42%; } }
+
+/* Page load: glow → mark → photo from blur → name letters (50 ms stagger) → buttons */
+.viewer .ss-fu { animation: ss-fade-up var(--ss-fu-duration) var(--ss-ease-out) both; }
+.viewer .ss-ln { display: block; overflow: hidden; padding-bottom: 4px; }
+.viewer .ss-ch { display: inline-block; animation: ss-rise .9s var(--ss-ease-intro) both; }
+.viewer .ss-sil { animation: ss-sil-in 1.4s .25s var(--ss-ease-out) both; }
+.viewer .ss-under { transform-origin: left; animation: ss-line-grow 1s 1.6s var(--ss-ease-out) both; }
+
+/* Name shine: light sweep across the player's name */
+.viewer .ss-name { position: relative; }
+.viewer .ss-name::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent 35%, rgba(255, 255, 255, .55) 50%, transparent 65%);
+  background-size: 250% 100%;
+  /*
+   * One band only: a repeating gradient leaves a second, still band over the name at the start and end of
+   * each loop. It rests where the sweep starts (off the name), so nothing shows before the delay ends.
+   */
+  background-repeat: no-repeat;
+  background-position: 180% 0;
+  mix-blend-mode: soft-light;
+  animation: ss-sweep 4.5s var(--ss-sweep-delay) ease-in-out infinite;
+}
+
+/* Brand glow breathes, the infinity mark floats */
+.viewer .ss-glow { animation: ss-glow 6s ease-in-out infinite; }
+.viewer .ss-drift { animation: ss-drift var(--ss-drift-duration) ease-in-out infinite; }
+.viewer .ss-floaty { animation: ss-floaty 5s ease-in-out infinite; }
+
+/* Ticker */
+.viewer .ss-track { display: flex; width: max-content; animation: ss-marquee var(--ss-marquee-duration) linear infinite; }
+
+/* Counters count up once visible */
+.viewer .ss-count { counter-reset: n var(--n); }
+.viewer .ss-count:not(.is-counting) { counter-reset: n 0; }
+.viewer .ss-count.is-counting { animation: ss-count 2.2s var(--ss-ease-out) both; }
+.viewer .ss-count::after { content: counter(n); }
+
+/* Contact CTA: animated red gradient panel */
+.viewer .ss-cta {
+  background: linear-gradient(110deg, #CC0000, #7a0000, #CC0000, #ff2d2d, #CC0000);
+  background-size: 200% 100%;
+  animation: ss-cta-sweep 9s linear infinite;
+}
+
+/* Player: pulsing ring on play, court lines pan while playing, equaliser on the current item */
+.viewer .ss-ring { position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--ss-red-light); animation: ss-ring 1.8s ease-out infinite; }
+.viewer .ss-pulse { animation: ss-pulse 2s 2s infinite; }
+.viewer .ss-eqb { display: block; width: 3px; height: 12px; background: var(--ss-red-light); border-radius: 2px; transform-origin: bottom; animation: ss-eq .9s ease-in-out infinite; }
+.viewer .ss-pan { animation: ss-pan 18s linear infinite; }
+.viewer .ss-pan.is-paused { animation-play-state: paused; }
+.viewer .ss-wm { animation: ss-wm-move 24s steps(1, end) infinite; }
+
+/* Email gate and modals */
+.viewer .ss-si { animation: ss-slide-in .55s var(--ss-ease-intro) both; }
+.viewer .ss-modal { animation: ss-modal-in .55s var(--ss-ease-intro) both; }
+.viewer .ss-card-in { animation: ss-card-in .8s var(--ss-ease-out) both; }
+.viewer .ss-shake { animation: ss-shake .45s ease-in-out; }
+.viewer .ss-pop { animation: ss-pop .6s var(--ss-ease-intro) both; }
+.viewer .ss-chk { stroke-dasharray: 120; animation: ss-draw .7s .3s ease-out both; }
+.viewer .ss-burst { position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--ss-red-light); animation: ss-burst 1.2s ease-out infinite; }
+.viewer .ss-shim { background: linear-gradient(90deg, #1a1d24 0, #262a33 50%, #1a1d24 100%); background-size: 200% 100%; animation: ss-shimmer 2.6s linear infinite; }
+
+/* Hover: playlist items slide, thumbs zoom, document cards lift and tilt, player cards rise */
+.viewer .ss-item { transition: background .25s, transform .25s; cursor: pointer; }
+.viewer .ss-item:hover { background: var(--ss-hover); transform: translateX(4px); }
+.viewer .ss-thz { transition: transform .5s var(--ss-ease-out); }
+.viewer .ss-item:hover .ss-thz { transform: scale(1.08); }
+.viewer .ss-doc { transition: transform .35s var(--ss-ease-out), box-shadow .35s; }
+.viewer .ss-doc:hover { transform: translateY(-6px) rotate(-1deg); box-shadow: 0 28px 50px -24px rgba(204, 0, 0, .6); }
+.viewer .ss-pc { animation: ss-card-in .8s var(--ss-ease-out) both; transition: transform .45s var(--ss-ease-out), box-shadow .45s, border-color .3s; }
+.viewer .ss-pc:hover { transform: translateY(-10px); box-shadow: 0 34px 60px -30px rgba(204, 0, 0, .75); border-color: #5a1414; }
+.viewer .ss-pc .ss-ps { transition: transform .6s var(--ss-ease-out); }
+.viewer .ss-pc:hover .ss-ps { transform: scale(1.07) translateY(-6px); }
+.viewer .ss-pc .ss-ul { transform: scaleX(.25); transform-origin: left; transition: transform .45s var(--ss-ease-out); }
+.viewer .ss-pc:hover .ss-ul { transform: scaleX(1); }
+.viewer .ss-pc .ss-go { opacity: 0; transform: translateX(-8px); transition: opacity .3s, transform .3s; }
+.viewer .ss-pc:hover .ss-go { opacity: 1; transform: none; }
+.viewer .ss-press { transition: transform .15s; }
+.viewer .ss-press:active { transform: scale(.97); }
+
+/* Scroll reveal: sections fade up on enter */
+@supports (animation-timeline: view()) {
+  .viewer .ss-sr { animation: ss-fade-up linear both; animation-timeline: view(); animation-range: entry 0% cover 28%; }
+}
+@supports not (animation-timeline: view()) {
+  .viewer .ss-sr { animation: ss-fade-up var(--ss-fu-duration) .2s both; }
+}
+
+/* Returning viewers: a 400 ms fade instead of the full intro */
+html[data-ss-intro="short"] .viewer :is(.ss-fu, .ss-ch, .ss-sil, .ss-under) {
+  animation: ss-fade-in .4s ease both !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .viewer *,
+  .viewer *::before,
+  .viewer *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

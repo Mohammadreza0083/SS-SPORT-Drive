@@ -18,6 +18,8 @@ appsettings.*.json
 appsettings.Local.json
 .dev.vars
 .claude/settings.local.json
+# Per-machine dev-server config for the desktop app's browser preview.
+.claude/launch.json
 
 # --- .NET ---------------------------------------------------------
 [Bb]in/

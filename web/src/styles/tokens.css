@@ -1,0 +1,73 @@
+/*
+ * Brand tokens of the viewer site (backlog V-1).
+ * Values come from the brief §10 and the design canvas "SS-SPORT Drive · Animated Viewer Pages";
+ * fonts follow decisions §9 (Barlow Condensed for names, Geist, Geist Mono).
+ */
+:root {
+  /* Brand */
+  --ss-red: #CC0000;
+  --ss-maroon: #660000;
+  --ss-red-light: #FF4545;
+  --ss-red-soft: #FF6B6B;
+  --ss-red-hover: #ff7070;
+  --ss-red-ink: #3d0000;
+  --ss-red-tint: rgba(204, 0, 0, .12);
+  --ss-red-tint-border: rgba(255, 69, 69, .35);
+  --ss-red-tint-text: #FFD0D0;
+
+  /* Surfaces */
+  --ss-bg: #07080B;
+  --ss-panel: #0F1117;
+  --ss-input: #12151C;
+  --ss-hover: #15181F;
+  --ss-border: #1E222B;
+  --ss-border-strong: #2A2F3A;
+  --ss-border-ghost: #343a46;
+  --ss-divider: #1A1D24;
+  --ss-panel-hot: linear-gradient(135deg, #2a0000, #0F1117 70%);
+  --ss-panel-hot-border: #3a0d0d;
+  --ss-card-glow: radial-gradient(circle at 70% 25%, #5c0a0a 0, #1f0707 40%, #0B0C10 78%);
+
+  /* Text */
+  --ss-text: #F2F4F7;
+  --ss-text-soft: #B9C0CC;
+  --ss-text-dim: #C9CED8;
+  --ss-muted: #8A93A6;
+  --ss-faint: #7d8494;
+  --ss-success: #4ADE80;
+  --ss-error: #FF6B6B;
+
+  /* Type */
+  --ss-font-display: var(--font-barlow-condensed), Impact, sans-serif;
+  --ss-font-sans: var(--font-geist), system-ui, sans-serif;
+  --ss-font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  /* Layout */
+  --ss-page-max: 1280px;
+  --ss-gutter: 40px;
+  --ss-radius-sm: 8px;
+  --ss-radius-md: 14px;
+  --ss-radius-lg: 20px;
+  --ss-radius-xl: 22px;
+  --ss-radius-pill: 999px;
+  --ss-tap: 44px;
+
+  /* Motion */
+  --ss-ease-out: cubic-bezier(.2, .8, .2, 1);
+  --ss-ease-intro: cubic-bezier(.2, .9, .2, 1);
+  --ss-shadow-red: 0 14px 34px -10px rgba(204, 0, 0, .85);
+}
+
+/* Tablet (canvas: 834 px) */
+@media (max-width: 1024px) {
+  :root {
+    --ss-gutter: 36px;
+  }
+}
+
+/* Mobile (canvas: 390 px) */
+@media (max-width: 640px) {
+  :root {
+    --ss-gutter: 20px;
+  }
+}
