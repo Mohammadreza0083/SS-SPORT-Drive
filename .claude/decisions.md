@@ -581,6 +581,13 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
   - *(Anton, Inter and JetBrains Mono are dropped.)*
 - **Contact CTA:** **email only** (`info@ss-sport.co`). **No WhatsApp.**
 - **Video player:** **Media Chrome + hls-video-element** (MIT, free, light). hls.js loads only where native HLS is missing; iOS Safari plays natively. Frame stepping (`,` `.`) is custom.
+  - **V-3 implementation (2026-10-30):**
+    - iPhone/iPad Safari, and any browser without Media Source Extensions, play natively and never download hls.js. Desktop browsers (desktop Safari, and Chrome where it has native HLS too) use hls.js, loaded lazily, because only hls.js exposes the renditions for the quality menu and honours the 360p start (brief §10).
+    - Playback starts at the lowest rendition (`startLevel: 0`, i.e. 360p) and adaptive bitrate climbs from there.
+    - Speed menu 0.25×–2×; quality menu (Auto + each rendition); frame step by buttons and `,` `.`, pausing first. Frame rate defaults to 30 fps until ingest records each video's real rate.
+    - No download anywhere: context menu blocked, no download button, `controlslist="nodownload"`, and picture-in-picture and casting are off (the moving email overlay of V-4 cannot follow the video into those).
+    - Controls auto-hide while playing. On phones the mute button and volume slider are hidden (the device's buttons are used) so the controls fit one row of 44 px targets.
+    - `/design/player` is a development-only preview using a public Mux HLS test stream; production answers 404.
 - Brand tokens, page structure and the motion system are as in brief §10, except for the fonts and contact changes above.
 - **The design canvas is matched exactly, down to every detail** (owner, 2026-10-29, for V-1 and every later viewer page). Where the canvas and the brief differ on a value, the canvas wins; the brief still sets behaviour the canvas cannot show (for example counters start when visible).
 - **V-1 implementation choices (2026-10-29):**

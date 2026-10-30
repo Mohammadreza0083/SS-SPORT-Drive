@@ -2,6 +2,7 @@ import { introScript } from "@/lib/viewer/intro";
 import "@/styles/tokens.css";
 import "@/styles/motion.css";
 import "@/styles/shell.css";
+import "@/styles/player.css";
 
 /**
  * Layout of every viewer-facing page (player pages, search, email gate, roster, sign-in): the dark brand
