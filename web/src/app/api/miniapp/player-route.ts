@@ -5,6 +5,16 @@ import { apiBaseUrl } from "./api-base-url";
 const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
+ * Tells whether a route segment is a GUID, so it is safe to put in an API path.
+ *
+ * @param value - The segment.
+ * @returns `true` for a GUID.
+ */
+export function isGuid(value: string): boolean {
+  return GUID.test(value);
+}
+
+/**
  * Forwards a request about one player to the API, after checking the id.
  *
  * @param request - The incoming request with `Authorization: tma <initData>`.

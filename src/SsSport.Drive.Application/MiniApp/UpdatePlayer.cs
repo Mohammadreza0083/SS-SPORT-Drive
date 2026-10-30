@@ -45,6 +45,12 @@ public sealed record MiniAppPlayerDto : PlayerDetailsDto
 
     /// <summary>Gets a value indicating whether the caller may change the photo.</summary>
     public bool CanChangePhoto { get; init; }
+
+    /// <summary>Gets a value indicating whether the caller may edit the files' titles, tags and hero (T-7b).</summary>
+    public bool CanEditFiles { get; init; }
+
+    /// <summary>Gets a value indicating whether the caller may hide and show files: admins only (T-7b).</summary>
+    public bool CanHideFiles { get; init; }
 }
 
 /// <summary>The form that adds a Drive folder to an existing player.</summary>
@@ -128,6 +134,8 @@ public sealed class GetMiniAppPlayerQueryHandler(
             Folders = [.. (await folders.ListAsync(spec, cancellationToken)).Select(folder => folder.ToDto())],
             CanEditDetails = PlayerAccess.CanEditDetails(player, currentUser),
             CanChangePhoto = PlayerAccess.CanChangePhoto(player, currentUser),
+            CanEditFiles = PlayerAccess.CanEditFiles(player, currentUser),
+            CanHideFiles = PlayerAccess.CanHideFiles(currentUser),
         };
     }
 }

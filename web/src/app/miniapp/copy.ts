@@ -105,6 +105,10 @@ export const ruleMessages: Record<string, string> = {
   "player.photo_too_small": "The photo must be at least 800 px on its shorter side.",
   "player.photo_too_large": "The photo is larger than 15 MB.",
   "player.photo_unreadable": "Send a JPEG, PNG, WebP or HEIC photo.",
+  "asset.title_invalid": "Use a title of 1 to 200 characters.",
+  "asset.hero_not_video": "Only a video can be the hero.",
+  "asset.hero_hidden": "A hidden video cannot be the hero. Show it first.",
+  "asset.hero_other_player": "The hero must be one of this player's videos.",
 };
 
 /** UI copy of My players and the player detail (T-7a). */
@@ -133,4 +137,33 @@ export const myPlayersCopy = {
   hidden: "Hidden",
   hero: "★",
   pageLater: "The short link and view count appear here once the viewer site is live.",
+} as const;
+
+/** UI copy of the edit-video sheet (T-7b). */
+export const editVideoCopy = {
+  title: "Edit video",
+  editFile: (title: string) => `Edit ${title}`,
+  titleLabel: "Title",
+  titleHint: "A title you change here no longer follows the file name in Drive.",
+  tags: "Tags",
+  tagNames: {
+    Highlight: "Highlight",
+    Spike: "Spike",
+    Serve: "Serve",
+    Block: "Block",
+    Reception: "Reception",
+    Defence: "Defence",
+    FullMatch: "Full match",
+    Stats: "Stats",
+  } as Record<string, string>,
+  hero: "Hero video",
+  heroHint: "The hero plays first at the top of the player page.",
+  hide: "Hide from viewers",
+  show: "Show to viewers",
+  hiddenNote: "Hidden: viewers don't see this file.",
+  save: "Save",
+  saving: "Saving…",
+  cancel: "Cancel",
+  nothingChanged: "Nothing has changed yet.",
+  rejected: "The file could not be saved. Try again.",
 } as const;

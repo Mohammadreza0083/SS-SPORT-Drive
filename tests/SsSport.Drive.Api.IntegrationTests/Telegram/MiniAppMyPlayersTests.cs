@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Npgsql;
 using SsSport.Drive.Application.Abstractions.Drive;
 using SsSport.Drive.Application.Abstractions.Persistence;
 using SsSport.Drive.Application.Telegram;
@@ -23,6 +24,7 @@ namespace SsSport.Drive.Api.IntegrationTests.Telegram;
 /// <summary>
 /// My players (T-7a): an analyst lists their own players and an admin lists everyone's, paged, searched and filtered;
 /// the player detail lists the files in page order; the bot's My players button opens the screen in the Mini App.
+/// The edit-video sheet (T-7b) changes a file's title, tags and hero (owner or admin) and hides it (admins only).
 /// </summary>
 public sealed class MiniAppMyPlayersTests : IAsyncLifetime
 {
@@ -291,6 +293,223 @@ public sealed class MiniAppMyPlayersTests : IAsyncLifetime
         paths.GetProperty("/miniapp/players/{id}/files").GetProperty("get").GetProperty("responses").TryGetProperty("404", out _).Should().BeTrue();
     }
 
+    /// <summary>The owner changes a file's title and tags; the title then stops following Drive renames.</summary>
+    [Fact]
+    public async Task Owner_edits_title_and_tags()
+    {
+        var (id, _) = await CreatePlayerAsync(OwnerTelegramId);
+        var file = await AddAssetAsync(id, "highlights.mp4", 0);
+
+        using var response = await SendAsync(OwnerTelegramId, HttpMethod.Patch, $"/miniapp/players/{id}/files/{file}", new { title = "Best spikes 25-26", tags = new[] { "Spike", "highlight" } });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var body = await ReadJsonAsync(response);
+        body.RootElement.GetProperty("title").GetString().Should().Be("Best spikes 25-26");
+        body.RootElement.GetProperty("tags").EnumerateArray().Select(tag => tag.GetString()).Should().Equal("Highlight", "Spike");
+        (await ScalarAsync<bool>("SELECT title_is_custom FROM assets WHERE id = @p", file)).Should().BeTrue();
+    }
+
+    /// <summary>Fields left out stay as they are, and an empty tag list clears the tags.</summary>
+    [Fact]
+    public async Task Missing_file_fields_are_unchanged()
+    {
+        var (id, _) = await CreatePlayerAsync(OwnerTelegramId);
+        var file = await AddAssetAsync(id, "highlights.mp4", 0);
+
+        using var response = await SendAsync(OwnerTelegramId, HttpMethod.Patch, $"/miniapp/players/{id}/files/{file}", new { tags = Array.Empty<string>() });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var body = await ReadJsonAsync(response);
+        body.RootElement.GetProperty("title").GetString().Should().Be("highlights");
+        body.RootElement.GetProperty("tags").GetArrayLength().Should().Be(0);
+        (await ScalarAsync<bool>("SELECT title_is_custom FROM assets WHERE id = @p", file)).Should().BeFalse();
+    }
+
+    /// <summary>The owner makes a video the hero; choosing another moves it, and false clears it.</summary>
+    [Fact]
+    public async Task Owner_chooses_the_hero()
+    {
+        var (id, _) = await CreatePlayerAsync(OwnerTelegramId);
+        var first = await AddAssetAsync(id, "highlights.mp4", 0);
+        var second = await AddAssetAsync(id, "full match.mp4", 1);
+
+        using var chooseFirst = await SendAsync(OwnerTelegramId, HttpMethod.Patch, $"/miniapp/players/{id}/files/{first}", new { isHero = true });
+        using var chooseSecond = await SendAsync(OwnerTelegramId, HttpMethod.Patch, $"/miniapp/players/{id}/files/{second}", new { isHero = true });
+
+        chooseFirst.StatusCode.Should().Be(HttpStatusCode.OK);
+        using (var body = await ReadJsonAsync(chooseSecond))
+        {
+            body.RootElement.GetProperty("isHero").GetBoolean().Should().BeTrue();
+        }
+
+        (await ScalarAsync<Guid>("SELECT hero_asset_id FROM players WHERE id = @p", id)).Should().Be(second);
+
+        using var clear = await SendAsync(OwnerTelegramId, HttpMethod.Patch, $"/miniapp/players/{id}/files/{second}", new { isHero = false });
+
+        clear.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ScalarAsync<object>("SELECT hero_asset_id FROM players WHERE id = @p", id)).Should().Be(DBNull.Value);
+    }
+
+    /// <summary>Only a visible video can be the hero.</summary>
+    /// <param name="fileName">The file.</param>
+    /// <param name="hidden">Whether it is hidden.</param>
+    /// <param name="code">The rule it breaks.</param>
+    [Theory]
+    [InlineData("stats.pdf", false, "asset.hero_not_video")]
+    [InlineData("highlights.mp4", true, "asset.hero_hidden")]
+    public async Task Hero_must_be_a_visible_video(string fileName, bool hidden, string code)
+    {
+        var (id, _) = await CreatePlayerAsync(OwnerTelegramId);
+        var file = await AddAssetAsync(id, fileName, 0, hidden ? asset => asset.Hide() : null);
+
+        using var response = await SendAsync(OwnerTelegramId, HttpMethod.Patch, $"/miniapp/players/{id}/files/{file}", new { isHero = true });
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        using var body = await ReadJsonAsync(response);
+        body.RootElement.GetProperty("code").GetString().Should().Be(code);
+    }
+
+    /// <summary>
+    /// Only an admin hides and shows a file; both are audited with the admin as the actor, and hiding the hero clears it.
+    /// </summary>
+    [Fact]
+    public async Task Admin_hides_and_shows_a_file()
+    {
+        var (id, _) = await CreatePlayerAsync(OwnerTelegramId);
+        var file = await AddAssetAsync(id, "highlights.mp4", 0);
+        using (var hero = await SendAsync(OwnerTelegramId, HttpMethod.Patch, $"/miniapp/players/{id}/files/{file}", new { isHero = true }))
+        {
+            hero.StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+
+        using var byOwner = await SendAsync(OwnerTelegramId, HttpMethod.Patch, $"/miniapp/players/{id}/files/{file}", new { hidden = true });
+        using var hide = await SendAsync(AdminTelegramId, HttpMethod.Patch, $"/miniapp/players/{id}/files/{file}", new { hidden = true });
+
+        byOwner.StatusCode.Should().Be(HttpStatusCode.Forbidden, "only an admin hides files");
+        hide.StatusCode.Should().Be(HttpStatusCode.OK);
+        using (var body = await ReadJsonAsync(hide))
+        {
+            body.RootElement.GetProperty("visibility").GetString().Should().Be("Hidden");
+            body.RootElement.GetProperty("isHero").GetBoolean().Should().BeFalse();
+        }
+
+        (await ScalarAsync<object>("SELECT hero_asset_id FROM players WHERE id = @p", id)).Should().Be(DBNull.Value, "hiding the hero clears it");
+        (await ScalarAsync<long>("SELECT a.telegram_id FROM audit_entries e JOIN users a ON a.id = e.actor_user_id WHERE e.action = 'asset.hidden' AND e.target_id = @p", file.ToString()))
+            .Should().Be(AdminTelegramId);
+
+        using var show = await SendAsync(AdminTelegramId, HttpMethod.Patch, $"/miniapp/players/{id}/files/{file}", new { hidden = false });
+
+        show.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ScalarAsync<long>("SELECT count(*) FROM audit_entries WHERE action = 'asset.shown' AND target_id = @p", file.ToString())).Should().Be(1);
+    }
+
+    /// <summary>Another analyst cannot edit; an admin can edit any player's file.</summary>
+    [Fact]
+    public async Task Files_are_edited_by_the_owner_or_an_admin()
+    {
+        var (id, _) = await CreatePlayerAsync(OwnerTelegramId);
+        var file = await AddAssetAsync(id, "highlights.mp4", 0);
+
+        using var other = await SendAsync(OtherTelegramId, HttpMethod.Patch, $"/miniapp/players/{id}/files/{file}", new { title = "Mine now" });
+        using var admin = await SendAsync(AdminTelegramId, HttpMethod.Patch, $"/miniapp/players/{id}/files/{file}", new { title = "Checked by admin" });
+
+        other.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        admin.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    /// <summary>The card tells the Mini App who may edit files and who may hide them.</summary>
+    /// <param name="telegramId">Who reads the card.</param>
+    /// <param name="canEdit">Whether they may edit files.</param>
+    /// <param name="canHide">Whether they may hide files.</param>
+    [Theory]
+    [InlineData(OwnerTelegramId, true, false)]
+    [InlineData(OtherTelegramId, false, false)]
+    [InlineData(AdminTelegramId, true, true)]
+    public async Task Card_says_who_may_edit_files(long telegramId, bool canEdit, bool canHide)
+    {
+        var (id, _) = await CreatePlayerAsync(OwnerTelegramId);
+
+        using var response = await SendAsync(telegramId, HttpMethod.Get, $"/miniapp/players/{id}");
+
+        using var body = await ReadJsonAsync(response);
+        body.RootElement.GetProperty("canEditFiles").GetBoolean().Should().Be(canEdit);
+        body.RootElement.GetProperty("canHideFiles").GetBoolean().Should().Be(canHide);
+    }
+
+    /// <summary>An unknown file, or a file of another player, is 404.</summary>
+    [Fact]
+    public async Task Files_of_other_players_are_404()
+    {
+        var (id, _) = await CreatePlayerAsync(OwnerTelegramId);
+        var (other, _) = await CreatePlayerAsync(OwnerTelegramId);
+        var otherFile = await AddAssetAsync(other, "highlights.mp4", 0);
+
+        using var unknown = await SendAsync(OwnerTelegramId, HttpMethod.Patch, $"/miniapp/players/{id}/files/{Guid.CreateVersion7()}", new { title = "x" });
+        using var wrongPlayer = await SendAsync(OwnerTelegramId, HttpMethod.Patch, $"/miniapp/players/{id}/files/{otherFile}", new { title = "x" });
+
+        unknown.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        wrongPlayer.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    /// <summary>An empty or too long title and an unknown tag are 400s naming the field.</summary>
+    /// <param name="field">The field sent wrong.</param>
+    [Theory]
+    [InlineData("title")]
+    [InlineData("longTitle")]
+    [InlineData("tags")]
+    public async Task Bad_file_edits_are_400(string field)
+    {
+        var (id, _) = await CreatePlayerAsync(OwnerTelegramId);
+        var file = await AddAssetAsync(id, "highlights.mp4", 0);
+        object edit = field switch
+        {
+            "title" => new { title = "  " },
+            "longTitle" => new { title = new string('a', 201) },
+            _ => new { tags = new[] { "Highlight", "Dunk" } },
+        };
+
+        using var response = await SendAsync(OwnerTelegramId, HttpMethod.Patch, $"/miniapp/players/{id}/files/{file}", edit);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        using var body = await ReadJsonAsync(response);
+        body.RootElement.GetProperty("errors").TryGetProperty(field == "longTitle" ? "title" : field, out _).Should().BeTrue();
+    }
+
+    /// <summary>The edit endpoint is documented with request and response examples and every refusal.</summary>
+    [Fact]
+    public async Task Edit_endpoint_is_documented()
+    {
+        using var client = _api.CreateClient();
+        using var document = JsonDocument.Parse(await client.GetStringAsync(new Uri("/openapi/v1.json", UriKind.Relative), TestContext.Current.CancellationToken));
+        var operation = document.RootElement.GetProperty("paths").GetProperty("/miniapp/players/{id}/files/{fileId}").GetProperty("patch");
+
+        operation.GetProperty("summary").GetString().Should().NotBeNullOrWhiteSpace();
+        operation.GetProperty("description").GetString().Should().NotBeNullOrWhiteSpace();
+        operation.GetProperty("tags").EnumerateArray().Select(tag => tag.GetString()).Should().Contain("Mini App");
+        operation.GetProperty("security").EnumerateArray().Any(requirement => requirement.TryGetProperty("TelegramMiniApp", out _)).Should().BeTrue();
+        operation.GetProperty("requestBody").GetProperty("content").GetProperty("application/json").TryGetProperty("example", out _).Should().BeTrue();
+        var responses = operation.GetProperty("responses");
+        responses.GetProperty("200").GetProperty("content").GetProperty("application/json").TryGetProperty("example", out _).Should().BeTrue();
+        foreach (var status in new[] { "400", "401", "403", "404", "409", "422" })
+        {
+            responses.TryGetProperty(status, out _).Should().BeTrue($"{status} is documented");
+        }
+    }
+
+    /// <summary>Reads one value straight from the database.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="sql">The query, with an <c>@p</c> parameter.</param>
+    /// <param name="parameter">The parameter value.</param>
+    /// <returns>The value.</returns>
+    private async Task<T> ScalarAsync<T>(string sql, object parameter)
+    {
+        await using var connection = new NpgsqlConnection(_postgres.GetConnectionString());
+        await connection.OpenAsync(TestContext.Current.CancellationToken);
+        await using var command = new NpgsqlCommand(sql, connection);
+        command.Parameters.AddWithValue("p", parameter);
+        return (T)(await command.ExecuteScalarAsync(TestContext.Current.CancellationToken))!;
+    }
+
     /// <summary>Parses a JSON response body.</summary>
     /// <param name="response">The response.</param>
     /// <returns>The document; the caller disposes it.</returns>
@@ -352,7 +571,8 @@ public sealed class MiniAppMyPlayersTests : IAsyncLifetime
     {
         using var scope = _api.Services.CreateScope();
         var player = await scope.ServiceProvider.GetRequiredService<IRepository<Player, Guid>>().GetByIdAsync(playerId, TestContext.Current.CancellationToken);
-        player!.SetHero(assetId);
+        var asset = await scope.ServiceProvider.GetRequiredService<IRepository<Asset, Guid>>().GetByIdAsync(assetId, TestContext.Current.CancellationToken);
+        player!.SetHero(asset!);
         await scope.ServiceProvider.GetRequiredService<IUnitOfWork>().SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 

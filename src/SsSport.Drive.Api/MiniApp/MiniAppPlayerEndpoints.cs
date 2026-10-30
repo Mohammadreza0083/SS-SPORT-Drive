@@ -54,7 +54,36 @@ public static class MiniAppPlayerEndpoints
             }
           ],
           "canEditDetails": true,
-          "canChangePhoto": true
+          "canChangePhoto": true,
+          "canEditFiles": true,
+          "canHideFiles": false
+        }
+        """;
+
+    /// <summary>An edit-video sheet that renames a file, retags it and makes it the hero.</summary>
+    private const string ExampleFileEdit =
+        """
+        {
+          "title": "Best spikes 25-26",
+          "tags": ["Highlight", "Spike"],
+          "isHero": true
+        }
+        """;
+
+    /// <summary>The file after that edit.</summary>
+    private const string ExampleFileEdited =
+        """
+        {
+          "id": "0199f4a1-3b2c-7d4e-8f5a-6b7c8d9e0f1a",
+          "kind": "Video",
+          "title": "Best spikes 25-26",
+          "tags": ["Highlight", "Spike"],
+          "sortOrder": 0,
+          "visibility": "Visible",
+          "state": "Ready",
+          "durationSeconds": 184.5,
+          "pageCount": null,
+          "isHero": true
         }
         """;
 
@@ -213,6 +242,27 @@ public static class MiniAppPlayerEndpoints
             .WithPagedResponse(_exampleFiles)
             .AddOpenApiOperationTransformer(MiniAppEndpoints.Document("200", null));
 
+        app.MapPatch("/miniapp/players/{id:guid}/files/{fileId:guid}", EditFileAsync)
+            .WithTags(MiniAppEndpoints.Tag)
+            .WithName("EditMiniAppPlayerFile")
+            .WithSummary("Edit a player's file (edit-video sheet)")
+            .WithDescription(
+                "Changes the fields that are sent; fields left out stay as they are. `title` (1 to 200 characters; a hand-edited title no longer follows " +
+                "Drive renames), `tags` (every tag the file should have: Highlight, Spike, Serve, Block, Reception, Defence, FullMatch, Stats; empty clears them) " +
+                "and `isHero` are for the owning analyst or an admin, also after Publish. `hidden` is for admins only; hiding and showing are audited " +
+                "(`asset.hidden`, `asset.shown`), and hiding the hero clears it. Files are never deleted here. 400 for a bad title or an unknown tag; 403 for " +
+                "another analyst, or a non-admin sending `hidden`; 404 for an unknown player or a file of another player; 409 `concurrency.conflict` when " +
+                "someone saved the same player or file at the same moment; 422 `asset.hero_not_video`, `asset.hero_hidden`.")
+            .Accepts<EditPlayerFileDto>("application/json")
+            .Produces<PlayerFileDto>(StatusCodes.Status200OK)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .AddOpenApiOperationTransformer(MiniAppEndpoints.Document("200", ExampleFileEdited, ExampleFileEdit));
+
         app.MapPost("/miniapp/players/{id:guid}/folders", AddFolderAsync)
             .WithTags(MiniAppEndpoints.Tag)
             .WithName("AddMiniAppPlayerFolder")
@@ -275,6 +325,16 @@ public static class MiniAppPlayerEndpoints
     /// <returns>200 with the page.</returns>
     private static async Task<Ok<PagedResult<PlayerFileDto>>> ListFilesAsync(Guid id, [AsParameters] PageParameters paging, ISender sender, CancellationToken cancellationToken) =>
         TypedResults.Ok(await sender.Send(new GetPlayerFilesQuery(id, paging.ToRequest()), cancellationToken));
+
+    /// <summary>Edits one file from the edit-video sheet.</summary>
+    /// <param name="id">The player id.</param>
+    /// <param name="fileId">The file id.</param>
+    /// <param name="form">The fields to change.</param>
+    /// <param name="sender">The MediatR sender.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>200 with the file.</returns>
+    private static async Task<Ok<PlayerFileDto>> EditFileAsync(Guid id, Guid fileId, EditPlayerFileDto form, ISender sender, CancellationToken cancellationToken) =>
+        TypedResults.Ok(await sender.Send(form.ToCommand(id, fileId), cancellationToken));
 
     /// <summary>Reads the card.</summary>
     /// <param name="id">The player id.</param>

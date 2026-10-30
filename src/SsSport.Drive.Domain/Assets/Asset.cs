@@ -75,7 +75,7 @@ public sealed record AssetReplaced(Guid AssetId, Guid PlayerId, int Version) : I
 public sealed class Asset : AggregateRoot<Guid>
 {
     /// <summary>The longest title.</summary>
-    private const int MaxTitleLength = 200;
+    public const int MaxTitleLength = 200;
 
     /// <summary>The longest stored failure reason.</summary>
     private const int MaxReasonLength = 1000;
