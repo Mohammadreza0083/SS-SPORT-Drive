@@ -44,6 +44,7 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped(typeof(IRepository<,>), typeof(Repository<,>));
         services.AddScoped<IPagedReader, PagedReader>();
+        services.AddScoped<IPlayerListReader, PlayerListReader>();
 
         services.AddOptions<StorageOptions>().BindConfiguration(StorageOptions.SectionName);
         services.AddSingleton<IObjectStorage, S3ObjectStorage>();
@@ -77,6 +78,7 @@ public static class DependencyInjection
 
         services.AddScoped<ITelegramUpdateInbox, TelegramUpdateInbox>();
         services.AddSingleton<IBotAdminSettings, TelegramBotAdminSettings>();
+        services.AddSingleton<IMiniAppLinks, TelegramMiniAppLinks>();
         services.AddSingleton<ITelegramMessenger, TelegramMessenger>();
         services.AddSingleton<ITelegramBotClient>(provider =>
         {

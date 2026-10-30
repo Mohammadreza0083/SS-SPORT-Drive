@@ -238,7 +238,7 @@ Last updated: 2026-10-29
   - **First admin:** the configured owner (`Telegram__AdminUserId` + **`Telegram__AdminEmail`**) becomes the active admin on their first `/start`. Without the email they are told to set it.
   - **A button on an already-handled request** answers "already approved/declined by <name>", taken from the audit log. Other admins' copies are not edited eagerly.
   - **Approve as Admin needs an email.** Without one, the admin sees a pop-up: approve as Analyst, then add the email and promote in the console (A-8).
-  - **Not built yet:** *New player* and *My players* answer "Coming soon" until T-4/T-7. *Help* and `/help` work. The "Open Drive" menu button came with the Mini App (T-3, below).
+  - **Not built yet:** *New player* and *My players* answered "Coming soon" until T-4/T-7. *Help* and `/help` work. The "Open Drive" menu button came with the Mini App (T-3, below).
   - **How it is built:**
     - The update command is a router.
     - State changes run as their own MediatR commands (`StartBotCommand`, `RequestBotAccessCommand`, `ReviewAccessRequestCommand`), so they are saved first.
@@ -302,6 +302,21 @@ Last updated: 2026-10-29
     - A changed name gets a new unique slug, and a changed Volleybox id must still be free (`player.volleybox_taken`).
   - **Seeing the card:** every active team member may read a player's card (`GET /miniapp/players/{id}`). It carries `canEditDetails` and `canChangePhoto`, so the Mini App shows only what the caller may do.
   - **Folder duplicates:** the live Drive check now answers 200 with `existingPlayerId`/`existingPlayerName` for a folder that already belongs to a player, as the Volleybox check does. Creating a player or adding the folder still refuses it with `drive_folder.taken`.
+- **My players (T-7, owner-approved 2026-10-30):**
+  - **Split:** T-7a (SSD-41) is the list, the player detail and the bot button. T-7b (SSD-117) is the edit-video bottom sheet. Each is its own PR.
+  - **Who sees what:** an analyst sees only the players they own (`AnalystId`). "Shared with them" from the brief has no meaning yet, because players are not shared between analysts. An admin sees every player.
+  - **List:** search on the name and the Volleybox id, offset-paged in SQL (§2b). Each row shows the photo, name, flag, positions, status and file count.
+  - **Filter chips:**
+    - **All.**
+    - **Live:** the player is published.
+    - **Processing:** at least one file is queued, copying or processing.
+    - **Needs attention:** the details are incomplete, a file failed, or a linked Drive folder lost access.
+  - **Player detail:** the player card (photo and details through the T-4b / T-5 steps, + Add folder), the linked Drive folders, and the files in page order with tag, status and a ★ on the hero.
+  - **Not shown yet:** the short link (Epic 5) and the total view count (tracking). They are added when those exist. Analysts never see viewer identities.
+  - **Edit-video sheet (T-7b):** title (a hand-edited title stops following Drive renames), tags and set as hero, for the owning analyst or an admin. **Hide/Show is shown to admins only** (the brief's permission table wins over its sheet list). Nobody deletes from the Mini App, and reordering stays in the admin console (drag).
+  - **Bot:** the *My players* button and `/players` answer with a button that opens `{Telegram__MiniAppUrl}/players` in the Mini App; *New player* and `/new` do the same for `/new`. Without a Mini App URL (local development) the button answers "The Mini App is not set up yet". `/new` and `/players` from someone outside the team get the normal start reply.
+  - **How the list is read (owner's choice, 2026-10-30):** a dedicated read model, `IPlayerListReader` (Application port) with an EF Core implementation that runs one SQL projection: each player row with correlated counts of its files (all, in progress, failed) and an `EXISTS` for a folder that lost access, composed in LINQ with the filter, `ILIKE` search (wildcards escaped) and `OFFSET`/`LIMIT`. The criteria are the typed `PlayerListCriteria`. This is a recorded exception to "conditions in specifications", because the row spans three aggregates with no navigations and the name is a value-converted column. The admin console list (A-2) reuses it. The files list still goes through `IPagedReader` with a specification.
+  - **API:** `GET /miniapp/players` (`search`, `filter`, `page`, `pageSize`) and `GET /miniapp/players/{id}/files` (paged, every team member, 404 for an unknown player), both in Scalar with examples.
 - **Live Drive folder check (T-4c, owner, 2026-10-29):**
   - **Only folders in the agency's Shared Drive** (`GoogleDrive__SharedDriveId`) are accepted. Anything else is refused with `drive_folder.outside_shared_drive`.
   - **If Drive cannot be reached, creation stops** with 503 `drive.unavailable`. This covers a network failure, a timeout, a Google error, bad credentials and missing settings. No player is ever created with an unchecked folder.

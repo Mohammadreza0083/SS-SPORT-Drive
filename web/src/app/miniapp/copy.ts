@@ -7,7 +7,7 @@ export const miniAppCopy = {
   forbidden: "You do not have team access yet. Send /start and ask for access in the bot.",
   error: "Something went wrong. Please try again in a moment.",
   newPlayer: "New player",
-  comingSoon: "My players arrives here soon.",
+  myPlayers: "My players",
 } as const;
 
 /**
@@ -106,3 +106,31 @@ export const ruleMessages: Record<string, string> = {
   "player.photo_too_large": "The photo is larger than 15 MB.",
   "player.photo_unreadable": "Send a JPEG, PNG, WebP or HEIC photo.",
 };
+
+/** UI copy of My players and the player detail (T-7a). */
+export const myPlayersCopy = {
+  title: "My players",
+  search: "Search by name or Volleybox ID",
+  filters: { all: "All", live: "Live", processing: "Processing", needsAttention: "Needs attention" },
+  loading: "Loading players…",
+  loadingFiles: "Loading files…",
+  empty: "No players here yet.",
+  failed: "The players could not be loaded. Try again in a moment.",
+  live: "Live",
+  waiting: "Waiting for an admin",
+  needsAttention: "Needs attention",
+  files: (count: number, processing: number) => `${plural(count, "file")}${processing > 0 ? ` · ${processing} processing` : ""}`,
+  previous: "Previous",
+  next: "Next",
+  pageOf: (page: number, total: number) => `Page ${page} of ${Math.max(total, 1)}`,
+  back: "Back to My players",
+  editPlayer: "Edit player",
+  closeEditor: "Close the editor",
+  foldersTitle: "Drive folders",
+  accessLost: "access lost",
+  filesTitle: "Files in page order",
+  noFiles: "No files yet. They appear here once the Drive folder has been read and processed.",
+  hidden: "Hidden",
+  hero: "★",
+  pageLater: "The short link and view count appear here once the viewer site is live.",
+} as const;

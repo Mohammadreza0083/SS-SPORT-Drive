@@ -266,7 +266,7 @@ export interface MiniAppPlayer {
   analystName: string | null;
   hasPhoto: boolean;
   folderCount: number;
-  folders: { id: string; name: string }[];
+  folders: { id: string; name: string; access?: "Ok" | "Lost" }[];
   canEditDetails: boolean;
   canChangePhoto: boolean;
 }
@@ -409,6 +409,106 @@ export async function fetchPhotoUrl(playerId: string, initData: string, fetchImp
   try {
     const response = await fetchImpl(`/api/miniapp/players/${encodeURIComponent(playerId)}/photo`, signedRequest(initData));
     return response.ok ? URL.createObjectURL(await response.blob()) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** One page of a list, as every paged API endpoint returns it. */
+export interface Page<T> {
+  items: T[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+}
+
+/** The filter chips of My players. */
+export const PLAYER_FILTERS = ["all", "live", "processing", "needsAttention"] as const;
+
+/** A filter chip of My players. */
+export type PlayerFilter = (typeof PLAYER_FILTERS)[number];
+
+/** One row of My players (T-7), as `GET /miniapp/players` returns it. */
+export interface PlayerListItem {
+  id: string;
+  name: string | null;
+  category: "Men" | "Women";
+  nationalityCode: string | null;
+  nationalityName: string | null;
+  positions: PositionCode[];
+  hasPhoto: boolean;
+  status: "Waiting" | "Published";
+  isComplete: boolean;
+  fileCount: number;
+  processingCount: number;
+  failedCount: number;
+  hasLostFolder: boolean;
+  needsAttention: boolean;
+  createdAt: string;
+}
+
+/** One file of a player, in page order, as `GET /miniapp/players/{id}/files` returns it. */
+export interface PlayerFile {
+  id: string;
+  kind: "Video" | "Document" | "Scout";
+  title: string;
+  tags: string[];
+  sortOrder: number;
+  visibility: "Visible" | "Hidden";
+  state: "Queued" | "Copying" | "Processing" | "Ready" | "Failed";
+  durationSeconds?: number | null;
+  pageCount?: number | null;
+  isHero: boolean;
+}
+
+/**
+ * Reads one page of My players: the caller's own players, or every player for an admin.
+ *
+ * @param query - The page, the filter chip and the search (left out when empty).
+ * @param initData - The raw initData from Telegram.
+ * @param fetchImpl - The fetch to use (tests pass a stub).
+ * @returns The page, or `null` when it cannot be read.
+ */
+export async function fetchMyPlayers(
+  query: { page: number; filter: PlayerFilter; search: string },
+  initData: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<Page<PlayerListItem> | null> {
+  const params = new URLSearchParams({ page: String(query.page), filter: query.filter });
+  const search = query.search.trim();
+  if (search) {
+    params.set("search", search);
+  }
+
+  return readPage<PlayerListItem>(`/api/miniapp/players?${params.toString()}`, initData, fetchImpl);
+}
+
+/**
+ * Reads one page of a player's files, in page order.
+ *
+ * @param playerId - The player.
+ * @param page - The page number, from 1.
+ * @param initData - The raw initData from Telegram.
+ * @param fetchImpl - The fetch to use (tests pass a stub).
+ * @returns The page, or `null` when it cannot be read.
+ */
+export async function fetchPlayerFiles(playerId: string, page: number, initData: string, fetchImpl: typeof fetch = fetch): Promise<Page<PlayerFile> | null> {
+  return readPage<PlayerFile>(`/api/miniapp/players/${encodeURIComponent(playerId)}/files?page=${page}`, initData, fetchImpl);
+}
+
+/**
+ * Reads a page from a same-origin Mini App route.
+ *
+ * @param url - The route with its query.
+ * @param initData - The raw initData from Telegram.
+ * @param fetchImpl - The fetch to use.
+ * @returns The page, or `null` when it cannot be read.
+ */
+async function readPage<T>(url: string, initData: string, fetchImpl: typeof fetch): Promise<Page<T> | null> {
+  try {
+    const response = await fetchImpl(url, signedRequest(initData));
+    return response.ok ? ((await response.json()) as Page<T>) : null;
   } catch {
     return null;
   }

@@ -1,13 +1,18 @@
+using System.ComponentModel;
 using MediatR;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
+using SsSport.Drive.Api.Paging;
 using SsSport.Drive.Application.DriveFolders;
 using SsSport.Drive.Application.MiniApp;
+using SsSport.Drive.Application.Paging;
 using SsSport.Drive.Application.Players;
 
 namespace SsSport.Drive.Api.MiniApp;
 
 /// <summary>
-/// Update-player mode of the Mini App (T-5): read an existing player card, add a Drive folder to it, edit its details.
+/// Player endpoints of the Mini App: My players and a player's files (T-7), and update-player mode (T-5): read an
+/// existing player card, add a Drive folder to it, edit its details.
 /// </summary>
 public static class MiniAppPlayerEndpoints
 {
@@ -102,7 +107,67 @@ public static class MiniAppPlayerEndpoints
         }
         """;
 
-    /// <summary>Maps the update-mode endpoints under the "Mini App" tag.</summary>
+    /// <summary>Two realistic rows of My players for the API reference.</summary>
+    private static readonly PlayerListItemDto[] _exampleRows =
+    [
+        new()
+        {
+            Id = Guid.Parse("0199f2b1-2d4e-7c8a-b1f3-5e6a7b8c9d0e"),
+            Name = "Arash Tehrani",
+            Category = "Men",
+            NationalityCode = "IR",
+            NationalityName = "Iran",
+            Positions = ["OH", "OPP"],
+            HasPhoto = true,
+            Status = "Published",
+            IsComplete = true,
+            FileCount = 14,
+            ProcessingCount = 2,
+            CreatedAt = new DateTimeOffset(2026, 10, 29, 13, 30, 0, TimeSpan.Zero),
+        },
+        new()
+        {
+            Id = Guid.Parse("0199f1d0-7a3b-7e21-9c4d-2b8a6f1e0c35"),
+            Name = "Kian Moradi",
+            Category = "Men",
+            NationalityCode = "IR",
+            NationalityName = "Iran",
+            Positions = ["S"],
+            Status = "Waiting",
+            FileCount = 3,
+            FailedCount = 1,
+            CreatedAt = new DateTimeOffset(2026, 10, 28, 9, 15, 0, TimeSpan.Zero),
+        },
+    ];
+
+    /// <summary>Two realistic files of a player for the API reference.</summary>
+    private static readonly PlayerFileDto[] _exampleFiles =
+    [
+        new()
+        {
+            Id = Guid.Parse("0199f4a1-3b2c-7d4e-8f5a-6b7c8d9e0f1a"),
+            Kind = "Video",
+            Title = "Highlights 2025-26",
+            Tags = ["Highlight"],
+            SortOrder = 0,
+            Visibility = "Visible",
+            State = "Ready",
+            DurationSeconds = 184.5,
+            IsHero = true,
+        },
+        new()
+        {
+            Id = Guid.Parse("0199f4a1-3b2c-7d4e-8f5a-6b7c8d9e0f1b"),
+            Kind = "Document",
+            Title = "Season stats",
+            Tags = ["Stats"],
+            SortOrder = 1,
+            Visibility = "Visible",
+            State = "Processing",
+        },
+    ];
+
+    /// <summary>Maps the update-mode and My players endpoints under the "Mini App" tag.</summary>
     /// <param name="app">The route builder.</param>
     /// <returns>The same route builder, for chaining.</returns>
     public static IEndpointRouteBuilder MapPlayerEndpoints(this IEndpointRouteBuilder app)
@@ -120,6 +185,33 @@ public static class MiniAppPlayerEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .AddOpenApiOperationTransformer(MiniAppEndpoints.Document("200", ExampleCard));
+
+        app.MapGet("/miniapp/players", ListAsync)
+            .WithTags(MiniAppEndpoints.Tag)
+            .WithName("ListMyPlayers")
+            .WithSummary("List My players")
+            .WithDescription(
+                "One page of players, newest first. An analyst sees only the players they own; an admin sees every player. `search` matches part of the " +
+                "name (any case) or the exact Volleybox id. `filter` is a chip: `all` (default), `live` (published), `processing` (a file is queued, " +
+                "copying or processing) or `needsAttention` (details missing, a file failed, or a Drive folder lost access). Each row carries the counts " +
+                "behind the chips. 400 for an unknown filter, a search over 100 characters or a bad page.")
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .WithPagedResponse(_exampleRows)
+            .AddOpenApiOperationTransformer(MiniAppEndpoints.Document("200", null));
+
+        app.MapGet("/miniapp/players/{id:guid}/files", ListFilesAsync)
+            .WithTags(MiniAppEndpoints.Tag)
+            .WithName("ListMiniAppPlayerFiles")
+            .WithSummary("List a player's files in page order")
+            .WithDescription(
+                "One page of the player's files for the player detail, in page order: hidden files included, each with its kind, tags, processing state " +
+                "and whether it is the hero video. Any active analyst or admin may read them, like the player card. 404 for an unknown player.")
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .WithPagedResponse(_exampleFiles)
+            .AddOpenApiOperationTransformer(MiniAppEndpoints.Document("200", null));
 
         app.MapPost("/miniapp/players/{id:guid}/folders", AddFolderAsync)
             .WithTags(MiniAppEndpoints.Tag)
@@ -159,6 +251,30 @@ public static class MiniAppPlayerEndpoints
 
         return app;
     }
+
+    /// <summary>Lists My players.</summary>
+    /// <param name="paging">The page.</param>
+    /// <param name="search">Part of the name or the exact Volleybox id.</param>
+    /// <param name="filter">The filter chip.</param>
+    /// <param name="sender">The MediatR sender.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>200 with the page.</returns>
+    private static async Task<Ok<PagedResult<PlayerListItemDto>>> ListAsync(
+        [AsParameters] PageParameters paging,
+        [FromQuery(Name = "search"), Description("Part of the player's name (any case) or the exact Volleybox id.")] string? search,
+        [FromQuery(Name = "filter"), Description("all (default), live, processing or needsAttention.")] string? filter,
+        ISender sender,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await sender.Send(new GetMyPlayersQuery(paging.ToRequest(), search, filter), cancellationToken));
+
+    /// <summary>Lists a player's files.</summary>
+    /// <param name="id">The player id.</param>
+    /// <param name="paging">The page.</param>
+    /// <param name="sender">The MediatR sender.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>200 with the page.</returns>
+    private static async Task<Ok<PagedResult<PlayerFileDto>>> ListFilesAsync(Guid id, [AsParameters] PageParameters paging, ISender sender, CancellationToken cancellationToken) =>
+        TypedResults.Ok(await sender.Send(new GetPlayerFilesQuery(id, paging.ToRequest()), cancellationToken));
 
     /// <summary>Reads the card.</summary>
     /// <param name="id">The player id.</param>
