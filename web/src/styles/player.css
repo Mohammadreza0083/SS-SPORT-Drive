@@ -17,6 +17,8 @@
   overflow: hidden;
   border: 1px solid var(--ss-border);
   background: radial-gradient(circle at 50% 120%, #2b3a52 0, #111722 55%, #0A0D13 100%);
+  /* Let the canvas's court gradient show until the first frame arrives. */
+  --media-background-color: transparent;
   --media-font-family: var(--ss-font-sans);
   --media-primary-color: #E6E9EF;
   --media-secondary-color: transparent;
@@ -51,6 +53,14 @@
   text-align: center;
   color: var(--ss-text-soft);
   font-size: 14px;
+}
+
+/* The loading spinner overlays the centre instead of pushing the play button down. */
+.viewer .ss-player-loading {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  pointer-events: none;
 }
 
 /* Big play button: 92 px red disc; the ring pulses while paused */
@@ -250,9 +260,23 @@
     padding: 10px 12px 6px;
   }
 
+  /* The mobile canvas keeps only time, speed and quality in the bar; frame keys still work. */
   .viewer .ss-player-volume,
   .viewer .ss-player-label,
-  .viewer .ss-player-mute {
+  .viewer .ss-player-mute,
+  .viewer .ss-player-frame-btn {
+    display: none;
+  }
+
+  /*
+   * The phone stage is too short for both: before the first play only the big button shows; once the
+   * video has played, the control bar takes over (with its own play button).
+   */
+  .viewer .ss-player-stage:not([mediahasplayed]) .ss-player-bar {
+    display: none;
+  }
+
+  .viewer .ss-player-stage[mediahasplayed] .ss-player-big {
     display: none;
   }
 

@@ -42,6 +42,8 @@ type VideoPlayerProps = {
   poster?: string;
   /** The video's frame rate, for frame stepping. */
   fps?: number;
+  /** Starts playing as soon as it can; used when a viewer picks a video from the playlist. */
+  autoPlay?: boolean;
 };
 
 /** The media element the player drives: a native `<video>` or the `<hls-video>` custom element. */
@@ -59,7 +61,7 @@ const noSubscription = () => () => {};
  * @param props - See {@link VideoPlayerProps}.
  * @returns The player with its title row.
  */
-export function VideoPlayer({ src, title, tag, poster, fps = DEFAULT_FPS }: VideoPlayerProps) {
+export function VideoPlayer({ src, title, tag, poster, fps = DEFAULT_FPS, autoPlay = false }: VideoPlayerProps) {
   const id = useId();
   const mediaRef = useRef<PlayerMedia | null>(null);
   const mode = useSyncExternalStore<PlaybackMode | null>(noSubscription, () => playbackMode(detectHlsSupport()), () => null);
@@ -93,12 +95,13 @@ export function VideoPlayer({ src, title, tag, poster, fps = DEFAULT_FPS }: Vide
     media.setAttribute("disableremoteplayback", "");
     media.setAttribute("controlslist", "nodownload noremoteplayback noplaybackrate");
     media.setAttribute("preload", "metadata");
+    media.toggleAttribute("autoplay", autoPlay);
     if (mode === "hls") {
       // The config must be in place before the source, so hls.js starts at 360p.
       media.config = HLS_CONFIG;
     }
     media.setAttribute("src", src);
-  }, [ready, mode, src]);
+  }, [ready, mode, src, autoPlay]);
 
   /**
    * Pauses and moves one frame forward or back.
@@ -155,7 +158,7 @@ export function VideoPlayer({ src, title, tag, poster, fps = DEFAULT_FPS }: Vide
           ) : null}
           {mode === "unsupported" ? <p className="ss-player-unsupported">{playerCopy.unsupported}</p> : null}
 
-          <MediaLoadingIndicator slot="centered-chrome" noAutohide />
+          <MediaLoadingIndicator slot="centered-chrome" className="ss-player-loading" noAutohide />
           <MediaPlayButton slot="centered-chrome" className="ss-player-big" />
 
           {/* Menus sit above the control bar and open over the video. */}

@@ -189,4 +189,10 @@ html[data-ss-intro="short"] .viewer :is(.ss-fu, .ss-ch, .ss-sil, .ss-under) {
     animation: none !important;
     transition: none !important;
   }
+
+  /* With motion off, counters show their final value without waiting to scroll into view. */
+  .viewer .ss-count,
+  .viewer .ss-count:not(.is-counting) {
+    counter-reset: n var(--n);
+  }
 }
