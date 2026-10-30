@@ -102,6 +102,12 @@
   pointer-events: none;
   background: linear-gradient(100deg, transparent 35%, rgba(255, 255, 255, .55) 50%, transparent 65%);
   background-size: 250% 100%;
+  /*
+   * One band only: a repeating gradient leaves a second, still band over the name at the start and end of
+   * each loop. It rests where the sweep starts (off the name), so nothing shows before the delay ends.
+   */
+  background-repeat: no-repeat;
+  background-position: 180% 0;
   mix-blend-mode: soft-light;
   animation: ss-sweep 4.5s var(--ss-sweep-delay) ease-in-out infinite;
 }

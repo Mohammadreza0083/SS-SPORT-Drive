@@ -588,7 +588,7 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
   - The logo and infinity mark are the canvas's own PNGs (`web/public/brand/`), so the site looks exactly like the canvas.
   - Tokens, motion and shell styles live in `web/src/styles/`, scoped to `.viewer`, so the Telegram Mini App keeps its own look.
   - **Intro once per page:** the first visit to a page plays the full intro; later visits to that page get the 400 ms fade. The choice is remembered per page in `localStorage` and made by an inline script before the first paint. Blocked storage always gives the full intro.
-  - The name's light sweep is kept exactly as on the canvas (white 55 %, soft-light), which shows as a soft grey sheen over the dark background.
+  - The name's light sweep keeps the canvas values (white 55 %, soft-light, 4.5 s after a 2.4 s delay) but does not repeat its gradient: the canvas's repeating gradient left a still grey box over the name between sweeps.
   - Framer Motion is added only with the pieces that need it (mobile sheet, email gate steps), not in V-1.
   - `/design/shell` is a development-only preview of the shell built from the canvas's sample player; production answers 404.
 
