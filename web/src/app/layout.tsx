@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { fontVariables } from "./fonts";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -14,7 +15,8 @@ export const metadata: Metadata = {
  */
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en">
+    // The viewer shell's intro script sets data-ss-intro on <html> before hydration (see lib/viewer/intro).
+    <html lang="en" className={fontVariables} suppressHydrationWarning>
       <body>{children}</body>
     </html>
   );

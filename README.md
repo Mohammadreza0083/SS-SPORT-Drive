@@ -172,6 +172,9 @@ SS-SPORT Drive/
 │   └── SsSport.Drive.Workers/          # Background job host (Hangfire)
 ├── tests/                              # Unit, architecture & integration tests
 ├── web/                                # Next.js front-end
+│   ├── src/app/(viewer)/               # Viewer site shell (dark brand layout, intro script)
+│   ├── src/components/viewer/          # Shared viewer components (nav, footer, name reveal, ticker…)
+│   └── src/styles/                     # Brand tokens, motion system, shell styles
 ├── edge/                               # Cloudflare Worker
 ├── deploy/                             # Staging/production deployment & operations
 ├── perf/k6/                            # k6 benchmarks (smoke + load profiles), see perf/k6/README.md
@@ -204,7 +207,7 @@ SS-SPORT Drive/
 | 1 | Core domain & persistence | ✅ Done |
 | 2 | Telegram bot & Mini App | 🚧 In progress |
 | 3 | Ingest, transcode & sync | ⏳ Planned |
-| 4 | Viewer site & media protection | ⏳ Planned |
+| 4 | Viewer site & media protection | 🚧 In progress (V-1 shell done) |
 | 5 | Personal links, OTP & tracking | ⏳ Planned |
 | 6 | Public search & access requests | ⏳ Planned |
 | 7 | Admin console | ⏳ Planned |

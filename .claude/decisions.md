@@ -582,6 +582,15 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
 - **Contact CTA:** **email only** (`info@ss-sport.co`). **No WhatsApp.**
 - **Video player:** **Media Chrome + hls-video-element** (MIT, free, light). hls.js loads only where native HLS is missing; iOS Safari plays natively. Frame stepping (`,` `.`) is custom.
 - Brand tokens, page structure and the motion system are as in brief §10, except for the fonts and contact changes above.
+- **The design canvas is matched exactly, down to every detail** (owner, 2026-10-29, for V-1 and every later viewer page). Where the canvas and the brief differ on a value, the canvas wins; the brief still sets behaviour the canvas cannot show (for example counters start when visible).
+- **V-1 implementation choices (2026-10-29):**
+  - Fonts load through `next/font/google` with Latin + Latin Extended. They are downloaded at build time and served from our own origin, so viewers' browsers never call Google.
+  - The logo and infinity mark are the canvas's own PNGs (`web/public/brand/`), so the site looks exactly like the canvas.
+  - Tokens, motion and shell styles live in `web/src/styles/`, scoped to `.viewer`, so the Telegram Mini App keeps its own look.
+  - **Intro once per page:** the first visit to a page plays the full intro; later visits to that page get the 400 ms fade. The choice is remembered per page in `localStorage` and made by an inline script before the first paint. Blocked storage always gives the full intro.
+  - The name's light sweep is kept exactly as on the canvas (white 55 %, soft-light), which shows as a soft grey sheen over the dark background.
+  - Framer Motion is added only with the pieces that need it (mobile sheet, email gate steps), not in V-1.
+  - `/design/shell` is a development-only preview of the shell built from the canvas's sample player; production answers 404.
 
 ## 10. Brief OPEN items — resolution status
 
