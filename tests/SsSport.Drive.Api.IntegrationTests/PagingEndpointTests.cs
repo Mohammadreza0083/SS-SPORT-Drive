@@ -179,12 +179,16 @@ public sealed class PagingEndpointTests(WebApplicationFactory<Program> factory) 
         using var document = await GetJsonAsync("/openapi/v1.json", HttpStatusCode.OK);
         var schemas = document.RootElement.GetProperty("components").GetProperty("schemas");
 
-        var paged = schemas.EnumerateObject().Single(schema => schema.Name.StartsWith("PagedResultOf", StringComparison.Ordinal)).Value;
-        paged.GetProperty("properties").EnumerateObject().Select(property => property.Name)
-            .Should().BeEquivalentTo("items", "page", "pageSize", "totalCount", "totalPages");
+        // Every list has its own PagedResultOf… schema (one per item type), and they all share the same shape.
+        var paged = schemas.EnumerateObject().Where(schema => schema.Name.StartsWith("PagedResultOf", StringComparison.Ordinal)).ToList();
+        paged.Should().NotBeEmpty();
+        paged.Should().AllSatisfy(schema => schema.Value.GetProperty("properties").EnumerateObject().Select(property => property.Name)
+            .Should().BeEquivalentTo("items", "page", "pageSize", "totalCount", "totalPages"));
 
-        var cursor = schemas.EnumerateObject().Single(schema => schema.Name.StartsWith("CursorResultOf", StringComparison.Ordinal)).Value;
-        cursor.GetProperty("properties").EnumerateObject().Select(property => property.Name).Should().BeEquivalentTo("items", "nextCursor");
+        var cursor = schemas.EnumerateObject().Where(schema => schema.Name.StartsWith("CursorResultOf", StringComparison.Ordinal)).ToList();
+        cursor.Should().NotBeEmpty();
+        cursor.Should().AllSatisfy(schema => schema.Value.GetProperty("properties").EnumerateObject().Select(property => property.Name)
+            .Should().BeEquivalentTo("items", "nextCursor"));
     }
 
     /// <summary>Sends a GET and parses the JSON body after checking the status.</summary>

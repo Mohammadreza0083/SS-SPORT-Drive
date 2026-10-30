@@ -1,9 +1,20 @@
 namespace SsSport.Drive.Application.Telegram;
 
-/// <summary>An inline button: its label and the data Telegram sends back when it is pressed (at most 64 bytes).</summary>
+/// <summary>
+/// An inline button: its label and either the data Telegram sends back when it is pressed (at most 64 bytes) or a
+/// Mini App page it opens.
+/// </summary>
 /// <param name="Text">The label.</param>
-/// <param name="CallbackData">The data sent back, e.g. <c>access:request</c>.</param>
-public sealed record BotButton(string Text, string CallbackData);
+/// <param name="CallbackData">The data sent back, e.g. <c>access:request</c>; empty for a Mini App button.</param>
+/// <param name="WebAppUrl">The Mini App page the button opens, or <see langword="null"/> for a callback button.</param>
+public sealed record BotButton(string Text, string CallbackData, string? WebAppUrl = null)
+{
+    /// <summary>A button that opens a page of the Mini App instead of sending callback data.</summary>
+    /// <param name="text">The label.</param>
+    /// <param name="url">The HTTPS page to open.</param>
+    /// <returns>The button.</returns>
+    public static BotButton OpenMiniApp(string text, string url) => new(text, string.Empty, url);
+}
 
 /// <summary>Inline buttons under a message, row by row.</summary>
 /// <param name="Rows">The button rows.</param>
@@ -60,6 +71,15 @@ public interface ITelegramMessenger
     /// <param name="cancellationToken">Cancels the download.</param>
     /// <returns>The file bytes.</returns>
     Task<byte[]> DownloadFileAsync(string fileId, CancellationToken cancellationToken);
+}
+
+/// <summary>Links to pages of the Mini App, for bot buttons that open it (T-7).</summary>
+public interface IMiniAppLinks
+{
+    /// <summary>Builds the URL of a Mini App page.</summary>
+    /// <param name="page">The page under the Mini App, e.g. <c>players</c> or <c>new</c>.</param>
+    /// <returns>The HTTPS URL, or <see langword="null"/> when the Mini App URL is not configured.</returns>
+    string? PageUrl(string page);
 }
 
 /// <summary>A photo a user sent to the bot: a Telegram photo (compressed) or an image sent as a File (full quality).</summary>

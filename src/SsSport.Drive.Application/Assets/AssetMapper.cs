@@ -18,6 +18,12 @@ public static partial class AssetMapper
     [MapProperty([nameof(Asset.File), nameof(AssetFile.SizeBytes)], nameof(AssetDto.SizeBytes))]
     public static partial AssetDto ToDto(this Asset asset);
 
+    /// <summary>Maps an asset to its row in the Mini App player detail; the caller sets <see cref="MiniApp.PlayerFileDto.IsHero"/>.</summary>
+    /// <param name="asset">The asset.</param>
+    /// <returns>The DTO.</returns>
+    [MapperIgnoreTarget(nameof(MiniApp.PlayerFileDto.IsHero))]
+    public static partial MiniApp.PlayerFileDto ToFileDto(this Asset asset);
+
     /// <summary>Maps a rendition to its DTO; the quality becomes its frame height.</summary>
     /// <param name="rendition">The rendition.</param>
     /// <returns>The DTO.</returns>

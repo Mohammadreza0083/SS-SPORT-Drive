@@ -50,7 +50,7 @@ export function MiniAppHome({ telegramReady }: { telegramReady: boolean }) {
           <h1>{miniAppCopy.greeting(state.profile.displayName)}</h1>
           <p>{state.profile.role}</p>
           <Link href="/miniapp/new">{miniAppCopy.newPlayer}</Link>
-          <p>{miniAppCopy.comingSoon}</p>
+          <Link href="/miniapp/players">{miniAppCopy.myPlayers}</Link>
         </>
       ) : (
         <p role="status">{message(state)}</p>

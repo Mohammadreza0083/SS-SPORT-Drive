@@ -77,13 +77,15 @@ internal sealed class TelegramMessenger(ITelegramBotClient client) : ITelegramMe
     public Task AnswerCallbackAsync(string callbackQueryId, string? text, bool showAlert, CancellationToken cancellationToken) =>
         client.AnswerCallbackQuery(callbackQueryId, text, showAlert, cancellationToken: cancellationToken);
 
-    /// <summary>Turns our keyboard into Telegram's inline markup.</summary>
+    /// <summary>Turns our keyboard into Telegram's inline markup: callback buttons, or buttons that open the Mini App.</summary>
     /// <param name="keyboard">The keyboard, or <see langword="null"/>.</param>
     /// <returns>The markup, or <see langword="null"/>.</returns>
     private static InlineKeyboardMarkup? Markup(BotKeyboard? keyboard) =>
         keyboard is null
             ? null
-            : new InlineKeyboardMarkup(keyboard.Rows.Select(row => row.Select(button => InlineKeyboardButton.WithCallbackData(button.Text, button.CallbackData))));
+            : new InlineKeyboardMarkup(keyboard.Rows.Select(row => row.Select(button => button.WebAppUrl is { } url
+                ? InlineKeyboardButton.WithWebApp(button.Text, new WebAppInfo { Url = url })
+                : InlineKeyboardButton.WithCallbackData(button.Text, button.CallbackData))));
 }
 
 /// <summary>Exposes the configured first admin to the Application layer.</summary>
@@ -95,4 +97,15 @@ internal sealed class TelegramBotAdminSettings(IOptions<TelegramOptions> options
 
     /// <summary>Gets the first admin's email.</summary>
     public string? AdminEmail => string.IsNullOrWhiteSpace(options.Value.AdminEmail) ? null : options.Value.AdminEmail;
+}
+
+/// <summary>Builds Mini App page links from <c>Telegram__MiniAppUrl</c>.</summary>
+/// <param name="options">The Telegram settings.</param>
+internal sealed class TelegramMiniAppLinks(IOptions<TelegramOptions> options) : IMiniAppLinks
+{
+    /// <summary>Builds the URL of a Mini App page.</summary>
+    /// <param name="page">The page under the Mini App, e.g. <c>players</c>.</param>
+    /// <returns>The URL, or <see langword="null"/> when the Mini App URL is empty.</returns>
+    public string? PageUrl(string page) =>
+        string.IsNullOrWhiteSpace(options.Value.MiniAppUrl) ? null : $"{options.Value.MiniAppUrl.TrimEnd('/')}/{page.TrimStart('/')}";
 }

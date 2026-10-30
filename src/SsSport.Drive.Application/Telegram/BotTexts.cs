@@ -57,8 +57,20 @@ public static class BotTexts
     /// <summary>Gets the "Help" text.</summary>
     public static string Help => Get(nameof(Help));
 
-    /// <summary>Gets the "ComingSoon" text.</summary>
-    public static string ComingSoon => Get(nameof(ComingSoon));
+    /// <summary>Gets the "OpenMyPlayers" text.</summary>
+    public static string OpenMyPlayers => Get(nameof(OpenMyPlayers));
+
+    /// <summary>Gets the "OpenMyPlayersButton" text.</summary>
+    public static string OpenMyPlayersButton => Get(nameof(OpenMyPlayersButton));
+
+    /// <summary>Gets the "OpenNewPlayer" text.</summary>
+    public static string OpenNewPlayer => Get(nameof(OpenNewPlayer));
+
+    /// <summary>Gets the "OpenNewPlayerButton" text.</summary>
+    public static string OpenNewPlayerButton => Get(nameof(OpenNewPlayerButton));
+
+    /// <summary>Gets the "MiniAppNotSetUp" text.</summary>
+    public static string MiniAppNotSetUp => Get(nameof(MiniAppNotSetUp));
 
     /// <summary>Gets the "FirstAdminNeedsEmail" text.</summary>
     public static string FirstAdminNeedsEmail => Get(nameof(FirstAdminNeedsEmail));

@@ -26,6 +26,7 @@ describe("MiniAppHome", () => {
 
     expect((await screen.findByRole("heading", { level: 1 })).textContent).toBe("Hello, Reza Ahmadi");
     expect(screen.getByText("Analyst")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "My players" }).getAttribute("href")).toBe("/miniapp/players");
   });
 
   it("tells a user without team access to ask the bot", async () => {

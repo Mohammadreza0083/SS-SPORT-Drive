@@ -89,18 +89,21 @@ public sealed class HandleTelegramUpdateCommandValidator : AbstractValidator<Han
 
 /// <summary>
 /// Takes in an update once (records its id and logs ids only), then routes it: <c>/help</c> → help; any other message
-/// → <see cref="StartBotCommand"/>; buttons → access request, review, or the menu. State changes run as their own
+/// → <see cref="StartBotCommand"/>; buttons → access request, review, or the menu. The New player and My players buttons (and <c>/new</c>,
+/// <c>/players</c> for active members) answer with a button that opens that Mini App page. State changes run as their own
 /// commands, so they are saved (and their events sent) before the bot replies.
 /// </summary>
 /// <param name="inbox">The update inbox.</param>
 /// <param name="sender">Sends the access commands.</param>
 /// <param name="bot">The messenger.</param>
+/// <param name="miniApp">Links to Mini App pages, for the New player and My players buttons.</param>
 /// <param name="timeProvider">The clock.</param>
 /// <param name="logger">The logger.</param>
 public sealed partial class HandleTelegramUpdateCommandHandler(
     ITelegramUpdateInbox inbox,
     ISender sender,
     ITelegramMessenger bot,
+    IMiniAppLinks miniApp,
     TimeProvider timeProvider,
     ILogger<HandleTelegramUpdateCommandHandler> logger)
     : ICommandHandler<HandleTelegramUpdateCommand, TelegramUpdateOutcome>
@@ -169,6 +172,12 @@ public sealed partial class HandleTelegramUpdateCommandHandler(
             _ => ((string?)null, (BotKeyboard?)null),
         };
 
+        if (status.State == BotUserState.Active && MiniAppPageOf(botCommand) is { } miniAppPage)
+        {
+            await SendMiniAppLinkAsync(from, miniAppPage, null, cancellationToken);
+            return;
+        }
+
         // The first admin is welcomed by the UserApproved event, so nothing is sent here.
         if (text is not null)
         {
@@ -205,8 +214,12 @@ public sealed partial class HandleTelegramUpdateCommandHandler(
                 await bot.SendAsync(from.ChatId, BotTexts.Help, null, cancellationToken);
                 return;
 
-            case BotCallbacks.NewPlayer or BotCallbacks.MyPlayers:
-                await bot.AnswerCallbackAsync(callbackId, BotTexts.ComingSoon, false, cancellationToken);
+            case BotCallbacks.NewPlayer:
+                await SendMiniAppLinkAsync(from, MiniAppPage.NewPlayer, callbackId, cancellationToken);
+                return;
+
+            case BotCallbacks.MyPlayers:
+                await SendMiniAppLinkAsync(from, MiniAppPage.MyPlayers, callbackId, cancellationToken);
                 return;
         }
 
@@ -236,6 +249,46 @@ public sealed partial class HandleTelegramUpdateCommandHandler(
             _ => BotTexts.RequestGone,
         };
         await ReplyAsync(from, messageId, outcomeText, null, cancellationToken);
+    }
+
+    /// <summary>Tells which Mini App page a bot command opens.</summary>
+    /// <param name="botCommand">The bot command, if any.</param>
+    /// <returns>The page, or <see langword="null"/> for other commands.</returns>
+    private static MiniAppPage? MiniAppPageOf(string? botCommand) => botCommand switch
+    {
+        "new" => MiniAppPage.NewPlayer,
+        "players" => MiniAppPage.MyPlayers,
+        _ => null,
+    };
+
+    /// <summary>
+    /// Sends a button that opens a Mini App page. Without a configured Mini App URL, a button press is answered with
+    /// a note instead (the Mini App guards access itself).
+    /// </summary>
+    /// <param name="to">The chat.</param>
+    /// <param name="page">The page.</param>
+    /// <param name="callbackId">The button press to answer, or <see langword="null"/> for a command.</param>
+    /// <param name="cancellationToken">Cancels the calls.</param>
+    /// <returns>A task that completes when the reply is sent.</returns>
+    private async Task SendMiniAppLinkAsync(TelegramSender to, MiniAppPage page, string? callbackId, CancellationToken cancellationToken)
+    {
+        var (path, text, label) = page == MiniAppPage.MyPlayers
+            ? ("players", BotTexts.OpenMyPlayers, BotTexts.OpenMyPlayersButton)
+            : ("new", BotTexts.OpenNewPlayer, BotTexts.OpenNewPlayerButton);
+        var url = miniApp.PageUrl(path);
+        if (callbackId is not null)
+        {
+            await bot.AnswerCallbackAsync(callbackId, url is null ? BotTexts.MiniAppNotSetUp : null, false, cancellationToken);
+        }
+
+        if (url is not null)
+        {
+            await bot.SendAsync(to.ChatId, text, BotKeyboard.Column(BotButton.OpenMiniApp(label, url)), cancellationToken);
+        }
+        else if (callbackId is null)
+        {
+            await bot.SendAsync(to.ChatId, BotTexts.MiniAppNotSetUp, null, cancellationToken);
+        }
     }
 
     /// <summary>
@@ -288,4 +341,14 @@ public sealed partial class HandleTelegramUpdateCommandHandler(
     /// <param name="UpdateKind">The update type.</param>
     [LoggerMessage(Level = LogLevel.Debug, Message = "Telegram update {UpdateId} ({UpdateKind}) was already received; skipped")]
     private static partial void LogDuplicate(ILogger logger, long UpdateId, string UpdateKind);
+}
+
+/// <summary>A Mini App page the bot links to.</summary>
+internal enum MiniAppPage
+{
+    /// <summary>The new-player form (<c>/miniapp/new</c>).</summary>
+    NewPlayer,
+
+    /// <summary>My players (<c>/miniapp/players</c>).</summary>
+    MyPlayers,
 }
