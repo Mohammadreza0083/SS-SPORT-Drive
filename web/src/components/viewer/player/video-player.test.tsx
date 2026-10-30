@@ -167,6 +167,17 @@ describe("VideoPlayer", () => {
     await waitFor(() => expect(container.querySelector("[slot=media]")?.hasAttribute("autoplay")).toBe(true));
   });
 
+  it("sends every hls.js request with the latest edge token", async () => {
+    desktop();
+    const { container } = render(<VideoPlayer src="/hls/tok1.sig/players/a/videos/b/hls/master.m3u8" title="Highlights 2026" />);
+    const media = (await mediaElement(container)) as unknown as { config: { xhrSetup: (xhr: XMLHttpRequest, url: string) => void } };
+    const xhr = { open: vi.fn() } as unknown as XMLHttpRequest;
+
+    media.config.xhrSetup(xhr, "https://drive.ss-sport.co/hls/stale.sig/players/a/videos/b/hls/720p/seg_1.ts");
+
+    expect(xhr.open).toHaveBeenCalledWith("GET", "https://drive.ss-sport.co/hls/tok1.sig/players/a/videos/b/hls/720p/seg_1.ts", true);
+  });
+
   it("lays the viewer's email over the video when one is given", async () => {
     desktop();
     const { container } = render(

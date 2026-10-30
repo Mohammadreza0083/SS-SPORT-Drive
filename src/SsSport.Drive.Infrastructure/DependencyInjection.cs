@@ -6,10 +6,12 @@ using Microsoft.Extensions.Options;
 using Npgsql;
 using SsSport.Drive.Application.Abstractions.Drive;
 using SsSport.Drive.Application.Abstractions.Images;
+using SsSport.Drive.Application.Abstractions.Media;
 using SsSport.Drive.Application.Abstractions.Persistence;
 using SsSport.Drive.Application.Abstractions.Storage;
 using SsSport.Drive.Application.Telegram;
 using SsSport.Drive.Infrastructure.Drive;
+using SsSport.Drive.Infrastructure.Edge;
 using SsSport.Drive.Infrastructure.Images;
 using SsSport.Drive.Infrastructure.Persistence;
 using SsSport.Drive.Infrastructure.Storage;
@@ -29,7 +31,7 @@ public static class DependencyInjection
     /// <summary>
     /// Adds the shared PostgreSQL data source, the EF Core context, the persistence ports
     /// (unit of work + generic repository, one per request scope), the media bucket, the photo processor and the
-    /// Telegram adapters. The connection string is
+    /// Telegram adapters and the HLS edge-token issuer. The connection string is
     /// read lazily from configuration, so hosts and tests can supply it from any configuration source.
     /// </summary>
     /// <param name="services">The service collection to add to.</param>
@@ -56,6 +58,12 @@ public static class DependencyInjection
             .ValidateOnStart();
         services.AddSingleton<IDriveApi, GoogleDriveApi>();
         services.AddSingleton<IDriveFolderReader, GoogleDriveFolderReader>();
+
+        services.AddOptions<EdgeOptions>()
+            .BindConfiguration(EdgeOptions.SectionName)
+            .Validate(options => options.HlsSigningKey.Length == 0 || EdgeOptions.IsValidSigningKey(options.HlsSigningKey), "Edge__HlsSigningKey must be base64 of at least 32 random bytes (or empty to turn HLS tokens off).")
+            .ValidateOnStart();
+        services.AddSingleton<IHlsTokenIssuer, HmacHlsTokenIssuer>();
 
         services.AddTelegram();
         return services;

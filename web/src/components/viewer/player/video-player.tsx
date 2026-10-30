@@ -30,6 +30,8 @@ import {
 } from "@/lib/viewer/player";
 import { playerCopy } from "./copy";
 import { EmailOverlay } from "./email-overlay";
+import { useHlsRefresh } from "./use-hls-refresh";
+import { swapToken } from "@/lib/viewer/hls-token";
 
 /** Props of {@link VideoPlayer}. */
 type VideoPlayerProps = {
@@ -47,6 +49,8 @@ type VideoPlayerProps = {
   autoPlay?: boolean;
   /** The signed-in viewer's email, laid faintly over the video (V-4); no overlay without it. */
   viewerEmail?: string;
+  /** Fetches a freshly signed playlist URL for this video; renews the 30-minute edge token while watching (V-5a). */
+  refreshSource?: () => Promise<string>;
 };
 
 /** The media element the player drives: a native `<video>` or the `<hls-video>` custom element. */
@@ -65,7 +69,7 @@ const noSubscription = () => () => {};
  * @param props - See {@link VideoPlayerProps}.
  * @returns The player with its title row.
  */
-export function VideoPlayer({ src, title, tag, poster, fps = DEFAULT_FPS, autoPlay = false, viewerEmail }: VideoPlayerProps) {
+export function VideoPlayer({ src, title, tag, poster, fps = DEFAULT_FPS, autoPlay = false, viewerEmail, refreshSource }: VideoPlayerProps) {
   const id = useId();
   const mediaRef = useRef<PlayerMedia | null>(null);
   const frameRef = useRef<HTMLDivElement>(null);
@@ -90,6 +94,7 @@ export function VideoPlayer({ src, title, tag, poster, fps = DEFAULT_FPS, autoPl
   }, [mode]);
 
   const ready = mode === "native" || (mode === "hls" && hlsReady);
+  const tokenRef = useHlsRefresh({ mediaRef, mode: ready ? mode : null, src, refreshSource });
 
   useEffect(() => {
     // Fullscreen takes the frame (controller + email overlay), not just the controller.
@@ -110,11 +115,20 @@ export function VideoPlayer({ src, title, tag, poster, fps = DEFAULT_FPS, autoPl
     media.setAttribute("preload", "metadata");
     media.toggleAttribute("autoplay", autoPlay);
     if (mode === "hls") {
-      // The config must be in place before the source, so hls.js starts at 360p.
-      media.config = HLS_CONFIG;
+      // The config must be in place before the source, so hls.js starts at 360p. Every request carries the latest
+      // edge token, so a renewal (V-5a) takes effect without restarting the stream.
+      media.config = {
+        ...HLS_CONFIG,
+        xhrSetup: (xhr: XMLHttpRequest, url: string) => {
+          const next = swapToken(url, tokenRef.current);
+          if (next !== url) {
+            xhr.open("GET", next, true);
+          }
+        },
+      };
     }
     media.setAttribute("src", src);
-  }, [ready, mode, src, autoPlay]);
+  }, [ready, mode, src, autoPlay, tokenRef]);
 
   /**
    * Pauses and moves one frame forward or back.

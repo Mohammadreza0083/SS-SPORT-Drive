@@ -81,7 +81,8 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | V-2 | Player page (desktop / tablet / mobile) per canvas | Claude | Playwright visual pass |
 | V-3 | Media Chrome + hls-video-element player: speed, quality, frame step, no download, no context menu | Claude | Demo |
 | V-4 | Moving viewer-email overlay (20 %, small, repositions every few seconds) | Claude | Demo |
-| V-5 | Cloudflare Worker: short links, HMAC HLS tokens (30 min) + background refresh while watching | Claude | Copying the m3u8 elsewhere fails |
+| V-5a | Edge Worker: HMAC HLS tokens (30 min) bound to the viewer session cookie, R2 delivery, .NET token issuer, player background refresh (split 2026-10-31) | Claude | Copying the m3u8 elsewhere fails (Worker tests) |
+| V-5b | HLS token endpoint on the viewer session + player wiring; short-link routing on the edge (after L-1/L-2) | Claude | Copying the m3u8 elsewhere fails end to end |
 | V-6 | View-only PDF viewer (rendered pages, no file download) | Claude | Demo |
 | V-7 | Email-only contact CTA (`info@ss-sport.co`) | Claude | Done |
 | V-8 | DataVolley (`.dvw`) viewer: in-page, view-only, no download (what it shows is designed with the owner first) | Claude | Viewers can read a match's scout file; tests green |

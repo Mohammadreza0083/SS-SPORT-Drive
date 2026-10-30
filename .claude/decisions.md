@@ -539,6 +539,13 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
 - **Signed tokens:**
   - HLS URLs are HMAC-signed and **expire after 30 minutes**.
   - While the viewer is actively watching, the player **refreshes the token in the background**, extending it another 30 minutes.
+  - **Implementation (V-5a, 2026-10-31; V-5 split into V-5a now and V-5b after L-2, owner):**
+    - Token = `base64url(JSON {v, p, s, e})` + `.` + `base64url(HMAC-SHA256(key, first part))`. `p` = the video's HLS folder, `s` = base64url of the first 16 bytes of SHA-256 of the viewer's session cookie (`ssd_vs`), `e` = expiry in Unix seconds. URL = `/hls/{token}/{p}/{file}`, so relative segment URIs in the playlists carry the token automatically.
+    - **Copied URLs fail:** the Worker checks the signature (constant time), the expiry, that the file is inside `p`, that it is an HLS file (`.m3u8`, `.ts`, `.m4s`, `init.mp4`), and that the request's `ssd_vs` cookie hashes to `s`. Pasting the URL into VLC, another browser or another viewer's browser gives 403, with no reason given.
+    - Format pinned by `contracts/hls-token-vectors.json`, which the .NET issuer (`HmacHlsTokenIssuer`, `Edge__HlsSigningKey`) and the Worker (`HLS_SIGNING_KEY` secret, `MEDIA` R2 binding) both test against.
+    - Playlists are `Cache-Control: private, no-store`; segments `private, max-age=1800`.
+    - The player renews the token every 20 minutes while playing, and on play after a longer pause. With hls.js the token is swapped into each following request (no interruption); with native HLS (iPhone/iPad) the source is swapped and playback resumes at the same second.
+    - V-5b adds the API endpoint that issues tokens on the viewer session, wires the player to it, and routes short links on the edge.
 - **Watermark values (S-11, approved by the owner 2026-10-24; final check on real full-match footage in I-3):**
   - **Logo:** the white horizontal lockup (`brand/svg/logo_horizontal_white.svg`), **10 % of the frame width** (192 px at 1080p, 64 px at 360p), **45 % opacity**, a soft 35 % shadow so it reads on bright courts.
   - **Slogan:** "SS-SPORT · Fetch Your Dreams" in Barlow Condensed SemiBold, white, **text height 3.2 % of the frame height** (≈35 px at 1080p), **55 % opacity**, same shadow.
