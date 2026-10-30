@@ -260,6 +260,16 @@ Last updated: 2026-10-29
   - **Category (Men/Women) is a required choice at the top of the form** (the owner gave no preference, so Claude's proposal stands), because every player needs it.
   - **Duplicates:** a Volleybox id that already exists is refused with `player.volleybox_taken` and the live check says so (switching to Update mode is T-5). A Drive folder already linked to a player is refused with `drive_folder.taken`.
   - **Until T-4c** the Drive link was only checked for its format, and the folder was stored with its Drive id as a provisional name. Since T-4c (below), the folder is read from Drive and linked under its real name.
+- **Player photo straight from the bot chat (T-4d, owner request, 2026-10-29):**
+  - **The idea:** the analyst can send the photo in the bot chat instead of opening the Mini App. Both ways stay available.
+  - **Which player:**
+    - **Reply** to the player's progress message (T-6a) with the photo, and the bot knows the player.
+    - **Without a reply**, the bot answers the photo with buttons for the analyst's players that still have no photo (newest first, 5 per page, Previous/Next). The picker is itself a reply to the photo, so pressing a button finds the photo again; nothing is stored in between.
+  - **Accepted forms:** a Telegram **photo**, or an **image sent as a File**.
+    - Telegram compresses photos (the longer side is usually 1280 px). When such a photo is under 800 px on its shorter side, the bot says to send it **as a File**, which keeps full quality.
+  - **Rules:** the same checks and processing as T-4b (15 MB, 800 px, upright, metadata stripped, WebP next to the original) and the same rule on who may change the photo (the owning analyst or an admin).
+  - **The bot answers** with "✅ Photo saved for {player}" or with what to fix, and the progress message updates itself.
+  - **Access:** someone who is not an active team member is told to ask for access.
 - **One progress message per player (T-6a, owner-approved 2026-10-29):**
   - **Split:** T-6 is split in two.
     - **T-6a (now):** one bot message per player for its analyst, edited in place for the steps that exist today.

@@ -2,6 +2,7 @@ using Microsoft.Extensions.Options;
 using SsSport.Drive.Application.Telegram;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
+using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace SsSport.Drive.Infrastructure.Telegram;
@@ -39,6 +40,32 @@ internal sealed class TelegramMessenger(ITelegramBotClient client) : ITelegramMe
         {
             // Pressing the same button twice produces the same text; Telegram rejects such edits.
         }
+    }
+
+    /// <summary>Sends a message, optionally as a reply to another one in the chat.</summary>
+    /// <param name="chatId">The chat.</param>
+    /// <param name="replyToMessageId">The message to reply to, or <see langword="null"/>.</param>
+    /// <param name="text">The text.</param>
+    /// <param name="keyboard">The buttons, or <see langword="null"/>.</param>
+    /// <param name="cancellationToken">Cancels the call.</param>
+    /// <returns>The message id.</returns>
+    public async Task<int> SendReplyAsync(long chatId, int? replyToMessageId, string text, BotKeyboard? keyboard, CancellationToken cancellationToken)
+    {
+        var replyTo = replyToMessageId is { } id ? new ReplyParameters { MessageId = id, AllowSendingWithoutReply = true } : null;
+        var message = await client.SendMessage(chatId, text, replyParameters: replyTo, replyMarkup: Markup(keyboard), cancellationToken: cancellationToken);
+        return message.MessageId;
+    }
+
+    /// <summary>Downloads a file a user sent (Bot API <c>getFile</c>, then the file itself).</summary>
+    /// <param name="fileId">The Telegram file id.</param>
+    /// <param name="cancellationToken">Cancels the download.</param>
+    /// <returns>The bytes.</returns>
+    public async Task<byte[]> DownloadFileAsync(string fileId, CancellationToken cancellationToken)
+    {
+        var file = await client.GetFile(fileId, cancellationToken);
+        using var buffer = new MemoryStream();
+        await client.DownloadFile(file.FilePath!, buffer, cancellationToken);
+        return buffer.ToArray();
     }
 
     /// <summary>Answers a button press.</summary>
