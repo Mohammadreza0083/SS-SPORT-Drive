@@ -378,6 +378,11 @@ Last updated: 2026-10-29
 - **Local ports are bound to 127.0.0.1 only.** The API's host port is **5080**, because 8080 is often taken on developer machines.
 
 - **VPS purchase deferred (S-1, owner, 2026-10-24):** it is too early to buy the VPS. Everything runs locally in Docker until deploy work (Epic 9) begins.
+- **Mini App UI (T-9, owner-approved 2026-10-31):**
+  - **Design first:** the Mini App had no styling. Five artboards were added to the design canvas (`MiniHome`, `MiniNewPlayer`, `MiniPhoto`, `MiniPlayers`, `MiniPlayer` with the edit-video sheet) and the owner approved them before any code.
+  - **Telegram theme, SS-SPORT accents:** colours come from Telegram's `--tg-theme-*` variables, with the canvas's dark palette as the fallback; SS-SPORT red `#CC0000` stays the action colour in every theme.
+  - **Styling only:** the screens keep their logic, text and accessible names. Badges, arrows and icons are drawn by CSS with empty alt text (`content: "1" / ""`), so screen readers hear the same names as before.
+  - **Not built:** the home artboard's "Recent" list needs data the API does not return yet; it is left out until a task adds it.
 
 ## 4. Google Drive & archive
 
@@ -706,3 +711,4 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
    - `Locked` (blurred and locked player page with a 3-step request-access modal)
    - `Invite` (the approval email carrying the personal link)
 3. **Admin:** `Waiting` (waiting list with a complete-details drawer; Publish stays disabled until every field is valid).
+4. **Telegram Mini App (T-9):** `MiniHome`, `MiniNewPlayer`, `MiniPhoto`, `MiniPlayers`, `MiniPlayer` (with the edit-video sheet).

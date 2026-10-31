@@ -58,9 +58,9 @@ export function UpdatePlayer({
   ];
 
   return (
-    <main>
+    <main className="ma-form">
       <h1>{copy.title}</h1>
-      <section aria-label={player.name ?? undefined}>
+      <section aria-label={player.name ?? undefined} className="ma-card">
         <h2>{player.name}</h2>
         <p>
           {[player.positions.join(" / "), player.nationalityName, player.category, player.status].filter(Boolean).join(" · ")}
@@ -69,7 +69,7 @@ export function UpdatePlayer({
         <p>{copy.folders(player.folderCount)}</p>
       </section>
 
-      <div role="tablist">
+      <div role="tablist" className="ma-tabs">
         {tabs.map(([key, label]) => (
           <button key={key} type="button" role="tab" aria-selected={choice === key} onClick={() => setChoice(key)}>
             {label}
@@ -84,7 +84,7 @@ export function UpdatePlayer({
       </div>
 
       {onBack && (
-        <button type="button" onClick={onBack}>
+        <button type="button" className="ma-secondary" onClick={onBack}>
           {copy.back}
         </button>
       )}
@@ -118,7 +118,7 @@ function AddFolderPanel({ playerId, initData, initialFolderUrl }: { playerId: st
     <>
       <DriveFolderField value={url} onChange={setUrl} state={check} onStateChange={setCheck} initData={initData} />
       {result.kind === "rejected" && <p role="alert">{ruleMessages[result.code ?? ""] ?? newPlayerCopy.rejected}</p>}
-      <button type="button" disabled={check.kind !== "found" || result.kind === "sending"} onClick={() => void onAdd()}>
+      <button type="button" className="ma-primary" disabled={check.kind !== "found" || result.kind === "sending"} onClick={() => void onAdd()}>
         {result.kind === "sending" ? copy.adding : copy.addFolder}
       </button>
     </>
@@ -195,7 +195,7 @@ function DetailsPanel({ player, initData, onSaved }: { player: MiniAppPlayer; in
           {state.kind === "saved" && <p role="status">{copy.saved}</p>}
           {state.kind === "unchanged" && <p role="status">{copy.nothingChanged}</p>}
           {state.kind === "rejected" && <p role="alert">{ruleMessages[state.code ?? ""] ?? newPlayerCopy.rejected}</p>}
-          <button type="button" disabled={state.kind === "sending"} onClick={() => void onSave()}>
+          <button type="button" className="ma-primary" disabled={state.kind === "sending"} onClick={() => void onSave()}>
             {state.kind === "sending" ? copy.saving : copy.save}
           </button>
         </>

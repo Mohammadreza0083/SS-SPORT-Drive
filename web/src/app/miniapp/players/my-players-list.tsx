@@ -41,9 +41,10 @@ export function MyPlayersList({ initData }: { initData: string }) {
   }
 
   return (
-    <main>
+    <main className="ma-players">
       <h1>{copy.title}</h1>
       <input
+        className="ma-search"
         type="search"
         aria-label={copy.search}
         placeholder={copy.search}
@@ -53,7 +54,7 @@ export function MyPlayersList({ initData }: { initData: string }) {
           setPage(1);
         }}
       />
-      <div>
+      <div className="ma-chips">
         {PLAYER_FILTERS.map((chip) => (
           <button key={chip} type="button" aria-pressed={filter === chip} onClick={() => choose(chip)}>
             {copy.filters[chip]}
@@ -65,14 +66,21 @@ export function MyPlayersList({ initData }: { initData: string }) {
       {result === null && <p role="alert">{copy.failed}</p>}
       {result && result.items.length === 0 && <p>{copy.empty}</p>}
       {result && result.items.length > 0 && (
-        <ul>
+        <ul className="ma-list">
           {result.items.map((player) => (
             <li key={player.id}>
-              <Link href={`/miniapp/players/${player.id}`}>
-                <strong>{player.name ?? "—"}</strong>
-                <span>{[player.positions.join(" / "), player.nationalityName].filter(Boolean).join(" · ")}</span>
-                <span>{statusLabel(player)}</span>
-                <span>{copy.files(player.fileCount, player.processingCount)}</span>
+              <Link href={`/miniapp/players/${player.id}`} className="ma-row">
+                <span className="ma-avatar" aria-hidden="true">
+                  {initials(player.name)}
+                </span>
+                <span className="ma-row-text">
+                  <strong>{player.name ?? "—"}</strong>
+                  <span className="ma-meta">
+                    {[player.positions.join(" / "), player.nationalityName].filter(Boolean).join(" · ")} ·{" "}
+                    {copy.files(player.fileCount, player.processingCount)}
+                  </span>
+                </span>
+                <span className={`ma-pill ${statusTone(player)}`}>{statusLabel(player)}</span>
               </Link>
             </li>
           ))}
@@ -80,7 +88,7 @@ export function MyPlayersList({ initData }: { initData: string }) {
       )}
 
       {result && (
-        <nav>
+        <nav className="ma-pager">
           <button type="button" disabled={page <= 1} onClick={() => setPage(page - 1)}>
             {copy.previous}
           </button>
@@ -106,4 +114,33 @@ function statusLabel(player: PlayerListItem): string {
   }
 
   return player.status === "Published" ? copy.live : copy.waiting;
+}
+
+/**
+ * The colour class of a row's status pill: red for attention, green for live, amber while waiting.
+ *
+ * @param player - The row.
+ * @returns The pill's tone class.
+ */
+function statusTone(player: PlayerListItem): string {
+  if (player.needsAttention) {
+    return "ma-pill-attention";
+  }
+
+  return player.status === "Published" ? "ma-pill-live" : "ma-pill-waiting";
+}
+
+/**
+ * Up to two initials for the row's avatar.
+ *
+ * @param name - The player's name.
+ * @returns For example `AT`, or `?` without a name.
+ */
+function initials(name: string | null): string {
+  const letters = (name ?? "")
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+  return letters.slice(0, 2) || "?";
 }

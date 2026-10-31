@@ -63,6 +63,7 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | T-7a | My players list (search, All / Live / Processing / Needs attention, paged) + player detail (card, folders, files in page order) + bot My players button | Claude | Demo |
 | T-7b | Edit video bottom sheet: title, tags, set as hero; Hide/Show for admins only | Claude | Demo |
 | T-8 | Notification rules: grouping, 10-min throttle, quiet hours 23:00–08:00 Tehran | Claude | Tests green |
+| T-9 | Mini App UI: design every screen in the canvas (Telegram theme-aware, SS-SPORT accents), then style the screens without changing their logic (owner, 2026-10-31) | Both | Artboards approved; screens match; tests green |
 
 ## EPIC 3 — Ingest, transcode & sync
 | Key | Task | Assignee | Done when |

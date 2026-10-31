@@ -187,19 +187,21 @@ export function NewPlayerForm({ initData }: { initData: string }) {
 
   if (submit.kind === "created") {
     return (
-      <main>
+      <main className="ma-form">
         <h1>{copy.title}</h1>
-        <p role="status">{copy.created(submit.name)}</p>
+        <p role="status" className="ma-ok">
+          {copy.created(submit.name)}
+        </p>
         <PhotoStep playerId={submit.id} playerName={submit.name} initData={initData} />
       </main>
     );
   }
 
   return (
-    <main>
+    <main className="ma-form">
       <h1>{copy.title}</h1>
 
-      <fieldset>
+      <fieldset className="ma-segment">
         <legend>{copy.category}</legend>
         {(["Men", "Women"] as const).map((category) => (
           <button key={category} type="button" aria-pressed={draft.category === category} onClick={() => update({ category })}>
@@ -208,14 +210,17 @@ export function NewPlayerForm({ initData }: { initData: string }) {
         ))}
       </fieldset>
 
-      <label htmlFor="player-name">{copy.name}</label>
-      <input id="player-name" value={draft.name} autoComplete="off" onChange={(event) => update({ name: event.target.value })} />
-      {draft.name.trim() !== "" && !nameValid && <p role="alert">{copy.nameHint}</p>}
+      <section className="ma-card">
+        <label htmlFor="player-name">{copy.name}</label>
+        <input id="player-name" value={draft.name} autoComplete="off" onChange={(event) => update({ name: event.target.value })} />
+        {draft.name.trim() !== "" && !nameValid && <p role="alert">{copy.nameHint}</p>}
 
-      <CountryPicker countries={countries} value={draft.nationalityCode} onChange={(code) => update({ nationalityCode: code })} />
+        <CountryPicker countries={countries} value={draft.nationalityCode} onChange={(code) => update({ nationalityCode: code })} />
+      </section>
 
       <PositionChips value={draft.positions} onChange={(positions) => update({ positions })} />
 
+      <section className="ma-card">
       <label htmlFor="player-volleybox">{copy.volleybox}</label>
       <input
         id="player-volleybox"
@@ -227,7 +232,11 @@ export function NewPlayerForm({ initData }: { initData: string }) {
         }}
         onBlur={() => void onVolleyboxBlur()}
       />
-      {volleybox.kind === "new" && <p role="status">{copy.volleyboxNew(volleybox.volleyboxId)}</p>}
+      {volleybox.kind === "new" && (
+        <p role="status" className="ma-check">
+          {copy.volleyboxNew(volleybox.volleyboxId)}
+        </p>
+      )}
       {volleybox.kind === "invalid" && <p role="alert">{ruleMessages[volleybox.code ?? ""] ?? ruleMessages["player.volleybox_url_invalid"]}</p>}
 
       <DriveFolderField
@@ -238,11 +247,12 @@ export function NewPlayerForm({ initData }: { initData: string }) {
         initData={initData}
         onOpenPlayer={setOpenPlayerId}
       />
+      </section>
 
-      <p>{copy.photoLater}</p>
+      <p className="ma-note">{copy.photoLater}</p>
       {submit.kind === "rejected" && <p role="alert">{ruleMessages[submit.code ?? ""] ?? copy.rejected}</p>}
 
-      <button type="button" disabled={!canCreate} onClick={() => void onCreate()}>
+      <button type="button" className="ma-primary" disabled={!canCreate} onClick={() => void onCreate()}>
         {submit.kind === "sending" ? copy.creating : copy.create}
       </button>
     </main>

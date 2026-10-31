@@ -39,7 +39,7 @@ export function PlayerDetail({ playerId, initData }: { playerId: string; initDat
     return (
       <>
         <UpdatePlayer playerId={playerId} initData={initData} />
-        <button type="button" onClick={() => setEditing(false)}>
+        <button type="button" className="ma-secondary ma-close-editor" onClick={() => setEditing(false)}>
           {copy.closeEditor}
         </button>
       </>
@@ -55,21 +55,27 @@ export function PlayerDetail({ playerId, initData }: { playerId: string; initDat
   }
 
   return (
-    <main>
-      <Link href="/miniapp/players">{copy.back}</Link>
-      {player.hasPhoto && <PlayerPhoto playerId={player.id} name={player.name} initData={initData} />}
-      <h1>{player.name}</h1>
-      <p>{[player.positions.join(" / "), player.nationalityName, player.category, player.status].filter(Boolean).join(" · ")}</p>
-      <p>{updateCopy.owner(player.analystName)}</p>
-      <p>{copy.pageLater}</p>
-      <button type="button" onClick={() => setEditing(true)}>
+    <main className="ma-detail">
+      <Link href="/miniapp/players" className="ma-back">
+        {copy.back}
+      </Link>
+      <section className="ma-player-card">
+        {player.hasPhoto && <PlayerPhoto playerId={player.id} name={player.name} initData={initData} />}
+        <p className="ma-player-meta">
+          {[player.positions.join(" / "), player.nationalityName, player.category, player.status].filter(Boolean).join(" · ")}
+        </p>
+        <h1>{player.name}</h1>
+      </section>
+      <p className="ma-hint">{updateCopy.owner(player.analystName)}</p>
+      <p className="ma-hint">{copy.pageLater}</p>
+      <button type="button" className="ma-secondary" onClick={() => setEditing(true)}>
         {copy.editPlayer}
       </button>
 
       <section aria-label={copy.foldersTitle}>
         <h2>{copy.foldersTitle}</h2>
-        <p>{updateCopy.folders(player.folderCount)}</p>
-        <ul>
+        <p className="ma-hint">{updateCopy.folders(player.folderCount)}</p>
+        <ul className="ma-list ma-folders">
           {player.folders.map((folder) => (
             <li key={folder.id}>
               {folder.name}
@@ -111,7 +117,7 @@ function PlayerPhoto({ playerId, name, initData }: { playerId: string; name: str
   }, [playerId, initData]);
 
   // eslint-disable-next-line @next/next/no-img-element -- an object URL from an authorised fetch; next/image cannot load it.
-  return url ? <img src={url} alt={name ?? ""} width={160} /> : null;
+  return url ? <img src={url} alt={name ?? ""} width={160} className="ma-player-photo" /> : null;
 }
 
 /**
@@ -147,11 +153,13 @@ function FileList({ playerId, initData, canEdit, canHide }: { playerId: string; 
       {files && files.items.length === 0 && <p>{copy.noFiles}</p>}
       {files && files.items.length > 0 && (
         <>
-          <ul>
+          <ul className="ma-list ma-files">
             {files.items.map((file) => (
-              <li key={file.id} aria-label={`file ${file.title}`}>
+              <li key={file.id} aria-label={`file ${file.title}`} className="ma-file-row">
                 <strong>{file.isHero ? `${copy.hero} ${file.title}` : file.title}</strong>{" "}
-                <span>{[file.kind, ...file.tags, file.state, file.visibility === "Hidden" ? copy.hidden : null].filter(Boolean).join(" · ")}</span>
+                <span className="ma-meta">
+                  {[file.kind, ...file.tags, file.state, file.visibility === "Hidden" ? copy.hidden : null].filter(Boolean).join(" · ")}
+                </span>
                 {canEdit && (
                   <button type="button" onClick={() => setEditing(file)}>
                     {editVideoCopy.editFile(file.title)}
