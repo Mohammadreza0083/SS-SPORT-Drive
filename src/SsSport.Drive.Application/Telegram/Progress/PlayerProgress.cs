@@ -85,31 +85,35 @@ public sealed partial class PlayerProgressUpdater(
     ITelegramMessenger bot,
     TimeProvider timeProvider,
     ILogger<PlayerProgressUpdater> logger)
-    : IDomainEventHandler<PlayerCreated>, IDomainEventHandler<PlayerDetailsChanged>, IDomainEventHandler<PlayerPublished>, IDomainEventHandler<DriveFolderLinked>
+    : IBackgroundEventHandler<PlayerCreated>, IBackgroundEventHandler<PlayerDetailsChanged>, IBackgroundEventHandler<PlayerPublished>, IBackgroundEventHandler<DriveFolderLinked>
 {
     /// <summary>Sends the first progress message.</summary>
     /// <param name="domainEvent">The event.</param>
+    /// <param name="context">Who caused it (unused).</param>
     /// <param name="cancellationToken">Cancels the work.</param>
     /// <returns>A task that completes when the message is current.</returns>
-    public Task HandleAsync(PlayerCreated domainEvent, CancellationToken cancellationToken) => RefreshAsync(domainEvent.PlayerId, cancellationToken);
+    public Task HandleAsync(PlayerCreated domainEvent, EventContext context, CancellationToken cancellationToken) => RefreshAsync(domainEvent.PlayerId, cancellationToken);
 
     /// <summary>Updates the message after a detail or the photo changed.</summary>
     /// <param name="domainEvent">The event.</param>
+    /// <param name="context">Who caused it (unused).</param>
     /// <param name="cancellationToken">Cancels the work.</param>
     /// <returns>A task that completes when the message is current.</returns>
-    public Task HandleAsync(PlayerDetailsChanged domainEvent, CancellationToken cancellationToken) => RefreshAsync(domainEvent.PlayerId, cancellationToken);
+    public Task HandleAsync(PlayerDetailsChanged domainEvent, EventContext context, CancellationToken cancellationToken) => RefreshAsync(domainEvent.PlayerId, cancellationToken);
 
     /// <summary>Updates the message after an admin published the player.</summary>
     /// <param name="domainEvent">The event.</param>
+    /// <param name="context">Who caused it (unused).</param>
     /// <param name="cancellationToken">Cancels the work.</param>
     /// <returns>A task that completes when the message is current.</returns>
-    public Task HandleAsync(PlayerPublished domainEvent, CancellationToken cancellationToken) => RefreshAsync(domainEvent.PlayerId, cancellationToken);
+    public Task HandleAsync(PlayerPublished domainEvent, EventContext context, CancellationToken cancellationToken) => RefreshAsync(domainEvent.PlayerId, cancellationToken);
 
     /// <summary>Updates the message after a Drive folder was added.</summary>
     /// <param name="domainEvent">The event.</param>
+    /// <param name="context">Who caused it (unused).</param>
     /// <param name="cancellationToken">Cancels the work.</param>
     /// <returns>A task that completes when the message is current.</returns>
-    public Task HandleAsync(DriveFolderLinked domainEvent, CancellationToken cancellationToken) => RefreshAsync(domainEvent.PlayerId, cancellationToken);
+    public Task HandleAsync(DriveFolderLinked domainEvent, EventContext context, CancellationToken cancellationToken) => RefreshAsync(domainEvent.PlayerId, cancellationToken);
 
     /// <summary>Renders the progress and sends or edits the message when the text changed.</summary>
     /// <param name="playerId">The player.</param>

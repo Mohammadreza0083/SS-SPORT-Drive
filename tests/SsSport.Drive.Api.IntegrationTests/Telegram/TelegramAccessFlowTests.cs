@@ -51,7 +51,7 @@ public sealed class TelegramAccessFlowTests : IAsyncLifetime
                 ["Telegram:AdminEmail"] = "owner@ss-sport.co",
                 ["Telegram:Mode"] = "Webhook",
             }));
-            builder.ConfigureTestServices(services => services.Replace(ServiceDescriptor.Singleton<ITelegramMessenger>(_bot)));
+            builder.ConfigureTestServices(services => services.Replace(ServiceDescriptor.Singleton<ITelegramMessenger>(_bot)).UseInlineBotNotices());
         });
         await DatabaseMigrator.MigrateAsync(_api.Services, TestContext.Current.CancellationToken);
     }

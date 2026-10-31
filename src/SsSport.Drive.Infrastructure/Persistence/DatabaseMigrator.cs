@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Npgsql;
+using SsSport.Drive.Infrastructure.BackgroundJobs;
 
 namespace SsSport.Drive.Infrastructure.Persistence;
 
@@ -25,12 +27,17 @@ public static partial class DatabaseMigrator
         if (pending.Count == 0)
         {
             LogUpToDate(logger);
-            return;
+        }
+        else
+        {
+            LogApplying(logger, pending.Count, pending[^1]);
+            await context.Database.MigrateAsync(cancellationToken);
+            LogApplied(logger, pending.Count);
         }
 
-        LogApplying(logger, pending.Count, pending[^1]);
-        await context.Database.MigrateAsync(cancellationToken);
-        LogApplied(logger, pending.Count);
+        // Hangfire keeps its own versioned scripts in its own schema; installing is a no-op when it is current (T-6c).
+        await HangfireStorage.InstallAsync(scope.ServiceProvider.GetRequiredService<NpgsqlDataSource>(), cancellationToken);
+        LogHangfireReady(logger, HangfireStorage.Schema);
     }
 
     /// <summary>Logs that there is nothing to apply.</summary>
@@ -50,4 +57,10 @@ public static partial class DatabaseMigrator
     /// <param name="Count">How many migrations were applied.</param>
     [LoggerMessage(Level = LogLevel.Information, Message = "Applied {Count} database migration(s)")]
     private static partial void LogApplied(ILogger logger, int Count);
+
+    /// <summary>Logs that Hangfire's schema is current.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="Schema">Hangfire's schema.</param>
+    [LoggerMessage(Level = LogLevel.Information, Message = "Hangfire schema {Schema} is up to date")]
+    private static partial void LogHangfireReady(ILogger logger, string Schema);
 }

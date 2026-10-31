@@ -203,11 +203,29 @@ Keep the seeded players Waiting: the update-mode scenarios edit their details, w
 
 Every T-7 threshold passed with a wide margin. The list runs one SQL query with correlated counts of each player's files and folders, plus the total, and stays near the single-player card's time.
 
-**One older threshold now fails: `player_edit` (T-5).** Its p95 was 845 ms (smoke, Development mode) and 929 ms (load, Production mode), against 300 ms. This is not T-7. Since T-6a, every saved player change sends or edits the analyst's progress message in Telegram **inside the request**. With the bench's fake token, each call is a round trip to `api.telegram.org` that ends in 401, and from this machine that round trip takes about 1 s. Photo uploads pay the same cost (p95 1.7 s, against 0.5 s on 10-29). On the VPS, Telegram is close and the token is real, but the request still waits for Telegram. Sending progress messages after the response (an outbox or a background job) would remove it.
+**One older threshold failed here: `player_edit` (T-5); fixed by T-6c, see below.** Its p95 was 845 ms (smoke, Development mode) and 929 ms (load, Production mode), against 300 ms. This is not T-7. Since T-6a, every saved player change sends or edits the analyst's progress message in Telegram **inside the request**. With the bench's fake token, each call is a round trip to `api.telegram.org` that ends in 401, and from this machine that round trip takes about 1 s. Photo uploads pay the same cost (p95 1.7 s, against 0.5 s on 10-29). On the VPS, Telegram is close and the token is real, but the request still waits for Telegram. Sending progress messages after the response (an outbox or a background job) would remove it.
 
 **Two run-recipe traps found on the way, now fixed above:**
 - **Development mode.** The API loaded the repository's `.env` and ran in **Development** mode. In that mode, with every SQL statement logged (90 MB of console output in one load run), even a 401 that never touches the database took 686 ms at p95. In Production mode with SQL logging at Warning, the same load gives it a p95 of 22 ms.
 - **Volleybox ids.** The script's Volleybox ids went up to 10 digits in about half of all minutes, and the domain allows 9, so every `volleybox` check was refused with 422. The id window now stays within 9 digits.
+
+### Bot notices out of the request (T-6c)
+
+Since T-6c, bot notices are queued as Hangfire jobs and sent after the response, so `player_edit` and `photo_upload` no longer wait for Telegram. Same machine, same recipe and seed as K-9, load at peak 50 (Production mode, SQL logging at Warning, the API's Hangfire server on):
+
+| Scenario | p95 before (K-9) | p95 after | p99 after |
+|---|---|---|---|
+| `player_edit` | 929 ms ✗ | **71 ms** | 113 ms |
+| `photo_upload` | 1.71 s | **612 ms** | 751 ms |
+| `my_players` | 66 ms | 44 ms | 67 ms |
+| `file_edit` | 59 ms | 43 ms | 71 ms |
+| `profile` | 38 ms | 26 ms | 46 ms |
+
+32 249 requests at 146/s, 2 failed (photo uploads). **Every threshold passed.**
+
+**The queue falls behind under load.** One worker sends the notices in order. With the bench's fake token, each Telegram call took about 1 s from this machine, so the worker managed about 1 notice/s while the load raised about 10/s. When the run ended, 1 061 notice jobs had succeeded, none had failed, and 1 311 were still queued. They go out over the next minutes. Real traffic is a few analysts, and on the VPS a Telegram call takes a fraction of that time, so this does not show up there. Options if it ever does: more workers with ordering per player, or merging the pending refreshes of one player into one.
+
+**Leaked test containers skew results.** An earlier crashed test run had left 234 PostgreSQL containers running, which made the whole machine slow: `profile` p95 was 421 ms. Check `docker ps` before a run.
 
 ### Notes
 

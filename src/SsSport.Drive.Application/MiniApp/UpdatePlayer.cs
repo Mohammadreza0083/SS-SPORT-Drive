@@ -286,29 +286,29 @@ public sealed class UpdatePlayerDetailsCommandHandler(IRepository<Player, Guid> 
 }
 
 /// <summary>
-/// Tells the owning analyst when someone else adds a Drive folder to their player (T-5). Runs after the save; the
-/// owner adding a folder, archive players without an analyst and system changes notify nobody.
+/// Tells the owning analyst when someone else adds a Drive folder to their player (T-5). Runs in a background job after
+/// the save (T-6c); the owner adding a folder, archive players without an analyst and system changes notify nobody.
 /// </summary>
 /// <param name="folders">The linked folders.</param>
 /// <param name="players">The players.</param>
 /// <param name="users">The team.</param>
-/// <param name="currentUser">Who added the folder.</param>
 /// <param name="bot">The messenger.</param>
 public sealed class NotifyOwnerOfAddedFolder(
     IRepository<DriveFolder, Guid> folders,
     IRepository<Player, Guid> players,
     IRepository<User, Guid> users,
-    ICurrentUser currentUser,
-    ITelegramMessenger bot) : IDomainEventHandler<DriveFolderLinked>
+    ITelegramMessenger bot) : IBackgroundEventHandler<DriveFolderLinked>
 {
     /// <summary>Sends the notice to the owner when the folder was added by someone else.</summary>
     /// <param name="domainEvent">The event.</param>
+    /// <param name="context">Who added the folder.</param>
     /// <param name="cancellationToken">Cancels the send.</param>
     /// <returns>A task that completes when the owner has been told, or nobody needed to be.</returns>
-    public async Task HandleAsync(DriveFolderLinked domainEvent, CancellationToken cancellationToken)
+    public async Task HandleAsync(DriveFolderLinked domainEvent, EventContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(domainEvent);
-        if (!Guid.TryParse(currentUser.UserId, out var actorId)
+        ArgumentNullException.ThrowIfNull(context);
+        if (context.ActorUserId is not { } actorId
             || await players.FirstOrDefaultAsync(new PlayerByIdReadOnlySpec(domainEvent.PlayerId), cancellationToken) is not { AnalystId: { } ownerId } player
             || ownerId == actorId
             || await users.FirstOrDefaultAsync(new UserByIdReadOnlySpec(ownerId), cancellationToken) is not { IsActive: true } owner

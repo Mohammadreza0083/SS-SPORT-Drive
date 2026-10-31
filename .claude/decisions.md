@@ -293,6 +293,21 @@ Last updated: 2026-10-29
   - **Failures:**
     - **Message deleted:** if Telegram can no longer edit the message (the analyst deleted it), it is sent again and the new message is used from then on.
     - **Telegram unreachable:** this never fails the request, because the change is already saved. The failure is logged as a Warning, and the next change tries again.
+- **Bot notices leave the request (T-6c, owner-approved 2026-10-31; found by the K-9 benchmark):**
+  - **Why:** every saved player change waited for Telegram inside the request (about 1 s per round trip), so a details edit took 929 ms at p95 against 300 ms.
+  - **Every bot notice** goes through a background job: the progress message (T-6a), the "folder added by someone else" notice (T-5), and the access request, approval and decline messages (T-2). The request saves, enqueues and answers. Bot replies to the user's own button or command stay inline, because the user is waiting for them.
+  - **Hangfire on PostgreSQL** (the stack decided in §1), owner's choice over an in-memory queue, so a queued notice survives a restart.
+  - **The Hangfire server runs inside the API** (owner's choice) and serves only the notice queue. The heavy jobs (ingest, ffmpeg, sync) go to the workers process in Epic 3 and share the same Hangfire storage.
+  - **How it is built:**
+    - A notice is an `IBackgroundEventHandler<TEvent>` (Application). After the save, the dispatcher still runs inline `IDomainEventHandler`s, and it queues an event that has background handlers through the `IBackgroundEventQueue` port, with the caller as the actor (`EventContext`), because a job has no signed-in user.
+    - Infrastructure stores it as a Hangfire job (`BotNoticeJob`) on the `notices` queue: the event's type name, its JSON and the actor id. Only types from the Domain assembly that are domain events are read back.
+    - **One worker** serves the queue, so a player's notices run in the order they were raised. The queue is polled every second, and a failed job is retried 3 times. Telegram failures are still caught and logged as before (T-6a), so they are not retried.
+    - **Schema:** Hangfire's tables live in their own `hangfire` schema. `migrate` installs and upgrades them, and start-up never does (§2).
+    - Without a database, the API still starts and the Hangfire server stays off.
+    - If the queue itself cannot be reached, the change stays saved and a Warning is logged.
+    - **No shared Hangfire state:** the storage and the job activator are registered per DI container, not taken from Hangfire's process-wide `JobStorage.Current` / `JobActivator.Current`. With those statics, several hosts in one process (the test suite) took each other's jobs.
+    - **Packages:** Hangfire.Core / Hangfire.NetCore 1.8.25 and Hangfire.PostgreSql 1.21.1, all LGPL-3.0. They are used unmodified as packages, which is compatible with the proprietary licence.
+    - **Dashboard:** there is none for now. It comes behind admin auth with the admin console (Epic 7).
 - **Concurrent edits and log levels (D-13, owner-approved 2026-10-29; found by the K-8 benchmark):**
   - **Concurrent saves:** when two requests save the same aggregate at once, PostgreSQL's `xmin` check still refuses the later save, so nothing is overwritten. The unit of work now reports that as `ConcurrencyConflictException`, and the API answers **409** with `code: concurrency.conflict` (it used to be a raw 500). The Mini App tells the analyst to try again.
   - **Log levels** (`LoggingBehavior`): refusals the API answers on purpose (401, 403, 400, 404, 409, 422) are logged at **Information**, with the reason as a structured `Reason` property (the rule code or the refusal type) and no stack trace. An outside service being down (503) is a **Warning**. Only real failures are **Error**, so Grafana error alerts mean something.

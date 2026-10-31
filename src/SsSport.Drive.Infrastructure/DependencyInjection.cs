@@ -1,15 +1,20 @@
 using System.Net;
+using Hangfire;
+using Hangfire.AspNetCore;
+using Hangfire.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Npgsql;
 using SsSport.Drive.Application.Abstractions.Drive;
+using SsSport.Drive.Application.Abstractions.Events;
 using SsSport.Drive.Application.Abstractions.Images;
 using SsSport.Drive.Application.Abstractions.Media;
 using SsSport.Drive.Application.Abstractions.Persistence;
 using SsSport.Drive.Application.Abstractions.Storage;
 using SsSport.Drive.Application.Telegram;
+using SsSport.Drive.Infrastructure.BackgroundJobs;
 using SsSport.Drive.Infrastructure.Drive;
 using SsSport.Drive.Infrastructure.Edge;
 using SsSport.Drive.Infrastructure.Images;
@@ -47,6 +52,19 @@ public static class DependencyInjection
         services.AddScoped(typeof(IRepository<,>), typeof(Repository<,>));
         services.AddScoped<IPagedReader, PagedReader>();
         services.AddScoped<IPlayerListReader, PlayerListReader>();
+
+        // Background jobs (T-6c): Hangfire on PostgreSQL, built lazily from the same data source, so a host without a
+        // database still starts. The schema comes from `migrate`, never from start-up. Everything Hangfire needs is
+        // registered per container; AddHangfire is not used, because it points Hangfire's process-wide statics
+        // (JobStorage.Current, JobActivator.Current, the log provider) at the last host built. With several hosts in
+        // one process (the test suite) that let one host's jobs land in another's database, run in another's
+        // services, or log through a disposed logger factory.
+        HangfireStorage.UseSerializerSettings();
+        services.AddSingleton<JobStorage>(provider =>
+            new PostgreSqlStorage(new DataSourceConnectionFactory(provider.GetRequiredService<NpgsqlDataSource>()), HangfireStorage.Options()));
+        services.AddSingleton<JobActivator>(provider => new AspNetCoreJobActivator(provider.GetRequiredService<IServiceScopeFactory>()));
+        services.AddSingleton<IBackgroundJobClient>(provider => new BackgroundJobClient(provider.GetRequiredService<JobStorage>()));
+        services.AddSingleton<IBackgroundEventQueue, HangfireBackgroundEventQueue>();
 
         services.AddOptions<StorageOptions>().BindConfiguration(StorageOptions.SectionName);
         services.AddSingleton<IObjectStorage, S3ObjectStorage>();
@@ -100,6 +118,18 @@ public static class DependencyInjection
 
             return new TelegramBotClient(options.BotToken, new HttpClient(handler));
         });
+    }
+
+    /// <summary>
+    /// Runs the Hangfire server that sends bot notices (T-6c) inside this host. The API calls it (owner, 2026-10-31);
+    /// it serves only the notices queue and does not start without a database.
+    /// </summary>
+    /// <param name="services">The service collection to add to.</param>
+    /// <returns>The same collection, for chaining.</returns>
+    public static IServiceCollection AddBotNoticeServer(this IServiceCollection services)
+    {
+        services.AddHostedService<BotNoticeServer>();
+        return services;
     }
 
     /// <summary>Reads the PostgreSQL connection string and fails with a clear message when it is missing.</summary>

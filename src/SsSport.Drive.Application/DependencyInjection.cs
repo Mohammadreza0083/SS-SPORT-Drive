@@ -36,12 +36,16 @@ public static class DependencyInjection
         services.AddTransient(typeof(IValidator<>), typeof(CursorPagedRequestValidator<>));
         services.Scan(AssemblyReference.Assembly);
         services.TryAddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
+        services.TryAddScoped<IBackgroundEventRunner, BackgroundEventRunner>();
         services.TryAddScoped<ICurrentUser, AnonymousCurrentUser>();
         services.TryAddSingleton(TimeProvider.System);
         return services;
     }
 
-    /// <summary>Registers every concrete <see cref="IDomainEventHandler{TEvent}"/> in an assembly as scoped.</summary>
+    /// <summary>
+    /// Registers every concrete <see cref="IDomainEventHandler{TEvent}"/> and <see cref="IBackgroundEventHandler{TEvent}"/>
+    /// in an assembly as scoped.
+    /// </summary>
     /// <param name="services">The service collection to add to.</param>
     /// <param name="assembly">The assembly to scan.</param>
     private static void Scan(this IServiceCollection services, System.Reflection.Assembly assembly)
@@ -49,7 +53,7 @@ public static class DependencyInjection
         var handlers = assembly.GetTypes()
             .Where(type => type is { IsAbstract: false, IsInterface: false })
             .SelectMany(type => type.GetInterfaces()
-                .Where(contract => contract.IsGenericType && contract.GetGenericTypeDefinition() == typeof(IDomainEventHandler<>))
+                .Where(contract => contract.IsGenericType && (contract.GetGenericTypeDefinition() == typeof(IDomainEventHandler<>) || contract.GetGenericTypeDefinition() == typeof(IBackgroundEventHandler<>)))
                 .Select(contract => (Contract: contract, Implementation: type)));
 
         foreach (var (contract, implementation) in handlers)

@@ -82,6 +82,7 @@ public sealed class MiniAppMyPlayersTests : IAsyncLifetime
             builder.ConfigureTestServices(services =>
             {
                 services.Replace(ServiceDescriptor.Singleton<ITelegramMessenger>(_bot));
+                services.UseInlineBotNotices();
                 services.Replace(ServiceDescriptor.Singleton<IDriveFolderReader>(_drive));
             });
         });
