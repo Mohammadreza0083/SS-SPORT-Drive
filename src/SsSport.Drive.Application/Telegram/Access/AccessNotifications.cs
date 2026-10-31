@@ -11,13 +11,14 @@ namespace SsSport.Drive.Application.Telegram.Access;
 /// </summary>
 /// <param name="users">The users.</param>
 /// <param name="bot">The messenger.</param>
-public sealed class NotifyAdminsOfAccessRequest(IRepository<User, Guid> users, ITelegramMessenger bot) : IDomainEventHandler<UserRequestedAccess>
+public sealed class NotifyAdminsOfAccessRequest(IRepository<User, Guid> users, ITelegramMessenger bot) : IBackgroundEventHandler<UserRequestedAccess>
 {
     /// <summary>Sends the request to each admin.</summary>
     /// <param name="domainEvent">The event.</param>
+    /// <param name="context">Who caused it (unused).</param>
     /// <param name="cancellationToken">Cancels the sends.</param>
     /// <returns>A task that completes when every admin has been messaged.</returns>
-    public async Task HandleAsync(UserRequestedAccess domainEvent, CancellationToken cancellationToken)
+    public async Task HandleAsync(UserRequestedAccess domainEvent, EventContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(domainEvent);
         var requester = await users.GetByIdAsync(domainEvent.UserId, cancellationToken);
@@ -37,13 +38,14 @@ public sealed class NotifyAdminsOfAccessRequest(IRepository<User, Guid> users, I
 /// <summary>Welcomes an approved user (and the first admin) with the three steps and the main menu.</summary>
 /// <param name="users">The users.</param>
 /// <param name="bot">The messenger.</param>
-public sealed class WelcomeApprovedUser(IRepository<User, Guid> users, ITelegramMessenger bot) : IDomainEventHandler<UserApproved>
+public sealed class WelcomeApprovedUser(IRepository<User, Guid> users, ITelegramMessenger bot) : IBackgroundEventHandler<UserApproved>
 {
     /// <summary>Sends the welcome.</summary>
     /// <param name="domainEvent">The event.</param>
+    /// <param name="context">Who caused it (unused).</param>
     /// <param name="cancellationToken">Cancels the send.</param>
     /// <returns>A task that completes when the welcome is sent.</returns>
-    public async Task HandleAsync(UserApproved domainEvent, CancellationToken cancellationToken)
+    public async Task HandleAsync(UserApproved domainEvent, EventContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(domainEvent);
         if (await users.GetByIdAsync(domainEvent.UserId, cancellationToken) is { } user)
@@ -56,13 +58,14 @@ public sealed class WelcomeApprovedUser(IRepository<User, Guid> users, ITelegram
 /// <summary>Tells a declined user they can ask again in 24 hours.</summary>
 /// <param name="users">The users.</param>
 /// <param name="bot">The messenger.</param>
-public sealed class TellDeclinedUser(IRepository<User, Guid> users, ITelegramMessenger bot) : IDomainEventHandler<UserDeclined>
+public sealed class TellDeclinedUser(IRepository<User, Guid> users, ITelegramMessenger bot) : IBackgroundEventHandler<UserDeclined>
 {
     /// <summary>Sends the notice.</summary>
     /// <param name="domainEvent">The event.</param>
+    /// <param name="context">Who caused it (unused).</param>
     /// <param name="cancellationToken">Cancels the send.</param>
     /// <returns>A task that completes when the notice is sent.</returns>
-    public async Task HandleAsync(UserDeclined domainEvent, CancellationToken cancellationToken)
+    public async Task HandleAsync(UserDeclined domainEvent, EventContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(domainEvent);
         if (await users.GetByIdAsync(domainEvent.UserId, cancellationToken) is { } user)

@@ -194,5 +194,5 @@ public sealed class TelegramWebhookTests : IAsyncLifetime
                 // CI has no bot token; blank it here too, so a developer's .env cannot hide a real Bot API call.
                 ["Telegram:BotToken"] = string.Empty,
             }))
-            .ConfigureTestServices(services => services.Replace(ServiceDescriptor.Singleton<ITelegramMessenger>(_bot))));
+            .ConfigureTestServices(services => services.Replace(ServiceDescriptor.Singleton<ITelegramMessenger>(_bot)).UseInlineBotNotices()));
 }

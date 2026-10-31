@@ -64,6 +64,7 @@ public sealed class MiniAppProgressMessageTests : IAsyncLifetime
             builder.ConfigureTestServices(services =>
             {
                 services.Replace(ServiceDescriptor.Singleton<ITelegramMessenger>(_bot));
+                services.UseInlineBotNotices();
                 services.Replace(ServiceDescriptor.Singleton<IDriveFolderReader>(new FakeDriveFolderReader()));
                 services.Replace(ServiceDescriptor.Singleton<IObjectStorage>(new InMemoryObjectStorage()));
             });

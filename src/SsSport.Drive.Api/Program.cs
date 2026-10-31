@@ -22,6 +22,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure();
+// Bot notices are sent by Hangfire jobs after the request (T-6c); their server runs here, on the notices queue only.
+builder.Services.AddBotNoticeServer();
 // Local development only: Telegram__Mode=Polling fetches updates through the VPN proxy (no webhook needed).
 builder.Services.AddHostedService<TelegramPollingService>();
 builder.Services.AddHttpContextAccessor();

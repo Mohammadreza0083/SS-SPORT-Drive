@@ -37,18 +37,47 @@ internal sealed class RecordingMessenger : ITelegramMessenger
     /// <summary>Gets or sets a value indicating whether edits fail, as when the user deleted the message.</summary>
     public bool FailEdits { get; set; }
 
+    /// <summary>Gets or sets how long every send takes, to stand in for a slow Telegram (T-6c).</summary>
+    public TimeSpan SendDelay { get; set; }
+
     /// <summary>Gets the calls sent to or edited in a chat.</summary>
     /// <param name="chatId">The chat.</param>
     /// <returns>The calls.</returns>
     public IReadOnlyList<BotCall> ToChat(long chatId) => Calls.Where(call => call.ChatId == chatId).ToList();
+
+    /// <summary>Waits until a call matching the condition has been recorded, as a background notice arrives later.</summary>
+    /// <param name="match">The condition.</param>
+    /// <param name="timeout">How long to wait.</param>
+    /// <returns>The first matching call.</returns>
+    /// <exception cref="TimeoutException">No such call arrived in time.</exception>
+    public async Task<BotCall> WaitForAsync(Func<BotCall, bool> match, TimeSpan timeout)
+    {
+        var deadline = DateTimeOffset.UtcNow + timeout;
+        while (DateTimeOffset.UtcNow < deadline)
+        {
+            if (Calls.FirstOrDefault(match) is { } call)
+            {
+                return call;
+            }
+
+            await Task.Delay(100);
+        }
+
+        throw new TimeoutException($"No matching bot call within {timeout}.");
+    }
 
     /// <inheritdoc />
     public Task<int> SendAsync(long chatId, string text, BotKeyboard? keyboard, CancellationToken cancellationToken) =>
         SendReplyAsync(chatId, null, text, keyboard, cancellationToken);
 
     /// <inheritdoc />
-    public Task<int> SendReplyAsync(long chatId, int? replyToMessageId, string text, BotKeyboard? keyboard, CancellationToken cancellationToken)
+    public async Task<int> SendReplyAsync(long chatId, int? replyToMessageId, string text, BotKeyboard? keyboard, CancellationToken cancellationToken)
     {
+        if (SendDelay > TimeSpan.Zero)
+        {
+            await Task.Delay(SendDelay, cancellationToken);
+        }
+
         if (FailSends)
         {
             throw new HttpRequestException("Telegram is unreachable.");
@@ -56,7 +85,7 @@ internal sealed class RecordingMessenger : ITelegramMessenger
 
         var id = Interlocked.Increment(ref _nextMessageId);
         Calls.Enqueue(new BotCall("Send", chatId, id, text, keyboard, false) { ReplyTo = replyToMessageId });
-        return Task.FromResult(id);
+        return id;
     }
 
     /// <inheritdoc />
