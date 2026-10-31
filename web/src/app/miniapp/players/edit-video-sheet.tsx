@@ -93,13 +93,13 @@ export function EditVideoSheet({
   const heroAllowed = file.kind === "Video" && !hidden;
 
   return (
-    <div role="dialog" aria-modal="true" aria-label={copy.title}>
+    <div role="dialog" aria-modal="true" aria-label={copy.title} className="ma-sheet">
       <h2>{copy.title}</h2>
       <label>
         {copy.titleLabel}
         <input value={title} maxLength={200} onChange={(event) => setTitle(event.target.value)} />
       </label>
-      <p>{copy.titleHint}</p>
+      <p className="ma-hint">{copy.titleHint}</p>
 
       <fieldset>
         <legend>{copy.tags}</legend>
@@ -111,18 +111,19 @@ export function EditVideoSheet({
       </fieldset>
 
       {heroAllowed && (
-        <label>
+        <label className="ma-switch">
           <input type="checkbox" checked={isHero} onChange={(event) => setIsHero(event.target.checked)} />
           {copy.hero}
         </label>
       )}
-      {heroAllowed && <p>{copy.heroHint}</p>}
+      {heroAllowed && <p className="ma-hint">{copy.heroHint}</p>}
 
       {canHide && (
         <>
           {hidden && <p>{copy.hiddenNote}</p>}
           <button
             type="button"
+            className="ma-toggle"
             onClick={() => {
               setHidden(!hidden);
               if (!hidden) {
@@ -138,10 +139,10 @@ export function EditVideoSheet({
       {state.kind === "rejected" && <p role="alert">{ruleMessages[state.code ?? ""] ?? copy.rejected}</p>}
       {state.kind === "unchanged" && <p role="status">{copy.nothingChanged}</p>}
 
-      <button type="button" disabled={state.kind === "saving"} onClick={() => void onSave()}>
+      <button type="button" className="ma-primary" disabled={state.kind === "saving"} onClick={() => void onSave()}>
         {state.kind === "saving" ? copy.saving : copy.save}
       </button>
-      <button type="button" onClick={onClose}>
+      <button type="button" className="ma-secondary" onClick={onClose}>
         {copy.cancel}
       </button>
     </div>

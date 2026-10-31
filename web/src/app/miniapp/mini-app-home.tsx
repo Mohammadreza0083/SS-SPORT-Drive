@@ -44,16 +44,34 @@ export function MiniAppHome({ telegramReady }: { telegramReady: boolean }) {
   }, [telegramReady]);
 
   return (
-    <main>
+    <main className="ma-home">
       {state.kind === "ok" ? (
         <>
-          <h1>{miniAppCopy.greeting(state.profile.displayName)}</h1>
-          <p>{state.profile.role}</p>
-          <Link href="/miniapp/new">{miniAppCopy.newPlayer}</Link>
-          <Link href="/miniapp/players">{miniAppCopy.myPlayers}</Link>
+          <section className="ma-hero">
+            {/* eslint-disable-next-line @next/next/no-img-element -- a small static brand file */}
+            <img src="/brand/logo-horizontal-reversed.png" alt="" aria-hidden="true" className="ma-hero-logo" />
+            <h1>{miniAppCopy.greeting(state.profile.displayName)}</h1>
+            <p className="ma-role">{state.profile.role}</p>
+          </section>
+          <div className="ma-tiles">
+            <Link href="/miniapp/new" className="ma-tile ma-tile-accent">
+              <span className="ma-tile-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+              </span>
+              {miniAppCopy.newPlayer}
+            </Link>
+            <Link href="/miniapp/players" className="ma-tile">
+              <span className="ma-tile-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5" /><path d="M3 20c.6-3.4 3-5.5 6-5.5s5.4 2.1 6 5.5M16 4.5a3.5 3.5 0 0 1 0 7M21 20c-.4-2.4-1.7-4.2-3.6-5" /></svg>
+              </span>
+              {miniAppCopy.myPlayers}
+            </Link>
+          </div>
         </>
       ) : (
-        <p role="status">{message(state)}</p>
+        <p role="status" className="ma-center">
+          {message(state)}
+        </p>
       )}
     </main>
   );

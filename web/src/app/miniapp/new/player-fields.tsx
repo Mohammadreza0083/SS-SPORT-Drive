@@ -40,7 +40,7 @@ export function CountryPicker({ countries, value, onChange }: { countries: Count
         }}
       />
       {matches.length > 0 && (
-        <div id="player-nationality-options" role="listbox">
+        <div id="player-nationality-options" role="listbox" className="ma-options">
           {matches.map((country) => (
             <button
               key={country.code}
@@ -69,9 +69,9 @@ export function CountryPicker({ countries, value, onChange }: { countries: Count
  */
 export function PositionChips({ value, onChange }: { value: PositionCode[]; onChange: (positions: PositionCode[]) => void }) {
   return (
-    <fieldset>
+    <fieldset className="ma-positions">
       <legend>{copy.positions}</legend>
-      <p>{copy.positionsHint}</p>
+      <p className="ma-hint">{copy.positionsHint}</p>
       {POSITIONS.map((position) => (
         <button
           key={position}
@@ -136,9 +136,13 @@ export function DriveFolderField({
         onBlur={() => void onBlur()}
       />
       {value.trim() !== "" && !wellFormed && <p role="alert">{ruleMessages["drive_folder.link_invalid"]}</p>}
-      {state.kind === "checking" && <p role="status">{copy.driveChecking}</p>}
+      {state.kind === "checking" && (
+        <p role="status" className="ma-hint">
+          {copy.driveChecking}
+        </p>
+      )}
       {state.kind === "found" && (
-        <p role="status">
+        <p role="status" className="ma-folder">
           {copy.driveFound(
             state.preview.name,
             state.preview.videoCount,

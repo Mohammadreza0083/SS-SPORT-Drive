@@ -1,0 +1,921 @@
+/*
+ * Telegram Mini App UI (backlog T-9), matched to the canvas artboards MiniHome, MiniNewPlayer, MiniPhoto,
+ * MiniPlayers and MiniPlayer. Colours follow the Telegram theme (Telegram sets the --tg-theme-* variables), with the
+ * design's dark theme as the fallback; SS-SPORT red stays the action colour in every theme.
+ * Every rule is scoped to .ma, the root the Mini App layout renders.
+ */
+
+.ma {
+  --ma-bg: var(--tg-theme-bg-color, #17212b);
+  --ma-text: var(--tg-theme-text-color, #f5f5f5);
+  --ma-hint: var(--tg-theme-hint-color, #708499);
+  --ma-section: var(--tg-theme-secondary-bg-color, #232e3c);
+  --ma-link: var(--tg-theme-link-color, #6ab3f3);
+  --ma-input: color-mix(in srgb, var(--ma-bg) 88%, #000);
+  --ma-border: color-mix(in srgb, var(--ma-hint) 32%, transparent);
+  --ma-accent: #CC0000;
+  --ma-accent-light: #FF4545;
+  --ma-accent-tint: rgba(204, 0, 0, .2);
+  --ma-ok: #4ADE80;
+  --ma-warn: #FACC15;
+  --ma-ease: cubic-bezier(.2, .8, .2, 1);
+
+  min-height: 100vh;
+  background: var(--ma-bg);
+  color: var(--ma-text);
+  font-family: var(--font-geist), system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+@keyframes ma-fade-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes ma-sheet-up { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes ma-pulse { 0% { box-shadow: 0 0 0 0 rgba(204, 0, 0, .55); } 100% { box-shadow: 0 0 0 14px rgba(204, 0, 0, 0); } }
+
+/* ---------- Page ---------- */
+.ma main {
+  box-sizing: border-box;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 16px 16px 110px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: ma-fade-up .5s var(--ma-ease) both;
+}
+
+.ma h1 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -.02em;
+}
+
+.ma h1::before {
+  content: "";
+  flex: none;
+  width: 4px;
+  height: 26px;
+  border-radius: 2px;
+  background: var(--ma-accent);
+}
+
+.ma h2 {
+  margin: 8px 0 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ma-hint);
+}
+
+.ma p {
+  margin: 0;
+}
+
+.ma a {
+  color: var(--ma-link);
+}
+
+.ma .ma-hint,
+.ma .ma-note {
+  font-size: 12px;
+  color: var(--ma-hint);
+}
+
+.ma .ma-center {
+  padding: 40vh 24px 0;
+  text-align: center;
+  color: var(--ma-hint);
+}
+
+/* ---------- Messages ---------- */
+.ma p[role="alert"] {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 69, 69, .12);
+  border: 1px solid rgba(255, 69, 69, .35);
+  color: #FF9A9A;
+  font-size: 13px;
+}
+
+.ma .ma-ok {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(74, 222, 128, .1);
+  border: 1px solid rgba(74, 222, 128, .3);
+  color: color-mix(in srgb, var(--ma-ok) 35%, var(--ma-text));
+  font-size: 13px;
+}
+
+.ma .ma-ok::before,
+.ma .ma-check::before {
+  content: "";
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  border-radius: 50%;
+  background: var(--ma-ok) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230e1621' stroke-width='3.4' stroke-linecap='round'%3E%3Cpath d='M5 12l5 5 9-10'/%3E%3C/svg%3E") center / 12px no-repeat;
+}
+
+.ma .ma-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--ma-ok);
+}
+
+.ma .ma-check::before {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  background-size: 9px;
+}
+
+/* ---------- Cards and fields ---------- */
+.ma fieldset,
+.ma .ma-card {
+  margin: 0;
+  min-width: 0;
+  padding: 14px;
+  border: none;
+  border-radius: 16px;
+  background: var(--ma-section);
+}
+
+.ma .ma-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.ma legend {
+  float: left;
+  width: 100%;
+  padding: 0;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ma-hint);
+}
+
+.ma label {
+  display: block;
+  margin: 12px 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ma .ma-card > label:first-child {
+  margin-top: 0;
+}
+
+.ma input:not([type="checkbox"]):not([type="file"]) {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 46px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid var(--ma-border);
+  background: var(--ma-input);
+  color: var(--ma-text);
+  font: 500 15px var(--font-geist), system-ui, sans-serif;
+  transition: border-color .2s, box-shadow .2s;
+}
+
+.ma input::placeholder {
+  color: var(--ma-hint);
+}
+
+.ma input:focus-visible {
+  outline: none;
+  border-color: var(--ma-accent-light);
+  box-shadow: 0 0 0 3px rgba(204, 0, 0, .22);
+}
+
+.ma #player-volleybox,
+.ma #player-drive {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 14px;
+}
+
+/* ---------- Buttons ---------- */
+.ma button {
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid var(--ma-border);
+  background: var(--ma-input);
+  color: var(--ma-text);
+  font: 600 14px var(--font-geist), system-ui, sans-serif;
+  cursor: pointer;
+  transition: transform .15s, background .2s, border-color .2s, color .2s;
+}
+
+.ma button:active:not(:disabled) {
+  transform: scale(.97);
+}
+
+.ma button:disabled {
+  opacity: .45;
+  cursor: default;
+}
+
+.ma button:focus-visible,
+.ma a:focus-visible {
+  outline: 2px solid var(--ma-accent-light);
+  outline-offset: 2px;
+}
+
+.ma button[aria-pressed="true"],
+.ma button[aria-selected="true"] {
+  background: var(--ma-accent);
+  border-color: var(--ma-accent);
+  color: #fff;
+}
+
+/* The screen's main action: a full-width red bar at the bottom, like Telegram's own main button. */
+.ma .ma-primary {
+  position: sticky;
+  bottom: 16px;
+  z-index: 5;
+  width: 100%;
+  min-height: 50px;
+  margin-top: 8px;
+  border: none;
+  background: var(--ma-accent);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  box-shadow: 0 10px 30px -12px rgba(0, 0, 0, .8);
+}
+
+.ma .ma-secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  border-radius: 12px;
+  border: 1px solid var(--ma-border);
+  background: transparent;
+  color: var(--ma-text);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Category: a two-way segmented control */
+.ma .ma-segment {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.ma .ma-segment legend,
+.ma .ma-positions legend {
+  grid-column: 1 / -1;
+}
+
+.ma .ma-segment button {
+  min-height: 40px;
+  border-color: transparent;
+  background: var(--ma-input);
+}
+
+.ma .ma-segment button[aria-pressed="true"] {
+  background: var(--ma-accent);
+  border-color: var(--ma-accent);
+  color: #fff;
+}
+
+/* Positions: six chips, primary first (1) and secondary (2) */
+.ma .ma-positions {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+
+.ma .ma-positions .ma-hint {
+  grid-column: 1 / -1;
+  margin: -4px 0 4px;
+}
+
+.ma .ma-positions button {
+  position: relative;
+  padding: 0;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.ma .ma-positions button[aria-pressed="true"]:not([data-primary]) {
+  background: var(--ma-accent-tint);
+  border-color: #7a2a2a;
+}
+
+.ma .ma-positions button[aria-pressed="true"]::after {
+  content: "2" / "";
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--ma-text);
+  color: var(--ma-accent);
+  font: 700 10px/16px var(--font-geist-mono), monospace;
+  text-align: center;
+}
+
+.ma .ma-positions button[data-primary]::after {
+  content: "1" / "";
+}
+
+/* Nationality search results */
+.ma .ma-options {
+  display: flex;
+  flex-direction: column;
+  margin-top: 6px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--ma-border);
+}
+
+.ma .ma-options button {
+  border: none;
+  border-radius: 0;
+  border-bottom: 1px solid var(--ma-border);
+  background: var(--ma-input);
+  text-align: left;
+  font-weight: 500;
+}
+
+/* Drive folder preview */
+.ma .ma-folder {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--ma-input);
+  border: 1px solid var(--ma-border);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 12px;
+  color: var(--ma-hint);
+}
+
+.ma .ma-folder::before {
+  content: "";
+  flex: none;
+  width: 26px;
+  height: 26px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23FACC15'%3E%3Cpath d='M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2h8.5A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* ---------- Home ---------- */
+.ma .ma-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 20px;
+  border-radius: 18px;
+  background: radial-gradient(circle at 85% 20%, #5c0a0a 0, #2a0d0d 42%, var(--ma-section) 80%);
+  border: 1px solid var(--ma-border);
+  color: #f5f5f5;
+}
+
+.ma .ma-hero-logo {
+  display: block;
+  height: 22px;
+  width: auto;
+  margin-bottom: 18px;
+}
+
+.ma .ma-hero h1 {
+  font-size: 26px;
+}
+
+.ma .ma-hero h1::before {
+  display: none;
+}
+
+.ma .ma-role {
+  display: inline-flex;
+  margin-top: 10px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(204, 0, 0, .18);
+  border: 1px solid rgba(255, 69, 69, .35);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: #FFD0D0;
+}
+
+.ma .ma-tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.ma .ma-tile {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 22px;
+  min-height: 120px;
+  box-sizing: border-box;
+  padding: 16px 14px;
+  border-radius: 16px;
+  background: var(--ma-section);
+  border: 1px solid var(--ma-border);
+  color: var(--ma-text);
+  font-weight: 700;
+  font-size: 16px;
+  text-decoration: none;
+  transition: transform .15s;
+}
+
+.ma .ma-tile:active {
+  transform: scale(.97);
+}
+
+.ma .ma-tile-accent {
+  background: var(--ma-accent);
+  border-color: var(--ma-accent);
+  color: #fff;
+}
+
+.ma .ma-tile-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--ma-hint) 25%, transparent);
+  color: var(--ma-accent-light);
+}
+
+.ma .ma-tile-accent .ma-tile-icon {
+  background: rgba(255, 255, 255, .18);
+  color: #fff;
+}
+
+/* ---------- Lists ---------- */
+.ma .ma-search {
+  background: var(--ma-section) !important;
+  border-color: transparent !important;
+}
+
+.ma .ma-chips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.ma .ma-chips button {
+  flex: none;
+  min-height: 36px;
+  border-radius: 999px;
+  background: transparent;
+  font-size: 13px;
+}
+
+.ma .ma-chips button[aria-pressed="true"] {
+  background: var(--ma-accent);
+  border-color: var(--ma-accent);
+  color: #fff;
+}
+
+.ma .ma-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-radius: 16px;
+  background: var(--ma-section);
+  overflow: hidden;
+}
+
+.ma .ma-list > li {
+  border-bottom: 1px solid color-mix(in srgb, var(--ma-bg) 70%, transparent);
+}
+
+.ma .ma-list > li:last-child {
+  border-bottom: none;
+}
+
+.ma .ma-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  color: var(--ma-text);
+  text-decoration: none;
+}
+
+.ma .ma-avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: radial-gradient(circle at 70% 30%, #5c0a0a, #1f0707 70%);
+  color: #f5f5f5;
+  font-family: var(--font-barlow-condensed), Impact, sans-serif;
+  font-weight: 800;
+  font-size: 17px;
+}
+
+.ma .ma-row-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ma .ma-row-text strong {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.ma .ma-meta {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 11px;
+  color: var(--ma-hint);
+}
+
+.ma .ma-pill {
+  flex: none;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ma .ma-pill-live {
+  background: rgba(74, 222, 128, .14);
+  color: var(--ma-ok);
+}
+
+.ma .ma-pill-waiting {
+  background: rgba(250, 204, 21, .14);
+  color: var(--ma-warn);
+}
+
+.ma .ma-pill-attention {
+  background: rgba(255, 69, 69, .16);
+  color: #FF6B6B;
+}
+
+.ma .ma-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 12px;
+  color: var(--ma-hint);
+}
+
+.ma .ma-pager button:last-child:not(:disabled) {
+  background: var(--ma-accent);
+  border-color: var(--ma-accent);
+  color: #fff;
+}
+
+/* ---------- Player detail ---------- */
+.ma .ma-back {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.ma .ma-back::before {
+  content: "‹" / "";
+  margin-right: 6px;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.ma .ma-player-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 170px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 14px 18px;
+  border-radius: 18px;
+  background: radial-gradient(circle at 78% 30%, #5c0a0a 0, #1f0707 42%, #09090b 78%);
+  border: 1px solid #2a1212;
+  border-left: 4px solid var(--ma-accent);
+  color: #f5f5f5;
+}
+
+.ma .ma-player-photo {
+  position: absolute;
+  right: 8px;
+  bottom: 0;
+  height: 160px;
+  width: auto;
+  object-fit: contain;
+}
+
+.ma .ma-player-meta {
+  position: relative;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ma-accent-light);
+}
+
+.ma .ma-player-card h1 {
+  position: relative;
+  max-width: 62%;
+  font-family: var(--font-barlow-condensed), Impact, sans-serif;
+  font-weight: 800;
+  font-size: 40px;
+  line-height: .9;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.ma .ma-player-card h1::before {
+  display: none;
+}
+
+.ma .ma-folders li {
+  padding: 12px 14px 12px 46px;
+  font-size: 14px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23FACC15'%3E%3Cpath d='M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2h8.5A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5z'/%3E%3C/svg%3E") 14px center / 22px no-repeat;
+}
+
+.ma .ma-file-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 10px 14px;
+}
+
+.ma .ma-file-row strong {
+  flex: 1 1 60%;
+  min-width: 0;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.ma .ma-file-row .ma-meta {
+  order: 3;
+  flex: 1 1 100%;
+}
+
+/* The edit button keeps its accessible name ("Edit <title>"); only a pencil shows. */
+.ma .ma-file-row button {
+  order: 2;
+  width: 40px;
+  min-height: 40px;
+  padding: 0;
+  font-size: 0;
+  border-color: transparent;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236ab3f3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 20h4L19 9l-4-4L4 16z'/%3E%3Cpath d='M13.5 6.5l4 4'/%3E%3C/svg%3E") center / 18px no-repeat;
+}
+
+/* ---------- Edit-video sheet ---------- */
+.ma .ma-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  box-sizing: border-box;
+  max-height: 88vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 16px 20px;
+  border-radius: 20px 20px 0 0;
+  background: color-mix(in srgb, var(--ma-section) 80%, var(--ma-bg));
+  border-top: 1px solid var(--ma-border);
+  box-shadow: 0 -30px 60px -20px rgba(0, 0, 0, .7), 0 0 0 100vmax rgba(0, 0, 0, .55);
+  animation: ma-sheet-up .45s cubic-bezier(.2, .9, .2, 1) both;
+}
+
+.ma .ma-sheet::before {
+  content: "";
+  flex: none;
+  align-self: center;
+  width: 38px;
+  height: 4px;
+  margin: -8px 0 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--ma-hint) 60%, transparent);
+}
+
+.ma .ma-sheet h2 {
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: -.01em;
+  text-transform: none;
+  color: var(--ma-text);
+}
+
+.ma .ma-sheet label {
+  margin: 0;
+}
+
+.ma .ma-sheet label input {
+  margin-top: 6px;
+}
+
+.ma .ma-sheet fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0;
+  background: transparent;
+}
+
+.ma .ma-sheet fieldset button {
+  min-height: 34px;
+  border-radius: 999px;
+  background: transparent;
+  font-size: 12px;
+}
+
+.ma .ma-sheet fieldset button[aria-pressed="true"] {
+  background: var(--ma-accent-tint);
+  border-color: var(--ma-accent);
+  color: #FFD0D0;
+}
+
+/* Hero: the checkbox drawn as a switch */
+.ma .ma-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-direction: row-reverse;
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: 14px;
+  background: var(--ma-section);
+  font-size: 14px;
+}
+
+.ma .ma-switch input[type="checkbox"] {
+  appearance: none;
+  position: relative;
+  width: 46px;
+  height: 28px;
+  margin: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ma-hint) 45%, transparent);
+  cursor: pointer;
+  transition: background .2s;
+}
+
+.ma .ma-switch input[type="checkbox"]::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  transition: left .2s;
+}
+
+.ma .ma-switch input[type="checkbox"]:checked {
+  background: var(--ma-accent);
+}
+
+.ma .ma-switch input[type="checkbox"]:checked::after {
+  left: 21px;
+}
+
+.ma .ma-toggle {
+  min-height: 48px;
+  border-radius: 14px;
+  background: var(--ma-section);
+  border-color: transparent;
+  text-align: left;
+}
+
+.ma .ma-sheet .ma-primary {
+  position: static;
+  margin-top: 4px;
+  box-shadow: none;
+}
+
+/* ---------- Update player ---------- */
+.ma .ma-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--ma-section);
+}
+
+.ma .ma-tabs button {
+  border-color: transparent;
+  background: transparent;
+  text-align: left;
+}
+
+.ma .ma-close-editor {
+  max-width: 528px;
+  margin: 0 auto 24px;
+  width: calc(100% - 32px);
+}
+
+/* ---------- Photo step ---------- */
+.ma .ma-photo {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ma .ma-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 300px;
+  margin: 0;
+  border-radius: 20px;
+  border: 2px dashed color-mix(in srgb, var(--ma-hint) 55%, transparent);
+  background: var(--ma-section);
+  color: var(--ma-text);
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.ma .ma-drop:focus-within {
+  border-color: var(--ma-accent-light);
+}
+
+.ma .ma-drop-icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--ma-accent);
+  color: #fff;
+  animation: ma-pulse 2s 1s infinite;
+}
+
+/* The real file input stays focusable and clickable through its label, but is not drawn. */
+.ma .ma-file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.ma .ma-photo-img {
+  display: block;
+  width: 100%;
+  height: 300px;
+  object-fit: cover;
+  border-radius: 20px;
+  border: 1px solid var(--ma-border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ma *,
+  .ma *::before,
+  .ma *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
