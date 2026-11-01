@@ -66,6 +66,22 @@ public sealed class NotFoundException : Exception
     }
 }
 
+/// <summary>
+/// A personal link does not open: unknown, malformed, paused, revoked or expired. The API returns the same 404 with
+/// <see cref="Code"/> for every case, so nobody can tell an unknown code from a stopped link (L-1).
+/// </summary>
+public sealed class ShareLinkUnavailableException : Exception
+{
+    /// <summary>The stable code clients see.</summary>
+    public const string Code = "share_link.unavailable";
+
+    /// <summary>Initializes the exception.</summary>
+    public ShareLinkUnavailableException()
+        : base("This link has expired or is not available. Ask SS-SPORT for a new link.")
+    {
+    }
+}
+
 /// <summary>The caller is signed in but lacks a required role. The API returns 403.</summary>
 public sealed class ForbiddenAccessException : Exception
 {

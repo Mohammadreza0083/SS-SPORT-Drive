@@ -52,6 +52,7 @@ public static class DependencyInjection
         services.AddScoped(typeof(IRepository<,>), typeof(Repository<,>));
         services.AddScoped<IPagedReader, PagedReader>();
         services.AddScoped<IPlayerListReader, PlayerListReader>();
+        services.AddScoped<IShareLinkListReader, ShareLinkListReader>();
 
         // Background jobs (T-6c): Hangfire on PostgreSQL, built lazily from the same data source, so a host without a
         // database still starts. The schema comes from `migrate`, never from start-up. Everything Hangfire needs is

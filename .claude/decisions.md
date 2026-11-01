@@ -586,6 +586,28 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
 
 - **Forwarding:** anyone may open a forwarded personal link after verifying their email with an OTP code. Every forward is logged, and admins are alerted with Keep / Block actions.
 - **No `/p/{slug}` public showcase pages.** Only personal `/r/{code}` links show content.
+- **Personal share links (L-1, built 2026-11-01; the owner approved starting L-1, the choices below are to be confirmed):**
+  - **Model (brief §5):**
+    - A `Recipient` has a name, an optional organisation and country, and one to five emails.
+    - A `ShareLink` holds:
+      - a six-character code;
+      - its type: `Personal` for one player, `Roster` for up to 20, in page order;
+      - an optional note (up to 500 characters);
+      - an expiry of 7, 30 or 90 days, or never;
+      - a status: `Active`, `Paused` or `Revoked`;
+      - the switches `VerifyOnNewDevice` (default on), `AllowForwarding` (default on), `ForwardingScope` (`AnyEmail` default, or `SameDomain`) and `NotifyOnOpen` (default off).
+    - There is no `AllowDownloads` (decisions §6).
+    - Choosing single files instead of "all visible" waits for the New share link modal (A-6).
+  - **Code:** six random characters from a 56-letter alphabet without look-alikes (no 0/O, 1/l/I), drawn with a cryptographic generator. Codes are unique (database index) and case-sensitive.
+  - **Rules:**
+    - Links only for published players.
+    - Pause and resume can be undone; revoke is final. A revoked link cannot be resumed or re-dated.
+    - A new expiry re-opens an expired link.
+    - Created, paused, resumed, expiry changed and revoked are audited under the `share_link.*` actions.
+  - **Who:** admins only. Until the admin console session (A-1) exists, admins call `/admin/links` with the Mini App's signed initData; the console session joins the same endpoints later.
+  - **Public check:** `GET /links/{code}` answers type, player count and a masked hint of the recipient's first email (`m***@lube.it`) for the L-2 email gate, and nothing about the players.
+  - **No probing:** unknown, malformed, paused, revoked and expired codes all answer the same 404 `share_link.unavailable`. Per-IP rate limits on this endpoint come with L-2's code-sending limits.
+  - **The `/r/{code}` web page** (email gate, then the player page; the "link has expired" page for links that do not open) is built with L-2 from the canvas `Gate` artboard.
 - **Public home page** (`drive.ss-sport.co`):
   - Visitors search players by name, with a position filter.
   - A result shows the full player page (photo, name, position, flag, counts), but **videos, stats and PDFs are blurred and locked**. The backend must not send real media or document URLs for locked pages.

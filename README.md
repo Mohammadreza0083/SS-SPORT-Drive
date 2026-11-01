@@ -111,6 +111,10 @@ cd web && npm ci && npm run dev        # http://localhost:3000
 cd edge && npm ci && npm test
 ```
 
+### Personal share links
+
+Admins create personal links at `POST /admin/links` (L-1): a recipient (name, organisation, country, one to five emails) and one published player (`Personal`) or up to twenty (`Roster`), with an optional note and an expiry of 7, 30 or 90 days or never. The link is `/r/{code}`, where the code is six random letters and digits without look-alikes. Links can be listed (paged, filtered by status, player or recipient), paused, resumed, re-dated and revoked; every change is in the audit log. `GET /links/{code}` is public. It tells the viewer site whether a link opens, and gives a masked hint of the recipient's email for the email gate (L-2). Unknown, paused, revoked and expired codes all answer the same 404, so codes cannot be probed. Until the admin console session exists (A-1), admins call these endpoints with the Mini App's signed initData.
+
 ### Viewer design previews and visual tests
 
 In development, `/design/shell`, `/design/player` and `/design/player-page` (open a document card for the PDF viewer) show the viewer pages with the design canvas's sample player (production answers 404). Playwright compares them at 1440 / 834 / 390 px with motion reduced. The Telegram Mini App screens are compared at 390 px with Telegram's script and the API stubbed, so they need no bot or backend. The baselines are Linux screenshots, so run the tests, or regenerate the baselines after an intended design change, in the same Docker image CI uses. From `web/`:
@@ -221,7 +225,7 @@ SS-SPORT Drive/
 | 2 | Telegram bot & Mini App | 🚧 In progress |
 | 3 | Ingest, transcode & sync | ⏳ Planned |
 | 4 | Viewer site & media protection | 🚧 In progress (V-1–V-4, V-5a, V-6 PDF viewer done) |
-| 5 | Personal links, OTP & tracking | ⏳ Planned |
+| 5 | Personal links, OTP & tracking | 🚧 In progress (L-1 share links done) |
 | 6 | Public search & access requests | ⏳ Planned |
 | 7 | Admin console | ⏳ Planned |
 | 8 | Archive migration | ⏳ Planned |
