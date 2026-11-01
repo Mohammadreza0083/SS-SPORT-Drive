@@ -55,6 +55,25 @@ Last updated: 2026-10-29
 
 - **Protected `main` (S-13, 2026-10-24):** GitHub blocks branch protection and rulesets on **private repos on the free plan** (API answers "Upgrade to GitHub Pro"). The rules are listed in the README under Conventions and are switched on once the owner upgrades to GitHub Pro. Until then they are followed by convention: no direct pushes to `main`, and every change goes through a PR with green CI.
 
+## 1b. Security baseline (owner, 2026-11-01)
+
+Standing rules for every feature. Each control gets tests, and nothing is committed that breaks one.
+
+1. **No secrets in code.** Keys, tokens, passwords and connection strings come only from environment variables or secret stores (the git-ignored `.env` locally; `.env.example` holds placeholders only). They never appear in commits, logs, Docker images, front-end bundles or realistic-looking test fixtures.
+2. **Database locked down.** PostgreSQL is never publicly reachable (bound to `127.0.0.1` locally, private Docker network on the VPS). The app connects with a least-privilege role (no superuser; migrations use a separate role). TLS in production. Backups are encrypted.
+3. **Server-side validation of every input,** through FluentValidation in the MediatR pipeline. Client-side checks are only for UX.
+4. **XSS is always blocked.** Output is encoded, user data is never rendered as raw HTML, and a strict Content-Security-Policy applies. `dangerouslySetInnerHTML` is allowed only for static scripts with a CSP nonce.
+5. **Admin area locked.** Admin pages and every admin API require an authenticated session with the Admin role, checked on the server (deny by default). Scalar sits behind admin auth in production.
+6. **HTTPS forced.** HTTPS redirection and HSTS in production; cookies are Secure-only.
+7. **Hash with salt.** Passwords (if ever introduced) use a slow salted hash (Argon2id or the ASP.NET Core `PasswordHasher`). OTP codes are stored hashed with a per-code salt. Magic-link and session tokens are stored only as HMAC-SHA256 hashes with a server-side pepper. Raw secrets are never stored, and comparisons are constant-time.
+8. **Suspicious activity is logged:** failed sign-ins and OTPs, wrong webhook secrets, rate-limit rejections, CSRF failures, forbidden admin calls. They are structured Serilog warnings (no secrets, tokens or full emails) with Grafana/Loki alerts.
+9. **Parameterized queries only.** EF Core LINQ or interpolated `FromSql`; SQL is never built by string concatenation.
+10. **Rate limiting** (ASP.NET Core rate limiter, partitioned by IP and identity) on sign-in, OTP, magic-link, access-request, webhook and other public endpoints. Rejections return 429 with `Retry-After`.
+11. **CORS** allows only the explicit origin list (`Cors__AllowedOrigins`); never a wildcard with credentials.
+12. **Security headers** on the API and the Next.js app: CSP, HSTS, `X-Content-Type-Options: nosniff`, `frame-ancestors`/`X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`.
+13. **Session cookies are secure:** `HttpOnly`, `Secure`, `SameSite=Lax` (or `Strict`), `__Host-` prefix, lifetimes per §7a (admin 7 days, viewer 1 day).
+14. **CSRF protection** (anti-forgery tokens) on every cookie-authenticated state-changing request. Header-authenticated calls (Mini App initData, Telegram webhook secret) are exempt.
+
 ## 2. Architecture (owner-required)
 
 - **CQRS + DDD + Clean Code + SOLID + DRY.**
