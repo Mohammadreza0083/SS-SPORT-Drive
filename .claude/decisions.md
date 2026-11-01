@@ -55,6 +55,41 @@ Last updated: 2026-10-29
 
 - **Protected `main` (S-13, 2026-10-24):** GitHub blocks branch protection and rulesets on **private repos on the free plan** (API answers "Upgrade to GitHub Pro"). The rules are listed in the README under Conventions and are switched on once the owner upgrades to GitHub Pro. Until then they are followed by convention: no direct pushes to `main`, and every change goes through a PR with green CI.
 
+## 1b. Security baseline (owner, 2026-11-01)
+
+Standing rules for every feature. Each control gets tests, and nothing is committed that breaks one.
+
+1. **No secrets in code.** Keys, tokens, passwords and connection strings come only from environment variables or secret stores (the git-ignored `.env` locally; `.env.example` holds placeholders only). They never appear in commits, logs, Docker images, front-end bundles or realistic-looking test fixtures.
+2. **Database locked down.** PostgreSQL is never publicly reachable (bound to `127.0.0.1` locally, private Docker network on the VPS). The app connects with a least-privilege role (no superuser; migrations use a separate role). TLS in production. Backups are encrypted.
+3. **Server-side validation of every input,** through FluentValidation in the MediatR pipeline. Client-side checks are only for UX.
+4. **XSS is always blocked.** Output is encoded, user data is never rendered as raw HTML, and a Content-Security-Policy applies. `dangerouslySetInnerHTML` is allowed only for static, code-built scripts (never user data).
+   - **Web CSP is static, with `'unsafe-inline'` scripts (owner, 2026-11-01).** A per-request nonce would force every page to render dynamically and switch off `cacheComponents`/Partial Prerendering; the owner chose to keep caching. Everything else is locked to our own origins (`'self'`, `https://*.ss-sport.co` for media). The site may not be framed; the Mini App may be framed only by `https://web.telegram.org` and loads `https://telegram.org`'s script. Built in `web/src/lib/security-headers.ts`.
+   - **The API's CSP** is `default-src 'none'` (JSON only); the Scalar page, never served in production, has none.
+5. **Admin area locked.** Admin pages and every admin API require an authenticated session with the Admin role, checked on the server (deny by default). Scalar sits behind admin auth in production.
+6. **HTTPS forced.** HTTPS redirection and HSTS in production; cookies are Secure-only.
+7. **Hash with salt.** Passwords (if ever introduced) use a slow salted hash (Argon2id or the ASP.NET Core `PasswordHasher`). OTP codes are stored hashed with a per-code salt. Magic-link and session tokens are stored only as HMAC-SHA256 hashes with a server-side pepper. Raw secrets are never stored, and comparisons are constant-time.
+8. **Suspicious activity is logged:** failed sign-ins and OTPs, wrong webhook secrets, rate-limit rejections, CSRF failures, forbidden admin calls. They are structured Serilog warnings (no secrets, tokens or full emails) with Grafana/Loki alerts.
+9. **Parameterized queries only.** EF Core LINQ or interpolated `FromSql`; SQL is never built by string concatenation.
+10. **Rate limiting** (ASP.NET Core rate limiter, partitioned by IP and identity) on sign-in, OTP, magic-link, access-request, webhook and other public endpoints. Rejections return 429 with `Retry-After`.
+11. **CORS** allows only the explicit origin list (`Cors__AllowedOrigins`); never a wildcard with credentials.
+12. **Security headers** on the API and the Next.js app: CSP, HSTS, `X-Content-Type-Options: nosniff`, `frame-ancestors`/`X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`.
+13. **Session cookies are secure:** `HttpOnly`, `Secure`, `SameSite=Lax` (or `Strict`), `__Host-` prefix, lifetimes per §7a (admin 7 days, viewer 1 day).
+14. **CSRF protection** (anti-forgery tokens) on every cookie-authenticated state-changing request. Header-authenticated calls (Mini App initData, Telegram webhook secret) are exempt.
+
+**How the first pass is built (O-9 / SSD-123, 2026-11-01):**
+- **API (`src/SsSport.Drive.Api/Security`):**
+  - Forwarded headers are honoured only from `Security__TrustedProxies` (addresses or CIDR; loopback always).
+  - Outside development, HTTP is redirected with 308 to HTTPS on port 443 (`/health` exempt, for container probes). HTTPS answers carry `max-age=31536000; includeSubDomains`; preload is not requested yet.
+  - Headers are written as the response starts, so errors and 429s carry them too. The `Server` header is off.
+  - Rate limits: a fixed one-minute window per client address, `RateLimiting__PermitsPerMinute` (300). The webhook has its own `RateLimiting__WebhookPermitsPerMinute` (1800). Health probes are never limited. Refusals are 429 ProblemDetails with `Retry-After`, logged as warnings, and documented on every operation in Scalar. OTP and magic-link endpoints add tighter policies when they are built.
+- **Web (`web/src/lib/security-headers.ts`):** headers come from `next.config.ts`, with HSTS in production builds and no `X-Powered-By`.
+- **Database role:**
+  - `migrate` connects as the owner and creates or updates the app role named by `Database__AppUser` / `Database__AppPassword` (compose: `DB_APP_USER` / `DB_APP_PASSWORD`). Running it again rotates the password.
+  - The role can log in and run SELECT/INSERT/UPDATE/DELETE on the tables of `public` and `hangfire`, and use their sequences. Default privileges cover tables later migrations create. It has no DDL, TRUNCATE, role or database powers.
+  - The password is sent only as a SCRAM-SHA-256 verifier with a random salt, built in .NET. The DDL is assembled by PostgreSQL's `format()` from bind parameters.
+  - Bad settings (an invalid name, a `pg_` prefix, the owner's own name, a password under 16 printable ASCII characters) stop `migrate` before anything changes.
+  - The API and workers in Docker connect as the role. A local `dotnet run` still uses the owner. The production compose (O-1) gives each container only its own secrets.
+
 ## 2. Architecture (owner-required)
 
 - **CQRS + DDD + Clean Code + SOLID + DRY.**

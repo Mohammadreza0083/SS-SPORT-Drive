@@ -38,6 +38,23 @@ Branded, trackable volleyball player video pages built from Google Drive folders
   - No secrets, tokens, OTP codes or full emails are ever logged.
   - Logs ship to **Grafana Loki** and are viewed in **Grafana** dashboards.
 
+## Security rules (owner, 2026-11-01; always)
+Every change is checked against these before it is committed. Full text in [decisions.md](decisions.md) §1b.
+- **No secrets in code.** Keys, tokens, passwords and connection strings come only from environment variables or secret stores. Never in commits, logs, images or front-end bundles.
+- **Database locked down:** never publicly reachable, least-privilege app role, TLS in production, encrypted backups.
+- **Server-side validation** of every input (FluentValidation in the MediatR pipeline). Client checks are UX only.
+- **XSS:** encode all output, no raw HTML from user data, CSP on every response (web CSP is static with `'unsafe-inline'` scripts, owner 2026-11-01; see decisions §1b).
+- **Admin area locked:** admin pages and APIs require the Admin role policy on the server, deny by default.
+- **HTTPS forced:** HTTPS redirection and HSTS in production.
+- **Hash with salt:** passwords (if ever added) with a slow salted hash; OTP codes hashed with salt; magic-link and session tokens stored only as keyed hashes. Compare in constant time.
+- **Log suspicious activity** (failed sign-ins/OTPs, bad secrets, rate-limit hits, CSRF failures, admin denials) as structured warnings, with no secrets.
+- **Parameterized queries only.** Never build SQL by string concatenation.
+- **Rate limiting** on auth, OTP, magic-link, access-request, webhook and public endpoints.
+- **CORS:** explicit origin allow-list only.
+- **Security headers** on the API and the web app: CSP, HSTS, X-Content-Type-Options, frame-ancestors, Referrer-Policy, Permissions-Policy.
+- **Session cookies:** `HttpOnly`, `Secure`, `SameSite`, `__Host-` prefix, short lifetime.
+- **CSRF protection** on every cookie-authenticated state-changing request.
+
 ## API documentation (Scalar)
 - Every API is documented with an **OpenAPI** document (`Microsoft.AspNetCore.OpenApi`) and rendered with **Scalar** (`Scalar.AspNetCore`) at `/scalar`.
 - Every endpoint must carry:

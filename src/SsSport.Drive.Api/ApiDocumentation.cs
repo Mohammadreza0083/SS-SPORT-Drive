@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
 
@@ -16,7 +18,7 @@ public static class ApiDocumentation
     /// <param name="services">The service collection to add to.</param>
     /// <returns>The same service collection, for chaining.</returns>
     public static IServiceCollection AddApiDocumentation(this IServiceCollection services) =>
-        services.AddOpenApi(options => options.AddDocumentTransformer((document, _, _) =>
+        services.AddOpenApi(options => options.AddOperationTransformer(DocumentRateLimitAsync).AddDocumentTransformer((document, _, _) =>
         {
             document.Info = new OpenApiInfo
             {
@@ -45,6 +47,47 @@ public static class ApiDocumentation
             };
             return Task.CompletedTask;
         }));
+
+    /// <summary>
+    /// Adds the 429 answer of the rate limiter (decisions §1b) to every operation except the health probes, which are
+    /// never limited.
+    /// </summary>
+    /// <param name="operation">The operation being documented.</param>
+    /// <param name="context">The transformer context.</param>
+    /// <param name="cancellationToken">Cancels the transformation.</param>
+    /// <returns>A task that completes when the response is added.</returns>
+    private static async Task DocumentRateLimitAsync(OpenApiOperation operation, OpenApiOperationTransformerContext context, CancellationToken cancellationToken)
+    {
+        var path = "/" + (context.Description.RelativePath ?? string.Empty);
+        if (path.StartsWith(Endpoints.HealthEndpoints.RoutePrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var problem = await context.GetOrCreateSchemaAsync(typeof(ProblemDetails), cancellationToken: cancellationToken);
+        operation.Responses ??= new OpenApiResponses();
+        operation.Responses["429"] = new OpenApiResponse
+        {
+            Description = "Too many requests from this client address. Wait for the number of seconds in `Retry-After`, then try again.",
+            Headers = new Dictionary<string, IOpenApiHeader>
+            {
+                ["Retry-After"] = new OpenApiHeader
+                {
+                    Description = "Seconds until the client's budget is refilled.",
+                    Schema = new OpenApiSchema { Type = JsonSchemaType.Integer },
+                    Example = System.Text.Json.Nodes.JsonValue.Create(42),
+                },
+            },
+            Content = new Dictionary<string, OpenApiMediaType>
+            {
+                ["application/problem+json"] = new OpenApiMediaType
+                {
+                    Schema = problem,
+                    Example = System.Text.Json.Nodes.JsonNode.Parse("""{ "type": "https://tools.ietf.org/html/rfc6585#section-4", "title": "Too many requests.", "status": 429, "detail": "Try again in 42 seconds." }"""),
+                },
+            },
+        };
+    }
 
     /// <summary>Maps the OpenAPI document and the Scalar UI, except in production.</summary>
     /// <param name="app">The web application.</param>

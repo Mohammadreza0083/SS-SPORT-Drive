@@ -45,6 +45,7 @@ public static class DependencyInjection
     {
         services.AddSingleton(provider => NpgsqlDataSource.Create(ReadConnectionString(provider.GetRequiredService<IConfiguration>())));
         services.AddSingleton<PostgreSqlHealthCheck>();
+        services.AddOptions<DatabaseAppRoleOptions>().BindConfiguration(DatabaseAppRoleOptions.SectionName);
 
         // SQL is not logged command by command (D-14); slow commands are logged instead. Logging is added if the host
         // has not (a bare container); hosts already have it, and AddLogging only adds what is missing.
