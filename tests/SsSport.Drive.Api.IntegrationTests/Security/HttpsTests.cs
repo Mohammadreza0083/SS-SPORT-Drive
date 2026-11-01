@@ -13,6 +13,9 @@ namespace SsSport.Drive.Api.IntegrationTests.Security;
 /// </summary>
 public sealed class HttpsTests : IDisposable
 {
+    /// <summary>A path that answers 404 without touching the database, so the tests need none.</summary>
+    private const string UnknownPath = "/no-such-route";
+
     /// <summary>The reverse proxy the tests trust.</summary>
     private const string TrustedProxy = "10.20.0.5";
 
@@ -48,7 +51,7 @@ public sealed class HttpsTests : IDisposable
             .Which.Should().Contain("max-age=31536000").And.Contain("includeSubDomains");
     }
 
-    /// <summary>Behind a trusted proxy that terminated TLS, the request counts as HTTPS: no redirect (the endpoint answers 401), and HSTS is sent.</summary>
+    /// <summary>Behind a trusted proxy that terminated TLS, the request counts as HTTPS: no redirect (the unknown path answers 404), and HSTS is sent.</summary>
     [Fact]
     public async Task Forwarded_https_from_a_trusted_proxy_is_honoured()
     {
@@ -57,7 +60,7 @@ public sealed class HttpsTests : IDisposable
 
         using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
         response.Headers.Contains("Strict-Transport-Security").Should().BeTrue();
     }
 
@@ -70,7 +73,7 @@ public sealed class HttpsTests : IDisposable
 
         using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     /// <summary>Anyone else claiming HTTPS in the header is ignored and still redirected.</summary>
@@ -123,7 +126,7 @@ public sealed class HttpsTests : IDisposable
     /// <returns>The request.</returns>
     private static HttpRequestMessage ForwardedRequest(string from)
     {
-        var request = new HttpRequestMessage(HttpMethod.Get, new Uri("/miniapp/me", UriKind.Relative));
+        var request = new HttpRequestMessage(HttpMethod.Get, new Uri(UnknownPath, UriKind.Relative));
         request.Headers.Add(TestClientAddress.Header, from);
         request.Headers.Add("X-Forwarded-Proto", "https");
         request.Headers.Add("X-Forwarded-For", "198.51.100.20");

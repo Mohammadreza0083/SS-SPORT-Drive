@@ -15,6 +15,9 @@ namespace SsSport.Drive.Api.IntegrationTests.Security;
 /// </summary>
 public sealed class RateLimitingTests : IDisposable
 {
+    /// <summary>A limited path that answers 404 without touching the database, so the tests need none.</summary>
+    private const string LimitedPath = "/no-such-route";
+
     /// <summary>The client the tests act as.</summary>
     private const string ClientIp = "198.51.100.7";
 
@@ -33,11 +36,11 @@ public sealed class RateLimitingTests : IDisposable
         using var client = _factory.CreateClient();
         for (var i = 0; i < 3; i++)
         {
-            using var allowed = await SendAsync(client, "/miniapp/me", ClientIp);
-            allowed.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            using var allowed = await SendAsync(client, LimitedPath, ClientIp);
+            allowed.StatusCode.Should().Be(HttpStatusCode.NotFound);
         }
 
-        using var response = await SendAsync(client, "/miniapp/me", ClientIp);
+        using var response = await SendAsync(client, LimitedPath, ClientIp);
 
         response.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
         response.Headers.RetryAfter.Should().NotBeNull();
@@ -52,12 +55,12 @@ public sealed class RateLimitingTests : IDisposable
         using var client = _factory.CreateClient();
         for (var i = 0; i < 4; i++)
         {
-            using var _ = await SendAsync(client, "/miniapp/me", ClientIp);
+            using var _ = await SendAsync(client, LimitedPath, ClientIp);
         }
 
-        using var response = await SendAsync(client, "/miniapp/me", "198.51.100.8");
+        using var response = await SendAsync(client, LimitedPath, "198.51.100.8");
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     /// <summary>A refused request is logged as a warning with the path and client, so Loki can alert on floods.</summary>
@@ -67,14 +70,14 @@ public sealed class RateLimitingTests : IDisposable
         using var client = _factory.CreateClient();
         for (var i = 0; i < 4; i++)
         {
-            using var _ = await SendAsync(client, "/miniapp/me", ClientIp);
+            using var _ = await SendAsync(client, LimitedPath, ClientIp);
         }
 
         var collector = _factory.Services.GetRequiredService<FakeLogCollector>();
         collector.GetSnapshot().Should().Contain(record =>
             record.Level == LogLevel.Warning
             && record.Message.Contains("Rate limit exceeded", StringComparison.Ordinal)
-            && record.Message.Contains("/miniapp/me", StringComparison.Ordinal)
+            && record.Message.Contains(LimitedPath, StringComparison.Ordinal)
             && record.Message.Contains(ClientIp, StringComparison.Ordinal));
     }
 
@@ -85,7 +88,7 @@ public sealed class RateLimitingTests : IDisposable
         using var client = _factory.CreateClient();
         for (var i = 0; i < 3; i++)
         {
-            using var _ = await SendAsync(client, "/miniapp/me", ClientIp);
+            using var _ = await SendAsync(client, LimitedPath, ClientIp);
         }
 
         var statuses = new List<HttpStatusCode>();
