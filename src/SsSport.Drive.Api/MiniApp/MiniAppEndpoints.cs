@@ -193,20 +193,21 @@ public static class MiniAppEndpoints
 
     /// <summary>
     /// Builds the OpenAPI transformer every Mini App endpoint shares: the initData security requirement, a success
-    /// example and, for a body, a request example.
+    /// example and, for a body, a request example. Public endpoints (such as <c>GET /links/{code}</c>) pass
+    /// <paramref name="signedIn"/> <see langword="false"/> and get no security requirement.
     /// </summary>
     /// <param name="status">The success status code.</param>
     /// <param name="responseExample">The JSON success example, or <see langword="null"/> for a non-JSON response.</param>
     /// <param name="requestExample">The request body example, or <see langword="null"/>.</param>
+    /// <param name="signedIn">Whether the endpoint needs the initData signature.</param>
     /// <returns>The transformer.</returns>
     internal static Func<OpenApiOperation, OpenApiOperationTransformerContext, CancellationToken, Task> Document(
-        string status, string? responseExample, string? requestExample = null) =>
+        string status, string? responseExample, string? requestExample = null, bool signedIn = true) =>
         (operation, context, _) =>
         {
-            operation.Security =
-            [
-                new OpenApiSecurityRequirement { [new OpenApiSecuritySchemeReference(TelegramMiniAppAuthenticationHandler.SchemeName, context.Document)] = [] },
-            ];
+            operation.Security = signedIn
+                ? [new OpenApiSecurityRequirement { [new OpenApiSecuritySchemeReference(TelegramMiniAppAuthenticationHandler.SchemeName, context.Document)] = [] }]
+                : [];
             if (responseExample is not null
                 && operation.Responses?.TryGetValue(status, out var success) == true
                 && success.Content?.TryGetValue("application/json", out var media) == true)

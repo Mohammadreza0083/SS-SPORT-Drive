@@ -6,6 +6,7 @@ using SsSport.Drive.Api;
 using SsSport.Drive.Api.Authentication;
 using SsSport.Drive.Api.Endpoints;
 using SsSport.Drive.Api.ErrorHandling;
+using SsSport.Drive.Api.Links;
 using SsSport.Drive.Api.MiniApp;
 using SsSport.Drive.Api.Telegram;
 using SsSport.Drive.Application;
@@ -66,6 +67,7 @@ app.MapApiDocumentation();
 app.MapHealthEndpoints();
 app.MapTelegramWebhook();
 app.MapMiniApp();
+app.MapShareLinks();
 
 await app.RunAsync();
 

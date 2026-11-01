@@ -43,6 +43,13 @@ public sealed class ApplicationExceptionHandler(IProblemDetailsService problemDe
                 Status = StatusCodes.Status404NotFound,
                 Title = notFound.Message,
             },
+            ShareLinkUnavailableException unavailableLink => new ProblemDetails
+            {
+                Status = StatusCodes.Status404NotFound,
+                Title = "Link not available.",
+                Detail = unavailableLink.Message,
+                Extensions = { ["code"] = ShareLinkUnavailableException.Code },
+            },
             ConcurrencyConflictException conflict => new ProblemDetails
             {
                 Status = StatusCodes.Status409Conflict,

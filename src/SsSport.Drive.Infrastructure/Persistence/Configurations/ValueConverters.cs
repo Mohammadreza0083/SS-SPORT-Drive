@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using SsSport.Drive.Domain.Links;
 using SsSport.Drive.Domain.Players;
 using SsSport.Drive.Domain.Primitives;
 using SsSport.Drive.Domain.Users;
@@ -44,6 +45,20 @@ internal static class ValueConverters
         (left, right) => Equals(left, right),
         positions => positions == null ? 0 : positions.GetHashCode(),
         positions => positions);
+
+    /// <summary>Gets the converter for <see cref="ShareLinkCode"/> ↔ its six characters.</summary>
+    public static ValueConverter<ShareLinkCode, string> ShareLinkCode { get; } = new(code => code.Value, value => Domain.Links.ShareLinkCode.Create(value));
+
+    /// <summary>Gets the converter for a list of <see cref="EmailAddress"/> ↔ a <c>text[]</c> of addresses, in order.</summary>
+    public static ValueConverter<List<EmailAddress>, string[]> Emails { get; } = new(
+        emails => emails.Select(email => email.Value).ToArray(),
+        values => values.Select(EmailAddress.Create).ToList());
+
+    /// <summary>Gets the comparer for a list of <see cref="EmailAddress"/>: same addresses in the same order, snapshotted as a copy.</summary>
+    public static ValueComparer<List<EmailAddress>> EmailsComparer { get; } = new(
+        (left, right) => left!.SequenceEqual(right!),
+        emails => emails.Aggregate(0, HashCode.Combine),
+        emails => emails.ToList());
 
     /// <summary>Turns positions into their codes, in order.</summary>
     /// <param name="positions">The positions.</param>
