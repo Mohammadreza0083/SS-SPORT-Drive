@@ -308,6 +308,13 @@ Last updated: 2026-10-29
     - **No shared Hangfire state:** the storage and the job activator are registered per DI container, not taken from Hangfire's process-wide `JobStorage.Current` / `JobActivator.Current`. With those statics, several hosts in one process (the test suite) took each other's jobs.
     - **Packages:** Hangfire.Core / Hangfire.NetCore 1.8.25 and Hangfire.PostgreSql 1.21.1, all LGPL-3.0. They are used unmodified as packages, which is compatible with the proprietary licence.
     - **Dashboard:** there is none for now. It comes behind admin auth with the admin console (Epic 7).
+- **SQL logging (D-14, owner-approved 2026-11-01; found by the K-9 benchmark):**
+  - **Why:** the base config logged the text of every SQL command at Information, in every environment (about 92 000 commands, 90 MB, in one load run). Parameter values were never logged.
+  - **EF Core logs at Warning** in the base `appsettings.json` of the API and the workers, so in every environment, Development included. Failed commands are still logged as Errors.
+  - **Turning SQL back on** for a while: `Logging__LogLevel__Microsoft.EntityFrameworkCore.Database.Command=Information`.
+  - **Slow queries are logged:** a command that takes at least `Database__SlowQueryThresholdMs` (default **500 ms**) is a Warning, with its duration and its SQL text, never its parameter values.
+  - The k6 run measures what SQL logging cost, in Production mode.
+  - These levels carry over to Serilog when it is added; setting up Serilog is not part of D-14.
 - **Concurrent edits and log levels (D-13, owner-approved 2026-10-29; found by the K-8 benchmark):**
   - **Concurrent saves:** when two requests save the same aggregate at once, PostgreSQL's `xmin` check still refuses the later save, so nothing is overwritten. The unit of work now reports that as `ConcurrencyConflictException`, and the API answers **409** with `code: concurrency.conflict` (it used to be a raw 500). The Mini App tells the analyst to try again.
   - **Log levels** (`LoggingBehavior`): refusals the API answers on purpose (401, 403, 400, 404, 409, 422) are logged at **Information**, with the reason as a structured `Reason` property (the rule code or the refusal type) and no stack trace. An outside service being down (503) is a **Warning**. Only real failures are **Error**, so Grafana error alerts mean something.

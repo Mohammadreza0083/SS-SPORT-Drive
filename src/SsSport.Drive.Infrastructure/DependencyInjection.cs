@@ -46,7 +46,17 @@ public static class DependencyInjection
         services.AddSingleton(provider => NpgsqlDataSource.Create(ReadConnectionString(provider.GetRequiredService<IConfiguration>())));
         services.AddSingleton<PostgreSqlHealthCheck>();
 
-        services.AddDbContext<AppDbContext>((provider, options) => options.UseAppDatabase(provider.GetRequiredService<NpgsqlDataSource>()));
+        // SQL is not logged command by command (D-14); slow commands are logged instead. Logging is added if the host
+        // has not (a bare container); hosts already have it, and AddLogging only adds what is missing.
+        services.AddLogging();
+        services.AddOptions<DatabaseOptions>()
+            .BindConfiguration(DatabaseOptions.SectionName)
+            .Validate(options => options.SlowQueryThresholdMs > 0, "Database__SlowQueryThresholdMs must be a positive number of milliseconds.")
+            .ValidateOnStart();
+        services.AddSingleton<SlowQueryInterceptor>();
+        services.AddDbContext<AppDbContext>((provider, options) => options
+            .UseAppDatabase(provider.GetRequiredService<NpgsqlDataSource>())
+            .AddInterceptors(provider.GetRequiredService<SlowQueryInterceptor>()));
         services.AddScoped<DbContext>(provider => provider.GetRequiredService<AppDbContext>());
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped(typeof(IRepository<,>), typeof(Repository<,>));

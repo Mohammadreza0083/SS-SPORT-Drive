@@ -210,6 +210,7 @@ SS-SPORT Drive/
 - 📚 **API docs:** every endpoint is fully described in OpenAPI and rendered with Scalar.
 - 🔒 **No secrets in git:** configuration comes from environment variables and secrets only.
 - 🌐 **English** in code, comments, logs and commits.
+- 🪵 **Logs:** SQL commands are not logged one by one; a command slower than `Database__SlowQueryThresholdMs` (500 ms) is a Warning, without parameter values. No secrets, tokens, OTP codes or full emails are ever logged.
 - 📦 **NuGet versions** live only in `Directory.Packages.props`; `nuget.config` pins packages and the vulnerability audit to nuget.org, so builds stay warning-free.
 
 ## Roadmap

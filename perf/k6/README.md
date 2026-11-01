@@ -85,16 +85,17 @@ Across the whole run, fewer than 1 % of requests may fail and more than 99 % of 
    docker run -d --name ssd-bench-pg -e POSTGRES_USER=bench -e POSTGRES_PASSWORD=bench -e POSTGRES_DB=ss_sport_drive_bench -p 127.0.0.1:55432:5432 postgres:17-alpine
    ```
 
-2. **Start the API in Release mode against it.** Real environment variables win over `.env`. Set **both** `ASPNETCORE_ENVIRONMENT` and `DOTNET_ENVIRONMENT`: the API loads the repository's `.env` (it walks up from the current folder), and a `DOTNET_ENVIRONMENT=Development` there would otherwise put the API in Development mode. Also keep EF Core's SQL logging at Warning; at Information it writes every statement to the console and slows the whole API down under load. Bash cannot `export` a name with a dot, so pass that one through `env`:
+2. **Start the API in Release mode against it.** Real environment variables win over `.env`. Set **both** `ASPNETCORE_ENVIRONMENT` and `DOTNET_ENVIRONMENT`: the API loads the repository's `.env` (it walks up from the current folder), and a `DOTNET_ENVIRONMENT=Development` there would otherwise put the API in Development mode. **Run it from its output folder:** the API reads `appsettings.json` from the current folder, so started from the repository root it runs with no settings file at all. Every log level then falls back to Information, and EF Core logs every SQL statement, which slows the whole API down under load. From the output folder, D-14's levels apply: SQL commands are not logged, and slow ones are Warnings.
 
    ```bash
    dotnet build src/SsSport.Drive.Api -c Release
    export DOTNET_ENVIRONMENT=Production ASPNETCORE_ENVIRONMENT=Production ASPNETCORE_URLS=http://127.0.0.1:5081 Telegram__Mode=Webhook Telegram__BotToken=424242:k6-bench-token ConnectionStrings__DefaultConnection="Host=127.0.0.1;Port=55432;Database=ss_sport_drive_bench;Username=bench;Password=bench"
-   dotnet src/SsSport.Drive.Api/bin/Release/net10.0/SsSport.Drive.Api.dll migrate
-   env 'Logging__LogLevel__Microsoft.EntityFrameworkCore=Warning' dotnet src/SsSport.Drive.Api/bin/Release/net10.0/SsSport.Drive.Api.dll
+   cd src/SsSport.Drive.Api/bin/Release/net10.0
+   dotnet SsSport.Drive.Api.dll migrate
+   dotnet SsSport.Drive.Api.dll
    ```
 
-   Check that the log says `Hosting environment: Production` before you start k6.
+   Before you start k6, check two things: the log says `Hosting environment: Production`, and it does not print `Executed DbCommand` lines. Also check `docker ps`: other test runs on the machine skew the results.
 
 3. **Add an active analyst for the script to sign in as:**
 
@@ -226,6 +227,26 @@ Since T-6c, bot notices are queued as Hangfire jobs and sent after the response,
 **The queue falls behind under load.** One worker sends the notices in order. With the bench's fake token, each Telegram call took about 1 s from this machine, so the worker managed about 1 notice/s while the load raised about 10/s. When the run ended, 1 061 notice jobs had succeeded, none had failed, and 1 311 were still queued. They go out over the next minutes. Real traffic is a few analysts, and on the VPS a Telegram call takes a fraction of that time, so this does not show up there. Options if it ever does: more workers with ordering per player, or merging the pending refreshes of one player into one.
 
 **Leaked test containers skew results.** An earlier crashed test run had left 234 PostgreSQL containers running, which made the whole machine slow: `profile` p95 was 421 ms. Check `docker ps` before a run.
+
+### SQL logging (D-14)
+
+Since D-14, EF Core logs at Warning: no SQL command is logged unless it fails or takes at least 500 ms. Two load runs at peak 50 measure the difference. Both ran back to back on 2026-11-01, Production mode, from the API's output folder; the only change was `Logging__LogLevel__Microsoft.EntityFrameworkCore.Database.Command=Information` for the second.
+
+| Scenario | p95, SQL not logged (D-14) | p95, every SQL command logged | Change |
+|---|---|---|---|
+| `profile` | 135 ms | 274 ms | about 2× |
+| `my_players` | 181 ms | 372 ms | about 2× |
+| `player_card` | 228 ms | 441 ms | about 1.9× |
+| `file_edit` | 219 ms | 346 ms | about 1.6× |
+| `player_edit` | 437 ms | 534 ms | about 1.2× |
+| `photo_upload` | 3.56 s | 4.49 s | about 1.3× |
+| API log | 8.9 MB, 0 SQL lines, 0 slow commands | 55 MB, 82 916 SQL lines | |
+
+32 201 and 32 088 requests, 9 and 13 failed. Under load, logging every SQL statement roughly doubled response times.
+
+**Absolute numbers are higher than in the T-6c run** because another session's test suite was running on the machine the whole time. That is also why some thresholds failed in both runs, and why only the side-by-side comparison counts here. Re-measure on staging (K-1).
+
+**Found on the way: database connections run out under load.** In one run, PostgreSQL refused new connections ("too many clients already"), and a few requests failed. Npgsql's pool allows 100 connections by default, which is also PostgreSQL's default `max_connections`, a few of them reserved. The API, Hangfire and a `psql` session share that limit. This is tracked as its own task (D-15).
 
 ### Notes
 
