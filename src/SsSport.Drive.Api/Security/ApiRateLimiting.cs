@@ -34,7 +34,7 @@ public static partial class ApiRateLimiting
     private const string LogCategory = "SsSport.Drive.Api.Security.RateLimiting";
 
     /// <summary>The length of one budget window.</summary>
-    private static readonly TimeSpan Window = TimeSpan.FromMinutes(1);
+    private static readonly TimeSpan _window = TimeSpan.FromMinutes(1);
 
     /// <summary>Registers the limiter, built from <see cref="ApiRateLimitOptions"/>.</summary>
     /// <param name="services">The service collection.</param>
@@ -83,7 +83,7 @@ public static partial class ApiRateLimiting
         RateLimitPartition.GetFixedWindowLimiter(key, _ => new FixedWindowRateLimiterOptions
         {
             PermitLimit = permits,
-            Window = Window,
+            Window = _window,
             QueueLimit = 0,
             AutoReplenishment = true,
         });
@@ -95,7 +95,7 @@ public static partial class ApiRateLimiting
     private static async ValueTask RejectAsync(OnRejectedContext context, CancellationToken cancellationToken)
     {
         var http = context.HttpContext;
-        var retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var wait) ? wait : Window;
+        var retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var wait) ? wait : _window;
         var seconds = Math.Max(1, (int)Math.Ceiling(retryAfter.TotalSeconds));
         http.Response.Headers.RetryAfter = seconds.ToString(CultureInfo.InvariantCulture);
 

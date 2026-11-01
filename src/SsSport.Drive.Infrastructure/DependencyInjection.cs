@@ -45,6 +45,7 @@ public static class DependencyInjection
     {
         services.AddSingleton(provider => NpgsqlDataSource.Create(ReadConnectionString(provider.GetRequiredService<IConfiguration>())));
         services.AddSingleton<PostgreSqlHealthCheck>();
+        services.AddOptions<DatabaseAppRoleOptions>().BindConfiguration(DatabaseAppRoleOptions.SectionName);
 
         services.AddDbContext<AppDbContext>((provider, options) => options.UseAppDatabase(provider.GetRequiredService<NpgsqlDataSource>()));
         services.AddScoped<DbContext>(provider => provider.GetRequiredService<AppDbContext>());

@@ -146,6 +146,7 @@ docker compose up -d --build --wait
 | PostgreSQL | `localhost:5432` |
 
 The `migrate` service applies the EF Core migrations and exits. The API starts only after it succeeds, and no app migrates on start-up.
+`migrate` connects as the database owner (`DB_USER`) and creates or updates the least-privilege app role (`DB_APP_USER` / `DB_APP_PASSWORD`). The API and workers connect as that role, which can only read and write rows. An existing `.env` needs those two keys added (see `.env.example`).
 
 Every port is bound to `127.0.0.1` only. The API answers browsers only from the origins in `Cors__AllowedOrigins`.
 Stop with `docker compose down` (add `--volumes` to wipe the data).
@@ -209,6 +210,12 @@ SS-SPORT Drive/
 - 📝 **Docs in code:** XML docs on every .NET member (the build fails without them), TSDoc on exported TypeScript.
 - 📚 **API docs:** every endpoint is fully described in OpenAPI and rendered with Scalar.
 - 🔒 **No secrets in git:** configuration comes from environment variables and secrets only.
+- 🛡️ **Security baseline** ([decisions §1b](.claude/decisions.md)), checked on every change:
+  - HTTPS with HSTS behind trusted proxies (`Security__TrustedProxies`);
+  - security headers and a CSP on the API and web app;
+  - per-client rate limits (`RateLimiting__*`, 429 + `Retry-After`) with warning logs for refused requests, rejected sign-ins and bad webhook secrets;
+  - CORS allow-list, server-side validation, parameterized SQL only;
+  - a least-privilege database role.
 - 🌐 **English** in code, comments, logs and commits.
 - 📦 **NuGet versions** live only in `Directory.Packages.props`; `nuget.config` pins packages and the vulnerability audit to nuget.org, so builds stay warning-free.
 

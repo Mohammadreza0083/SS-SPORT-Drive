@@ -76,6 +76,20 @@ Standing rules for every feature. Each control gets tests, and nothing is commit
 13. **Session cookies are secure:** `HttpOnly`, `Secure`, `SameSite=Lax` (or `Strict`), `__Host-` prefix, lifetimes per §7a (admin 7 days, viewer 1 day).
 14. **CSRF protection** (anti-forgery tokens) on every cookie-authenticated state-changing request. Header-authenticated calls (Mini App initData, Telegram webhook secret) are exempt.
 
+**How the first pass is built (O-9 / SSD-123, 2026-11-01):**
+- **API (`src/SsSport.Drive.Api/Security`):**
+  - Forwarded headers are honoured only from `Security__TrustedProxies` (addresses or CIDR; loopback always).
+  - Outside development, HTTP is redirected with 308 to HTTPS on port 443 (`/health` exempt, for container probes). HTTPS answers carry `max-age=31536000; includeSubDomains`; preload is not requested yet.
+  - Headers are written as the response starts, so errors and 429s carry them too. The `Server` header is off.
+  - Rate limits: a fixed one-minute window per client address, `RateLimiting__PermitsPerMinute` (300). The webhook has its own `RateLimiting__WebhookPermitsPerMinute` (1800). Health probes are never limited. Refusals are 429 ProblemDetails with `Retry-After`, logged as warnings, and documented on every operation in Scalar. OTP and magic-link endpoints add tighter policies when they are built.
+- **Web (`web/src/lib/security-headers.ts`):** headers come from `next.config.ts`, with HSTS in production builds and no `X-Powered-By`.
+- **Database role:**
+  - `migrate` connects as the owner and creates or updates the app role named by `Database__AppUser` / `Database__AppPassword` (compose: `DB_APP_USER` / `DB_APP_PASSWORD`). Running it again rotates the password.
+  - The role can log in and run SELECT/INSERT/UPDATE/DELETE on the tables of `public` and `hangfire`, and use their sequences. Default privileges cover tables later migrations create. It has no DDL, TRUNCATE, role or database powers.
+  - The password is sent only as a SCRAM-SHA-256 verifier with a random salt, built in .NET. The DDL is assembled by PostgreSQL's `format()` from bind parameters.
+  - Bad settings (an invalid name, a `pg_` prefix, the owner's own name, a password under 16 printable ASCII characters) stop `migrate` before anything changes.
+  - The API and workers in Docker connect as the role. A local `dotnet run` still uses the owner. The production compose (O-1) gives each container only its own secrets.
+
 ## 2. Architecture (owner-required)
 
 - **CQRS + DDD + Clean Code + SOLID + DRY.**

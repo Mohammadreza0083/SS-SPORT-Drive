@@ -19,9 +19,10 @@ x-app: &app
       condition: service_completed_successfully
 
 # Inside Docker the apps reach PostgreSQL and storage by service name, not localhost.
+# The API and workers connect as the least-privilege app role (row reads/writes only); only `migrate` uses the owner.
 x-app-environment: &app-environment
   DOTNET_ENVIRONMENT: Development
-  ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=${DB_NAME:?};Username=${DB_USER:?};Password=${DB_PASSWORD:?}
+  ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=${DB_NAME:?};Username=${DB_APP_USER:?};Password=${DB_APP_PASSWORD:?}
   Storage__ServiceUrl: http://storage:9000
 
 services:
@@ -78,7 +79,8 @@ services:
     restart: "no"
 
   # One-shot job: applies the EF Core migrations with the API image, then exits. The API starts only after it succeeds;
-  # apps never migrate on start-up (CD runs the same command as a pipeline step).
+  # apps never migrate on start-up (CD runs the same command as a pipeline step). It connects as the owner and
+  # creates or updates the app role the other services use (decisions §1b).
   migrate:
     build:
       context: .
@@ -87,6 +89,9 @@ services:
     env_file: .env
     environment:
       <<: *app-environment
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=${DB_NAME:?};Username=${DB_USER:?};Password=${DB_PASSWORD:?}
+      Database__AppUser: ${DB_APP_USER:?}
+      Database__AppPassword: ${DB_APP_PASSWORD:?}
     depends_on:
       postgres:
         condition: service_healthy
