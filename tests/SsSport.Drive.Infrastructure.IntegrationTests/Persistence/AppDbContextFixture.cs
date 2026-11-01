@@ -27,7 +27,8 @@ public sealed class AppDbContextFixture : IAsyncLifetime
     public async ValueTask DisposeAsync() => await _postgres.DisposeAsync();
 
     /// <summary>Creates a fresh application context against the container.</summary>
+    /// <param name="interceptors">Interceptors to add, e.g. the slow-query log (D-14).</param>
     /// <returns>The context; the caller disposes it.</returns>
-    internal AppDbContext CreateContext() =>
-        new(new DbContextOptionsBuilder<AppDbContext>().UseAppDatabase(_postgres.GetConnectionString()).Options);
+    internal AppDbContext CreateContext(params Microsoft.EntityFrameworkCore.Diagnostics.IInterceptor[] interceptors) =>
+        new(new DbContextOptionsBuilder<AppDbContext>().UseAppDatabase(_postgres.GetConnectionString()).AddInterceptors(interceptors).Options);
 }

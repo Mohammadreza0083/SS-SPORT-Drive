@@ -44,6 +44,7 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | D-12 | Fix the EF shadow-FK warning on the owned Volleybox profile (`VolleyboxProfile.PlayerId1`): explicit owner key on `players.id`, model test with warning 10625 as an error | Claude | No EF model warnings; tests green |
 | D-13 | Concurrent edits answer 500: map optimistic concurrency conflicts to 409 (`concurrency.conflict`); log expected 4xx at Information/Warning, not Error (found by K-8) | Claude | Tests green |
 | D-14 | Stop logging every SQL statement at Information: EF Core to Warning in the base config, then re-measure (found by K-9) | Claude | Tests green; owner approved the log levels |
+| D-15 | Database connections run out under load: cap the Npgsql pool per process (or raise `max_connections` / add PgBouncer) so the API, workers and Hangfire stay under PostgreSQL's limit (found by D-14) | Claude | Owner chose the limits; tests green; k6 load shows no "too many clients" |
 
 ## EPIC 2 — Telegram bot & Mini App
 | Key | Task | Assignee | Done when |
