@@ -25,23 +25,10 @@ public static class WebCors
         services.AddCors();
         services.AddOptions<CorsOptions>()
             .Configure<IConfiguration>((options, configuration) => options.AddPolicy(PolicyName, policy => policy
-                .WithOrigins(ReadAllowedOrigins(configuration))
+                .WithOrigins(ConfigurationList.Read(configuration, AllowedOriginsKey))
                 .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE")
                 .AllowAnyHeader()
                 .AllowCredentials()));
         return services;
-    }
-
-    /// <summary>Reads the allowed origins in either supported format.</summary>
-    /// <param name="configuration">The application configuration.</param>
-    /// <returns>The trimmed, non-empty origins.</returns>
-    private static string[] ReadAllowedOrigins(IConfiguration configuration)
-    {
-        var section = configuration.GetSection(AllowedOriginsKey);
-        var values = section.Value is { } single
-            ? single.Split(',')
-            : section.GetChildren().Select(child => child.Value ?? string.Empty);
-
-        return values.Select(origin => origin.Trim()).Where(origin => origin.Length > 0).ToArray();
     }
 }

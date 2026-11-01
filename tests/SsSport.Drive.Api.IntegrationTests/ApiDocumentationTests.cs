@@ -43,6 +43,35 @@ public sealed class ApiDocumentationTests(WebApplicationFactory<Program> factory
             .TryGetProperty("application/problem+json", out _).Should().BeTrue("failures are reported as ProblemDetails");
     }
 
+    /// <summary>
+    /// Every rate-limited operation documents its 429 ProblemDetails answer with the <c>Retry-After</c> header;
+    /// the health probes, which are never limited, do not.
+    /// </summary>
+    [Fact]
+    public async Task Rate_limited_operations_document_429()
+    {
+        using var document = await GetOpenApiDocumentAsync();
+        var paths = document.RootElement.GetProperty("paths");
+
+        foreach (var path in paths.EnumerateObject())
+        {
+            foreach (var operation in path.Value.EnumerateObject())
+            {
+                var responses = operation.Value.GetProperty("responses");
+                if (path.Name.StartsWith("/health", StringComparison.Ordinal))
+                {
+                    responses.TryGetProperty("429", out _).Should().BeFalse($"{path.Name} is never rate limited");
+                    continue;
+                }
+
+                var tooMany = responses.GetProperty("429");
+                tooMany.GetProperty("description").GetString().Should().NotBeNullOrWhiteSpace();
+                tooMany.GetProperty("headers").TryGetProperty("Retry-After", out _).Should().BeTrue($"{operation.Name} {path.Name} documents Retry-After");
+                tooMany.GetProperty("content").TryGetProperty("application/problem+json", out _).Should().BeTrue();
+            }
+        }
+    }
+
     /// <summary>The Scalar API reference UI is served at /scalar outside production.</summary>
     [Fact]
     public async Task Scalar_reference_is_served_outside_production()

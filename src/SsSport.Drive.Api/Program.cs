@@ -7,6 +7,7 @@ using SsSport.Drive.Api.Authentication;
 using SsSport.Drive.Api.Endpoints;
 using SsSport.Drive.Api.ErrorHandling;
 using SsSport.Drive.Api.MiniApp;
+using SsSport.Drive.Api.Security;
 using SsSport.Drive.Api.Telegram;
 using SsSport.Drive.Application;
 using SsSport.Drive.Application.Abstractions.Authentication;
@@ -19,6 +20,8 @@ using SsSport.Drive.Infrastructure.Telegram;
 Env.NoClobber().TraversePath().Load();
 
 var builder = WebApplication.CreateBuilder(args);
+// Do not advertise the server software.
+builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure();
@@ -32,6 +35,9 @@ builder.Services.Replace(ServiceDescriptor.Scoped<ICurrentUser, HttpContextCurre
 builder.Services.AddAuthentication(TelegramMiniAppAuthenticationHandler.SchemeName)
     .AddScheme<AuthenticationSchemeOptions, TelegramMiniAppAuthenticationHandler>(TelegramMiniAppAuthenticationHandler.SchemeName, configureOptions: null);
 builder.Services.AddWebCors();
+// Security baseline (decisions §1b): HTTPS + HSTS behind the trusted proxy, and per-client rate limits.
+builder.Services.AddHttpsEnforcement();
+builder.Services.AddApiRateLimiting();
 builder.Services.AddProblemDetails();
 // Enums are written by name ("Waiting", not 0), so responses and Scalar stay readable.
 builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
@@ -57,9 +63,14 @@ if (args is ["telegram-set-webhook"])
     return;
 }
 
+// The client's real scheme and address first, then the security headers, so every later answer carries them.
+app.UseHttpsEnforcement();
+app.UseSecurityHeaders();
 // Unhandled exceptions become ProblemDetails: 400 validation, 401/403 access, 422 broken business rules, a generic 500 otherwise.
 app.UseExceptionHandler();
 app.UseCors(WebCors.PolicyName);
+// Before authentication, so floods of bad sign-ins are refused cheaply.
+app.UseRateLimiter();
 app.UseAuthentication();
 
 app.MapApiDocumentation();

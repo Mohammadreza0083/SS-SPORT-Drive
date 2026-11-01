@@ -1,0 +1,130 @@
+using System.Globalization;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Options;
+using SsSport.Drive.Api.Endpoints;
+using SsSport.Drive.Api.Telegram;
+
+namespace SsSport.Drive.Api.Security;
+
+/// <summary>The per-minute request budgets (section <c>RateLimiting</c>).</summary>
+public sealed class ApiRateLimitOptions
+{
+    /// <summary>The configuration section.</summary>
+    public const string SectionName = "RateLimiting";
+
+    /// <summary>Requests per minute one client address may make to the API in general.</summary>
+    public int PermitsPerMinute { get; set; } = 300;
+
+    /// <summary>
+    /// Requests per minute to the Telegram webhook, per address. Telegram delivers from a few addresses, in bursts,
+    /// so it gets its own, larger budget.
+    /// </summary>
+    public int WebhookPermitsPerMinute { get; set; } = 1800;
+}
+
+/// <summary>
+/// Rate limiting (decisions §1b): every client address gets a fixed per-minute budget. A request over it is refused
+/// with 429, a <c>Retry-After</c> and a ProblemDetails body, and logged as a warning for the Loki alerts. Health
+/// probes are never limited. Endpoints with tighter needs (OTP, magic links) add their own policies on top.
+/// </summary>
+public static partial class ApiRateLimiting
+{
+    /// <summary>The log category of refusals.</summary>
+    private const string LogCategory = "SsSport.Drive.Api.Security.RateLimiting";
+
+    /// <summary>The length of one budget window.</summary>
+    private static readonly TimeSpan Window = TimeSpan.FromMinutes(1);
+
+    /// <summary>Registers the limiter, built from <see cref="ApiRateLimitOptions"/>.</summary>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The same collection, for chaining.</returns>
+    public static IServiceCollection AddApiRateLimiting(this IServiceCollection services)
+    {
+        services.AddOptions<ApiRateLimitOptions>()
+            .BindConfiguration(ApiRateLimitOptions.SectionName)
+            .Validate(options => options.PermitsPerMinute > 0 && options.WebhookPermitsPerMinute > 0, "Rate limits must be positive.")
+            .ValidateOnStart();
+
+        services.AddRateLimiter(_ => { });
+        services.AddOptions<RateLimiterOptions>().Configure<IOptions<ApiRateLimitOptions>>((options, limits) =>
+        {
+            var budgets = limits.Value;
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context => Partition(context, budgets));
+            options.OnRejected = RejectAsync;
+        });
+        return services;
+    }
+
+    /// <summary>Picks the budget for a request: none for health probes, the webhook's own, or the general one.</summary>
+    /// <param name="context">The request.</param>
+    /// <param name="budgets">The configured budgets.</param>
+    /// <returns>The partition the request counts against.</returns>
+    private static RateLimitPartition<string> Partition(HttpContext context, ApiRateLimitOptions budgets)
+    {
+        var path = context.Request.Path;
+        if (path.StartsWithSegments(HealthEndpoints.RoutePrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return RateLimitPartition.GetNoLimiter("health");
+        }
+
+        var client = ClientAddress(context);
+        return path.StartsWithSegments(TelegramWebhookEndpoints.Route, StringComparison.OrdinalIgnoreCase)
+            ? FixedWindow($"webhook:{client}", budgets.WebhookPermitsPerMinute)
+            : FixedWindow($"client:{client}", budgets.PermitsPerMinute);
+    }
+
+    /// <summary>A fixed one-minute window with no queue: over the budget is refused at once.</summary>
+    /// <param name="key">The partition key.</param>
+    /// <param name="permits">Requests allowed per window.</param>
+    /// <returns>The partition.</returns>
+    private static RateLimitPartition<string> FixedWindow(string key, int permits) =>
+        RateLimitPartition.GetFixedWindowLimiter(key, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = permits,
+            Window = Window,
+            QueueLimit = 0,
+            AutoReplenishment = true,
+        });
+
+    /// <summary>Answers a refused request with 429, <c>Retry-After</c> and a ProblemDetails body, and logs it.</summary>
+    /// <param name="context">The refusal context.</param>
+    /// <param name="cancellationToken">Cancels writing the answer.</param>
+    /// <returns>A task that completes when the answer is written.</returns>
+    private static async ValueTask RejectAsync(OnRejectedContext context, CancellationToken cancellationToken)
+    {
+        var http = context.HttpContext;
+        var retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var wait) ? wait : Window;
+        var seconds = Math.Max(1, (int)Math.Ceiling(retryAfter.TotalSeconds));
+        http.Response.Headers.RetryAfter = seconds.ToString(CultureInfo.InvariantCulture);
+
+        var logger = http.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger(LogCategory);
+        LogRefused(logger, http.Request.Path.Value ?? string.Empty, ClientAddress(http), seconds);
+
+        var problems = http.RequestServices.GetRequiredService<IProblemDetailsService>();
+        await problems.WriteAsync(new ProblemDetailsContext
+        {
+            HttpContext = http,
+            ProblemDetails =
+            {
+                Status = StatusCodes.Status429TooManyRequests,
+                Title = "Too many requests.",
+                Detail = $"Try again in {seconds} seconds.",
+            },
+        });
+    }
+
+    /// <summary>The client's address (after the trusted-proxy headers are applied), or <c>unknown</c>.</summary>
+    /// <param name="context">The request.</param>
+    /// <returns>The address as text.</returns>
+    private static string ClientAddress(HttpContext context) => context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+    /// <summary>Logs a refused request: a possible flood or brute-force attempt.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="Path">The requested path.</param>
+    /// <param name="ClientIp">The client address.</param>
+    /// <param name="RetryAfterSeconds">When the client may try again.</param>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Rate limit exceeded on {Path} for client {ClientIp}; retry after {RetryAfterSeconds}s")]
+    private static partial void LogRefused(ILogger logger, string Path, string ClientIp, int RetryAfterSeconds);
+}

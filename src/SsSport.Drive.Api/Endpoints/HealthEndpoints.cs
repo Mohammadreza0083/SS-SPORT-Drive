@@ -9,12 +9,15 @@ public static class HealthEndpoints
     /// <summary>Tag of the health checks that must pass before the API is ready (e.g. PostgreSQL).</summary>
     public const string ReadyTag = "ready";
 
+    /// <summary>The route prefix of the probes.</summary>
+    public const string RoutePrefix = "/health";
+
     /// <summary>Maps <c>GET /health/live</c> and <c>GET /health/ready</c> under the "Health" tag. No authentication.</summary>
     /// <param name="app">The route builder.</param>
     /// <returns>The same route builder, for chaining.</returns>
     public static IEndpointRouteBuilder MapHealthEndpoints(this IEndpointRouteBuilder app)
     {
-        var health = app.MapGroup("/health").WithTags("Health").AllowAnonymous();
+        var health = app.MapGroup(RoutePrefix).WithTags("Health").AllowAnonymous();
 
         health.MapGet("/live", Live)
             .WithName("GetLiveness")
