@@ -219,6 +219,39 @@ public sealed class ShareLink : AggregateRoot<Guid>
         _ => ShareLinkAccess.Open,
     };
 
+    /// <summary>
+    /// Tells how the link treats an email typed at the gate (L-2): the recipient's own emails always pass; another email
+    /// passes as a forward when forwarding is on and the scope fits (<see cref="ForwardingScope.SameDomain"/> = the
+    /// exact domain of one of the recipient's emails).
+    /// </summary>
+    /// <param name="recipient">The link's recipient.</param>
+    /// <param name="email">The typed email.</param>
+    /// <returns>Recipient, forward or refused.</returns>
+    /// <exception cref="ArgumentException">The recipient is not this link's.</exception>
+    public EmailAdmission Admit(Recipient recipient, EmailAddress email)
+    {
+        ArgumentNullException.ThrowIfNull(recipient);
+        ArgumentNullException.ThrowIfNull(email);
+        if (recipient.Id != RecipientId)
+        {
+            throw new ArgumentException("The recipient is not this link's.", nameof(recipient));
+        }
+
+        if (recipient.HasEmail(email))
+        {
+            return EmailAdmission.Recipient;
+        }
+
+        if (!AllowForwarding)
+        {
+            return EmailAdmission.Refused;
+        }
+
+        return ForwardingScope == ForwardingScope.AnyEmail || recipient.Emails.Any(own => DomainOf(own) == DomainOf(email))
+            ? EmailAdmission.Forward
+            : EmailAdmission.Refused;
+    }
+
     /// <summary>Stops the link for now.</summary>
     /// <returns><see langword="true"/> when it was active.</returns>
     /// <exception cref="DomainException"><c>share_link.revoked</c>.</exception>
@@ -281,6 +314,11 @@ public sealed class ShareLink : AggregateRoot<Guid>
         ExpiresAt = expiresAt;
         return true;
     }
+
+    /// <summary>The part of an address after the <c>@</c>; addresses are already lower-case.</summary>
+    /// <param name="email">The address.</param>
+    /// <returns>The domain.</returns>
+    private static string DomainOf(EmailAddress email) => email.Value[(email.Value.LastIndexOf('@') + 1)..];
 
     /// <summary>Refuses an expiry that is not in the future.</summary>
     /// <param name="expiresAt">The expiry, or <see langword="null"/>.</param>

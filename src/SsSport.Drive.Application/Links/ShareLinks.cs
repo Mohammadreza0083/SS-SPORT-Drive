@@ -4,6 +4,7 @@ using SsSport.Drive.Application.Abstractions.Authorization;
 using SsSport.Drive.Application.Abstractions.Messaging;
 using SsSport.Drive.Application.Abstractions.Persistence;
 using SsSport.Drive.Application.Exceptions;
+using SsSport.Drive.Application.MiniApp;
 using SsSport.Drive.Application.Paging;
 using SsSport.Drive.Domain.Audit;
 using SsSport.Drive.Domain.Links;
@@ -43,6 +44,32 @@ public static class ShareLinkRules
     /// <param name="currentUser">The caller.</param>
     /// <returns>The id, or <see langword="null"/>.</returns>
     public static Guid? ActorId(ICurrentUser currentUser) => Guid.TryParse(currentUser.UserId, out var id) ? id : null;
+
+    /// <summary>
+    /// Finds the link behind a <c>/r/{code}</c> code and checks that it opens now. Unknown, malformed, paused, revoked
+    /// and expired codes all fail the same way, so codes cannot be probed.
+    /// </summary>
+    /// <param name="links">The links.</param>
+    /// <param name="rawCode">The code from the URL.</param>
+    /// <param name="now">The current time (UTC).</param>
+    /// <param name="cancellationToken">Cancels the query.</param>
+    /// <returns>The open link.</returns>
+    /// <exception cref="ShareLinkUnavailableException">The link does not open.</exception>
+    public static async Task<ShareLink> OpenLinkAsync(this IRepository<ShareLink, Guid> links, string rawCode, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        ShareLinkCode code;
+        try
+        {
+            code = ShareLinkCode.Create(rawCode);
+        }
+        catch (DomainException)
+        {
+            throw new ShareLinkUnavailableException();
+        }
+
+        var link = await links.FirstOrDefaultAsync(new ShareLinkByCodeSpec(code), cancellationToken);
+        return link is not null && link.AccessAt(now) == ShareLinkAccess.Open ? link : throw new ShareLinkUnavailableException();
+    }
 
     /// <summary>Loads a link's recipient and players and maps it.</summary>
     /// <param name="link">The link.</param>
@@ -519,10 +546,12 @@ public sealed record ResolveShareLinkQuery(string Code) : IQuery<ResolvedShareLi
 /// <summary>Handles <see cref="ResolveShareLinkQuery"/>.</summary>
 /// <param name="links">The links.</param>
 /// <param name="recipients">The recipients.</param>
+/// <param name="players">The players, for the gate card.</param>
 /// <param name="timeProvider">The clock.</param>
 public sealed class ResolveShareLinkQueryHandler(
     IRepository<ShareLink, Guid> links,
     IRepository<Recipient, Guid> recipients,
+    IRepository<Player, Guid> players,
     TimeProvider timeProvider) : IQueryHandler<ResolveShareLinkQuery, ResolvedShareLinkDto>
 {
     /// <summary>Finds the link and checks that it opens now.</summary>
@@ -532,29 +561,23 @@ public sealed class ResolveShareLinkQueryHandler(
     /// <exception cref="ShareLinkUnavailableException">The link does not open.</exception>
     public async Task<ResolvedShareLinkDto> Handle(ResolveShareLinkQuery request, CancellationToken cancellationToken)
     {
-        ShareLinkCode code;
-        try
-        {
-            code = ShareLinkCode.Create(request.Code);
-        }
-        catch (DomainException)
-        {
-            throw new ShareLinkUnavailableException();
-        }
-
-        var link = await links.FirstOrDefaultAsync(new ShareLinkByCodeSpec(code), cancellationToken);
-        if (link is null || link.AccessAt(timeProvider.GetUtcNow()) != ShareLinkAccess.Open)
-        {
-            throw new ShareLinkUnavailableException();
-        }
-
+        var link = await links.OpenLinkAsync(request.Code, timeProvider.GetUtcNow(), cancellationToken);
         var recipient = await recipients.GetByIdAsync(link.RecipientId, cancellationToken) ?? throw new ShareLinkUnavailableException();
+        var player = link.Type == ShareLinkType.Personal ? await players.GetByIdAsync(link.PlayerIds[0], cancellationToken) : null;
         return new ResolvedShareLinkDto
         {
-            Code = code.Value,
+            Code = link.Code.Value,
             Type = link.Type.ToString(),
             PlayerCount = link.PlayerIds.Count,
             RecipientHint = recipient.Emails[0].ToString(),
+            Player = player is { Name: { } name, Positions: { } positions, Nationality: { } nationality }
+                ? new GatePlayerDto
+                {
+                    Name = name.Value,
+                    Position = positions.Primary.Code(),
+                    Nationality = new CountryDto { Code = nationality.Code, Name = nationality.CountryName },
+                }
+                : null,
         };
     }
 }

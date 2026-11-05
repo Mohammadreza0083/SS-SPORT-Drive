@@ -1,0 +1,348 @@
+/*
+ * The email gate of /r/{code} and the "not available" page (backlog L-2).
+ * Values come from the canvas artboard `Gate` (390 × 844). The canvas draws the phone only; on wider screens the
+ * same column is centred, at most 430 px wide, on the full-width background. Reduced motion is handled for the whole viewer in motion.css.
+ */
+.viewer .gate {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  background: var(--ss-bg);
+  color: var(--ss-text);
+  font-family: var(--ss-font-sans);
+}
+
+.viewer .gate a {
+  color: var(--ss-red-light);
+}
+
+.viewer .gate a:hover {
+  color: var(--ss-red-hover);
+}
+
+.viewer .gate-column {
+  position: relative;
+  z-index: 2;
+  max-width: 430px;
+  margin: 0 auto;
+}
+
+/* 160 px left of the column, as in the canvas: the column starts at 50% - 215 px on wide screens. */
+.viewer .gate-glow {
+  position: absolute;
+  left: max(-160px, calc(50% - 375px));
+  top: -200px;
+  width: 560px;
+  height: 560px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(140, 0, 0, .6), transparent 68%);
+  pointer-events: none;
+  animation-duration: 5s;
+}
+
+.viewer .gate-top {
+  position: relative;
+  z-index: 2;
+  padding: 22px 22px 0;
+}
+
+.viewer .gate-top img {
+  display: block;
+  height: 30px;
+  width: auto;
+}
+
+/* The player card. */
+.viewer .gate-card {
+  position: relative;
+  z-index: 2;
+  margin: 26px 22px 0;
+  height: 200px;
+  border-radius: var(--ss-radius-xl);
+  overflow: hidden;
+  background: radial-gradient(circle at 78% 30%, #5c0a0a 0, #1f0707 42%, #09090b 78%);
+  border: 1px solid #2a1212;
+  animation: ss-gate-card-in 1s .15s var(--ss-ease-out) both;
+}
+
+.viewer .gate-card-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  background: var(--ss-red);
+}
+
+.viewer .gate-card-mark {
+  position: absolute;
+  right: -40px;
+  top: -20px;
+  width: 300px;
+  opacity: .25;
+}
+
+.viewer .gate-card-figure {
+  position: absolute;
+  right: 6px;
+  bottom: 0;
+  height: 190px;
+  width: 152px;
+}
+
+.viewer .gate-card-text {
+  position: absolute;
+  left: 20px;
+  bottom: 18px;
+}
+
+.viewer .gate-eyebrow {
+  font-family: var(--ss-font-mono);
+  font-size: 11px;
+  letter-spacing: .16em;
+  color: var(--ss-red-light);
+  font-weight: 700;
+}
+
+.viewer .gate-name {
+  font-family: var(--ss-font-display);
+  font-weight: 800;
+  font-size: 46px;
+  line-height: .9;
+  text-transform: uppercase;
+}
+
+/* The steps. */
+.viewer .gate-body {
+  position: relative;
+  z-index: 2;
+  padding: 26px 22px;
+}
+
+.viewer .gate-step {
+  animation: ss-slide-in .55s var(--ss-ease-intro) both;
+}
+
+.viewer .gate-title {
+  margin: 0;
+  font-family: var(--ss-font-sans);
+  font-weight: 700;
+  letter-spacing: -.035em;
+  font-size: 30px;
+}
+
+.viewer .gate-intro {
+  font-size: 14px;
+  color: var(--ss-text-soft);
+  line-height: 1.55;
+  margin: 8px 0 18px;
+}
+
+.viewer .gate-intro b {
+  color: #fff;
+}
+
+.viewer .gate-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ss-muted);
+  margin-bottom: 6px;
+}
+
+.viewer .gate-input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 52px;
+  border-radius: var(--ss-radius-md);
+  border: 1px solid var(--ss-border-strong);
+  background: var(--ss-input);
+  color: #fff;
+  padding: 0 16px;
+  font: 500 15px var(--ss-font-sans);
+  transition: border-color .2s, box-shadow .2s;
+}
+
+.viewer .gate-input:focus {
+  outline: none;
+  border-color: var(--ss-red-light);
+  box-shadow: 0 0 0 4px rgba(204, 0, 0, .25);
+}
+
+.viewer .gate-input[aria-invalid="true"] {
+  border-color: var(--ss-red-light);
+}
+
+.viewer .gate-code {
+  min-height: 64px;
+  font: 700 30px var(--ss-font-mono);
+  letter-spacing: .5em;
+  text-align: center;
+}
+
+.viewer .gate-shake {
+  animation: ss-shake .45s ease-in-out;
+}
+
+.viewer .gate-error {
+  font-size: 13px;
+  color: var(--ss-error);
+  margin-top: 8px;
+  animation: ss-gate-fade-up .7s var(--ss-ease-out) both;
+}
+
+.viewer .gate-button {
+  margin-top: 14px;
+  width: 100%;
+  min-height: 54px;
+  border: none;
+  border-radius: var(--ss-radius-pill);
+  background: var(--ss-red);
+  color: #fff;
+  font: 700 16px var(--ss-font-sans);
+  cursor: pointer;
+  transition: transform .2s, box-shadow .2s, opacity .2s;
+}
+
+.viewer .gate-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px -10px rgba(204, 0, 0, .8);
+}
+
+.viewer .gate-button:focus-visible,
+.viewer .gate-link:focus-visible {
+  outline: 2px solid var(--ss-red-light);
+  outline-offset: 3px;
+}
+
+.viewer .gate-button:disabled {
+  cursor: default;
+  opacity: .6;
+}
+
+.viewer .gate-note {
+  font-size: 12px;
+  color: var(--ss-faint);
+  line-height: 1.5;
+  margin: 14px 0 0;
+}
+
+.viewer .gate-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--ss-muted);
+}
+
+.viewer .gate-link {
+  background: none;
+  border: none;
+  color: var(--ss-red-light);
+  font: 600 13px var(--ss-font-sans);
+  cursor: pointer;
+  min-height: var(--ss-tap);
+  padding: 0;
+}
+
+/* "You're in". */
+.viewer .gate-done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-top: 6px;
+}
+
+.viewer .gate-check {
+  position: relative;
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  background: var(--ss-red);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 20px 50px -10px rgba(204, 0, 0, .9);
+  animation: ss-pop .6s var(--ss-ease-intro) both;
+}
+
+.viewer .gate-burst {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--ss-red-light);
+  animation: ss-burst 1.2s ease-out infinite;
+}
+
+.viewer .gate-check-path {
+  stroke-dasharray: 120;
+  animation: ss-draw .7s .3s ease-out both;
+}
+
+.viewer .gate-done-title,
+.viewer .gate-done-line,
+.viewer .gate-loadbar,
+.viewer .gate-done-note,
+.viewer .gate-done-note-2 {
+  animation: ss-gate-fade-up .7s var(--ss-ease-out) both;
+}
+
+.viewer .gate-done-title {
+  margin: 22px 0 6px;
+  animation-delay: .4s;
+}
+
+.viewer .gate-done-line {
+  margin: 0;
+  animation-delay: .55s;
+}
+
+.viewer .gate-loadbar {
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--ss-border);
+  overflow: hidden;
+  margin-top: 22px;
+  animation-delay: .6s;
+}
+
+.viewer .gate-loadbar > div {
+  height: 100%;
+  background: linear-gradient(90deg, var(--ss-red), var(--ss-red-light));
+  animation: ss-gate-load 2.4s .6s cubic-bezier(.4, 0, .2, 1) both;
+}
+
+.viewer .gate-done-note {
+  margin-top: 12px;
+  animation-delay: .8s;
+}
+
+.viewer .gate-done-note-2 {
+  margin-top: 4px;
+  animation-delay: .9s;
+}
+
+.viewer .gate-unavailable {
+  padding-top: 60px;
+}
+
+/* The canvas's own curves: a card that tips up into place, and a 22 px rise. */
+@keyframes ss-gate-card-in {
+  from { opacity: 0; transform: perspective(800px) rotateX(18deg) translateY(30px) scale(.95); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes ss-gate-fade-up {
+  from { opacity: 0; transform: translateY(22px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes ss-gate-load {
+  from { width: 0; }
+  to { width: 100%; }
+}

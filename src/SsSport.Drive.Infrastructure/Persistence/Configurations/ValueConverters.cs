@@ -19,6 +19,9 @@ internal static class ValueConverters
     /// <summary>Gets the converter for <see cref="EmailAddress"/> ↔ text.</summary>
     public static ValueConverter<EmailAddress?, string> Email { get; } = new(email => email!.Value, value => EmailAddress.Create(value));
 
+    /// <summary>Gets the converter for a required <see cref="EmailAddress"/> ↔ text.</summary>
+    public static ValueConverter<EmailAddress, string> RequiredEmail { get; } = new(email => email.Value, value => EmailAddress.Create(value));
+
     /// <summary>Gets the converter for <see cref="Role"/> ↔ its name.</summary>
     public static ValueConverter<Role, string> Role { get; } = new(role => role.Name, value => Domain.Users.Role.FromName(value));
 

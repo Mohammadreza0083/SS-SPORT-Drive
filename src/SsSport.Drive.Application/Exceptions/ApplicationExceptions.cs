@@ -82,6 +82,43 @@ public sealed class ShareLinkUnavailableException : Exception
     }
 }
 
+/// <summary>The caller asked too often (e.g. for email codes, L-2). The API returns 429 with <see cref="Code"/> and <c>Retry-After</c>.</summary>
+public sealed class TooManyRequestsException : Exception
+{
+    /// <summary>Initializes the exception.</summary>
+    /// <param name="code">A stable code for clients, e.g. <c>email_code.too_many</c>.</param>
+    /// <param name="message">A short explanation.</param>
+    /// <param name="retryAfter">How long to wait; at least one second is reported.</param>
+    public TooManyRequestsException(string code, string message, TimeSpan retryAfter)
+        : base(message)
+    {
+        Code = code;
+        RetryAfter = retryAfter;
+    }
+
+    /// <summary>Gets the stable code.</summary>
+    public string Code { get; }
+
+    /// <summary>Gets how long to wait before trying again.</summary>
+    public TimeSpan RetryAfter { get; }
+}
+
+/// <summary>
+/// The viewer has no trusted device or session for a link and must pass the email gate (L-2). The API returns 401 with
+/// <see cref="Code"/>.
+/// </summary>
+public sealed class ViewerVerificationRequiredException : Exception
+{
+    /// <summary>The stable code clients see.</summary>
+    public const string Code = "viewer.verification_required";
+
+    /// <summary>Initializes the exception.</summary>
+    public ViewerVerificationRequiredException()
+        : base("Confirm your email to open this link.")
+    {
+    }
+}
+
 /// <summary>The caller is signed in but lacks a required role. The API returns 403.</summary>
 public sealed class ForbiddenAccessException : Exception
 {

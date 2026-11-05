@@ -5,19 +5,25 @@ using Hangfire.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Npgsql;
 using SsSport.Drive.Application.Abstractions.Drive;
+using SsSport.Drive.Application.Abstractions.Email;
 using SsSport.Drive.Application.Abstractions.Events;
 using SsSport.Drive.Application.Abstractions.Images;
 using SsSport.Drive.Application.Abstractions.Media;
 using SsSport.Drive.Application.Abstractions.Persistence;
+using SsSport.Drive.Application.Abstractions.Security;
 using SsSport.Drive.Application.Abstractions.Storage;
 using SsSport.Drive.Application.Telegram;
 using SsSport.Drive.Infrastructure.BackgroundJobs;
 using SsSport.Drive.Infrastructure.Drive;
 using SsSport.Drive.Infrastructure.Edge;
+using SsSport.Drive.Infrastructure.Email;
 using SsSport.Drive.Infrastructure.Images;
+using SsSport.Drive.Infrastructure.Links;
 using SsSport.Drive.Infrastructure.Persistence;
 using SsSport.Drive.Infrastructure.Storage;
 using SsSport.Drive.Infrastructure.Telegram;
@@ -36,7 +42,7 @@ public static class DependencyInjection
     /// <summary>
     /// Adds the shared PostgreSQL data source, the EF Core context, the persistence ports
     /// (unit of work + generic repository, one per request scope), the media bucket, the photo processor and the
-    /// Telegram adapters and the HLS edge-token issuer. The connection string is
+    /// Telegram adapters, the HLS edge-token issuer and the email gate's secrets and code email. The connection string is
     /// read lazily from configuration, so hosts and tests can supply it from any configuration source.
     /// </summary>
     /// <param name="services">The service collection to add to.</param>
@@ -95,6 +101,23 @@ public static class DependencyInjection
             .ValidateOnStart();
         services.AddSingleton<IHlsTokenIssuer, HmacHlsTokenIssuer>();
 
+        // The email gate (L-2): token and code hashes, and the code email (Resend, then Brevo).
+        services.AddOptions<ViewerOptions>()
+            .BindConfiguration(ViewerOptions.SectionName)
+            .Validate(options => options.TokenKey.Length == 0 || IsValidKey(options), "Viewer__TokenKey must be base64 of at least 32 random bytes.")
+            .ValidateOnStart();
+        services.AddSingleton<IViewerSecrets, HmacViewerSecrets>();
+        services.AddOptions<EmailOptions>()
+            .BindConfiguration(EmailOptions.SectionName)
+            .Validate<IHostEnvironment>(
+                (options, environment) => options.PickupDirectory.Length == 0 || !environment.IsProduction(),
+                "Email__PickupDirectory is for local development only; production must send real email.")
+            .ValidateOnStart();
+        services.AddSingleton<IEmailCodeSender>(provider => new EmailCodeSender(
+            provider.GetRequiredService<IOptions<EmailOptions>>(),
+            new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(5) }) { Timeout = TimeSpan.FromSeconds(15) },
+            provider.GetRequiredService<ILogger<EmailCodeSender>>()));
+
         services.AddTelegram();
         return services;
     }
@@ -142,6 +165,22 @@ public static class DependencyInjection
     {
         services.AddHostedService<BotNoticeServer>();
         return services;
+    }
+
+    /// <summary>Checks that the gate's key decodes to at least 32 bytes.</summary>
+    /// <param name="options">The settings.</param>
+    /// <returns><see langword="true"/> when the key can be used.</returns>
+    private static bool IsValidKey(ViewerOptions options)
+    {
+        try
+        {
+            options.KeyBytes();
+            return true;
+        }
+        catch (InvalidOperationException)
+        {
+            return false;
+        }
     }
 
     /// <summary>Reads the PostgreSQL connection string and fails with a clear message when it is missing.</summary>

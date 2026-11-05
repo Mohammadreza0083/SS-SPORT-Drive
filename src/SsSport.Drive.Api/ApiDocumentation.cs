@@ -45,6 +45,21 @@ public static class ApiDocumentation
                 Description = "Telegram Mini App sign-in: `tma <initData>`, where initData is `Telegram.WebApp.initData` exactly as Telegram " +
                     "gave it (URL-encoded, with its hash). Valid for 24 hours after Telegram issued it.",
             };
+            document.Components.SecuritySchemes[Links.ViewerGateEndpoints.DeviceSchemeName] = new OpenApiSecurityScheme
+            {
+                Type = SecuritySchemeType.ApiKey,
+                In = ParameterLocation.Header,
+                Name = Links.ViewerGateEndpoints.DeviceHeader,
+                Description = "A viewer's trusted device (L-2): the value of the browser's `__Host-ssd_dev` cookie, forwarded by the web app. " +
+                    "Issued by `POST /links/{code}/verify`, trusted 90 days per link.",
+            };
+            document.Components.SecuritySchemes[Links.ViewerGateEndpoints.SessionSchemeName] = new OpenApiSecurityScheme
+            {
+                Type = SecuritySchemeType.ApiKey,
+                In = ParameterLocation.Header,
+                Name = Links.ViewerGateEndpoints.SessionHeader,
+                Description = "A viewer's session (L-2): the value of the browser's `__Host-ssd_vs` cookie, forwarded by the web app. One day, one link.",
+            };
             return Task.CompletedTask;
         }));
 

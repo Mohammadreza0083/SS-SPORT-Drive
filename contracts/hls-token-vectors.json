@@ -2,7 +2,7 @@
   "description": "Shared test vectors for the HLS edge token (backlog V-5a). The .NET issuer must produce `token` exactly; the edge Worker must accept or reject each request as listed. See .claude/decisions.md \u00a76.",
   "format": "base64url(JSON {v,p,s,e}) + '.' + base64url(HMAC-SHA256(key, ascii(first part))); s = base64url(first 16 bytes of SHA-256(session cookie value)); e = expiry, Unix seconds; URL = /hls/{token}/{p}/{file}",
   "signingKeyBase64": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
-  "sessionCookieName": "ssd_vs",
+  "sessionCookieName": "__Host-ssd_vs",
   "issue": {
     "pathPrefix": "players/7f1c2a9e/videos/3b5d8c41/hls",
     "sessionCookie": "vs_9Jx2kQ7pL4mN8rT1",

@@ -77,7 +77,8 @@ public static class ShareLinkEndpoints
           "code": "Kq7mTx",
           "type": "Personal",
           "playerCount": 1,
-          "recipientHint": "m***@lube.it"
+          "recipientHint": "m***@lube.it",
+          "player": { "name": "Arash Tehrani", "position": "OPP", "nationality": { "code": "IR", "name": "Iran" } }
         }
         """;
 
@@ -197,8 +198,9 @@ public static class ShareLinkEndpoints
             .WithName("ResolveShareLink")
             .WithSummary("Check whether a personal link opens")
             .WithDescription(
-                "Public, no sign-in. The viewer site calls it for `/r/{code}`. An open link answers its type, how many players it shows and a masked " +
-                "hint of the recipient's first email, for the email gate (L-2); the players and videos come only after the gate. An unknown, malformed, " +
+                "Public, no sign-in. The viewer site calls it for `/r/{code}`. An open link answers its type, how many players it shows, a masked " +
+                "hint of the recipient's first email and, for a Personal link, the player's name, primary position and nationality for the gate card " +
+                "(L-2; `player` is null for a Roster). Photos, videos and files come only after the gate. An unknown, malformed, " +
                 "paused, revoked or expired code all answer the same 404 `share_link.unavailable` with the same text, so codes cannot be probed.")
             .Produces<ResolvedShareLinkDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
