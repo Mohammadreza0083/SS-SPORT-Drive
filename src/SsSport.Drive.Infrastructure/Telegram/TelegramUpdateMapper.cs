@@ -6,7 +6,8 @@ namespace SsSport.Drive.Infrastructure.Telegram;
 
 /// <summary>
 /// Turns a Telegram update into <see cref="HandleTelegramUpdateCommand"/>, for the webhook and for local polling alike.
-/// Only ids, the sender's profile, a bot command name and our button data are kept; free text is dropped.
+/// Only ids, the sender's profile, a bot command name, our button data and a typed message (for the chat flow, T-10a;
+/// never logged) are kept.
 /// </summary>
 public static partial class TelegramUpdateMapper
 {
@@ -29,6 +30,7 @@ public static partial class TelegramUpdateMapper
         {
             Sender = user is null ? null : new TelegramSender(user.Id, chatId ?? user.Id, user.Username, DisplayName(user)),
             BotCommand = ParseCommand(update.Message?.Text),
+            Text = update.Message?.Text is { } text && ParseCommand(text) is null && !text.StartsWith('/') ? text : null,
             CallbackData = update.CallbackQuery?.Data,
             CallbackQueryId = update.CallbackQuery?.Id,
             CallbackMessageId = update.CallbackQuery?.Message?.MessageId,
