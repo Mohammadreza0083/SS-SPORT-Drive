@@ -11,8 +11,26 @@ public sealed record DatabaseOptions
     /// <summary>The configuration section.</summary>
     public const string SectionName = "Database";
 
+    /// <summary>The pool size when <c>Database__MaxPoolSize</c> is not set (D-15).</summary>
+    public const int DefaultMaxPoolSize = 20;
+
+    /// <summary>The wait for a free connection when <c>Database__PoolTimeoutSeconds</c> is not set (D-15).</summary>
+    public const int DefaultPoolTimeoutSeconds = 5;
+
     /// <summary>Gets how long a SQL command may take before it is logged as slow, in milliseconds (D-14).</summary>
     public int SlowQueryThresholdMs { get; init; } = 500;
+
+    /// <summary>
+    /// Gets the most connections this process opens (D-15). Each host sets its share in its base settings, so the
+    /// API and the workers together stay under PostgreSQL's <c>max_connections</c>. It wins over the connection string.
+    /// </summary>
+    public int MaxPoolSize { get; init; } = DefaultMaxPoolSize;
+
+    /// <summary>
+    /// Gets how long, in seconds, opening a connection may take, including the wait for a free pooled one (D-15).
+    /// A full pool then fails fast as a busy database instead of holding the request. It wins over the connection string.
+    /// </summary>
+    public int PoolTimeoutSeconds { get; init; } = DefaultPoolTimeoutSeconds;
 }
 
 /// <summary>

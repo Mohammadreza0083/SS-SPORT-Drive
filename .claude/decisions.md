@@ -350,6 +350,12 @@ Standing rules for every feature. Each control gets tests, and nothing is commit
   - **Slow queries are logged:** a command that takes at least `Database__SlowQueryThresholdMs` (default **500 ms**) is a Warning, with its duration and its SQL text, never its parameter values.
   - The k6 run measures what SQL logging cost, in Production mode.
   - These levels carry over to Serilog when it is added; setting up Serilog is not part of D-14.
+- **Database connection pools (D-15, owner-approved 2026-11-06; found during D-14):**
+  - **Why:** every process could open Npgsql's default of 100 connections, which is also PostgreSQL's whole `max_connections`. Under load PostgreSQL refused new ones ("too many clients already") and requests failed with 500.
+  - **One capped pool per process:** `Database__MaxPoolSize` sets it, and it wins over any pool size in the connection string. The **API has 40** (its Hangfire server shares them), the **workers 20**, each set in its own base `appsettings.json`. That leaves 40 of PostgreSQL's 100 for `migrate`, a `psql` session and the reserved superuser slots. A test keeps API + workers at 80 or less. It is never set in the shared `.env`, because both hosts read it. Allowed range: 1-90; the default is 20.
+  - **Fail fast:** opening a connection, including the wait for a free pooled one, takes at most `Database__PoolTimeoutSeconds` (default **5 s**, range 1-60).
+  - **Busy database is a 503:** a full pool or a full server is answered with **503**, `code: database.busy` and `Retry-After: 1`, logged as a **Warning** without SQL or connection details.
+  - **No PgBouncer and no higher `max_connections` for now.** They come back if the API ever runs as several instances.
 - **Concurrent edits and log levels (D-13, owner-approved 2026-10-29; found by the K-8 benchmark):**
   - **Concurrent saves:** when two requests save the same aggregate at once, PostgreSQL's `xmin` check still refuses the later save, so nothing is overwritten. The unit of work now reports that as `ConcurrencyConflictException`, and the API answers **409** with `code: concurrency.conflict` (it used to be a raw 500). The Mini App tells the analyst to try again.
   - **Log levels** (`LoggingBehavior`): refusals the API answers on purpose (401, 403, 400, 404, 409, 422) are logged at **Information**, with the reason as a structured `Reason` property (the rule code or the refusal type) and no stack trace. An outside service being down (503) is a **Warning**. Only real failures are **Error**, so Grafana error alerts mean something.
@@ -435,6 +441,7 @@ Standing rules for every feature. Each control gets tests, and nothing is commit
 - **Local ports are bound to 127.0.0.1 only.** The API's host port is **5080**, because 8080 is often taken on developer machines.
 
 - **VPS purchase deferred (S-1, owner, 2026-10-24):** it is too early to buy the VPS. Everything runs locally in Docker until deploy work (Epic 9) begins.
+- **The bot works by chat too (T-10, owner, 2026-11-06):** the Mini App must stay optional. Today "New player" and "My players" only answer with a button that opens the Mini App. The owner wants analysts to be able to add a player and see their players by talking to the bot in the chat, with an "Open Mini App" button offered next to it (also as the chat's main Mini App button). The chat flow is designed with the owner before it is built.
 - **Mini App UI (T-9, owner-approved 2026-10-31):**
   - **Design first:** the Mini App had no styling. Five artboards were added to the design canvas (`MiniHome`, `MiniNewPlayer`, `MiniPhoto`, `MiniPlayers`, `MiniPlayer` with the edit-video sheet) and the owner approved them before any code.
   - **Telegram theme, SS-SPORT accents:** colours come from Telegram's `--tg-theme-*` variables, with the canvas's dark palette as the fallback; SS-SPORT red `#CC0000` stays the action colour in every theme.

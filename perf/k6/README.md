@@ -246,7 +246,7 @@ Since D-14, EF Core logs at Warning: no SQL command is logged unless it fails or
 
 **Absolute numbers are higher than in the T-6c run** because another session's test suite was running on the machine the whole time. That is also why some thresholds failed in both runs, and why only the side-by-side comparison counts here. Re-measure on staging (K-1).
 
-**Found on the way: database connections run out under load.** In one run, PostgreSQL refused new connections ("too many clients already"), and a few requests failed. Npgsql's pool allows 100 connections by default, which is also PostgreSQL's default `max_connections`, a few of them reserved. The API, Hangfire and a `psql` session share that limit. This is tracked as its own task (D-15).
+**Found on the way: database connections run out under load.** In one run, PostgreSQL refused new connections ("too many clients already"), and a few requests failed. Npgsql's pool allows 100 connections by default, which is also PostgreSQL's default `max_connections`, a few of them reserved. The API, Hangfire and a `psql` session share that limit. Fixed in D-15: the API's pool is capped at 40 and the workers' at 20, and a busy database is answered with 503 `database.busy` instead of 500. Re-run a `load` scenario to confirm no "too many clients" errors.
 
 ### Notes
 

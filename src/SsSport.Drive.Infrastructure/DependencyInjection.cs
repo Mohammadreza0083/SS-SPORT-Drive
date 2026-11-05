@@ -43,7 +43,17 @@ public static class DependencyInjection
     /// <returns>The same service collection, for chaining.</returns>
     public static IServiceCollection AddInfrastructure(this IServiceCollection services)
     {
-        services.AddSingleton(provider => NpgsqlDataSource.Create(ReadConnectionString(provider.GetRequiredService<IConfiguration>())));
+        // One pool per process, capped by Database__MaxPoolSize (D-15), so the API and the workers share PostgreSQL's
+        // connections instead of each trying to take all of them.
+        services.AddSingleton(provider =>
+        {
+            var database = provider.GetRequiredService<IOptions<DatabaseOptions>>().Value;
+            return NpgsqlDataSource.Create(new NpgsqlConnectionStringBuilder(ReadConnectionString(provider.GetRequiredService<IConfiguration>()))
+            {
+                MaxPoolSize = database.MaxPoolSize,
+                Timeout = database.PoolTimeoutSeconds,
+            });
+        });
         services.AddSingleton<PostgreSqlHealthCheck>();
         services.AddOptions<DatabaseAppRoleOptions>().BindConfiguration(DatabaseAppRoleOptions.SectionName);
 
@@ -53,6 +63,8 @@ public static class DependencyInjection
         services.AddOptions<DatabaseOptions>()
             .BindConfiguration(DatabaseOptions.SectionName)
             .Validate(options => options.SlowQueryThresholdMs > 0, "Database__SlowQueryThresholdMs must be a positive number of milliseconds.")
+            .Validate(options => options.MaxPoolSize is >= 1 and <= 90, "Database__MaxPoolSize must be 1-90 connections (PostgreSQL allows 100 in all).")
+            .Validate(options => options.PoolTimeoutSeconds is >= 1 and <= 60, "Database__PoolTimeoutSeconds must be 1-60 seconds.")
             .ValidateOnStart();
         services.AddSingleton<SlowQueryInterceptor>();
         services.AddDbContext<AppDbContext>((provider, options) => options
