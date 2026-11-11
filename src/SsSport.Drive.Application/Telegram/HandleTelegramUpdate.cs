@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using SsSport.Drive.Application.Abstractions.Messaging;
 using SsSport.Drive.Application.Telegram.Access;
+using SsSport.Drive.Application.Telegram.Chat;
 using SsSport.Drive.Application.Telegram.Photos;
 
 namespace SsSport.Drive.Application.Telegram;
@@ -40,8 +41,8 @@ public sealed record TelegramSender(long UserId, long ChatId, string? Username, 
 
 /// <summary>
 /// An authenticated update from Telegram (webhook or local polling), reduced to what the application needs: ids, the
-/// sender, a bot command name (<c>start</c>) or the data of one of our buttons. Free message text never travels in this
-/// command, so it can never reach the logs.
+/// sender, a bot command name (<c>start</c>), the data of one of our buttons, or a typed message for the chat flow
+/// (T-10a). The typed text is never logged; it is read only while a chat question waits for it.
 /// </summary>
 /// <param name="UpdateId">Telegram's <c>update_id</c>.</param>
 /// <param name="Kind">The update type, e.g. <c>Message</c> or <c>CallbackQuery</c>.</param>
@@ -53,6 +54,11 @@ public sealed record HandleTelegramUpdateCommand(long UpdateId, string Kind, lon
 
     /// <summary>Gets the bot command without slash or bot name (e.g. <c>start</c>), for messages that start with one.</summary>
     public string? BotCommand { get; init; }
+
+    /// <summary>
+    /// Gets a typed message that is not a bot command, for the chat flow (T-10a); <see langword="null"/> otherwise. Never logged.
+    /// </summary>
+    public string? Text { get; init; }
 
     /// <summary>Gets a pressed button's data, for callback queries.</summary>
     public string? CallbackData { get; init; }
@@ -84,14 +90,17 @@ public sealed class HandleTelegramUpdateCommandValidator : AbstractValidator<Han
     {
         RuleFor(command => command.UpdateId).GreaterThanOrEqualTo(0);
         RuleFor(command => command.Kind).NotEmpty();
+        RuleFor(command => command.Text).MaximumLength(4096);
     }
 }
 
 /// <summary>
-/// Takes in an update once (records its id and logs ids only), then routes it: <c>/help</c> → help; any other message
-/// → <see cref="StartBotCommand"/>; buttons → access request, review, or the menu. The New player and My players buttons (and <c>/new</c>,
-/// <c>/players</c> for active members) answer with a button that opens that Mini App page. State changes run as their own
-/// commands, so they are saved (and their events sent) before the bot replies.
+/// Takes in an update once (records its id and logs ids only), then routes it: <c>/help</c> → help; the New player
+/// button, <c>/new</c>, <c>/cancel</c>, the chat's buttons and answers to an open chat question →
+/// <see cref="ChatNewPlayerCommand"/> (T-10a); any other message → <see cref="StartBotCommand"/>; buttons → access
+/// request, review, or the menu. The My players button (and <c>/players</c> for active members) answers with a button
+/// that opens that Mini App page. State changes run as their own commands, so they are saved (and their events sent)
+/// before the bot replies.
 /// </summary>
 /// <param name="inbox">The update inbox.</param>
 /// <param name="sender">Sends the access commands.</param>
@@ -128,14 +137,28 @@ public sealed partial class HandleTelegramUpdateCommandHandler(
             {
                 await OnPhotoButtonAsync(from, data, callbackId, request, cancellationToken);
             }
+            else if (request.CallbackData is { } chatData && request.CallbackQueryId is { } chatButtonId && ChatCallbacks.IsChat(chatData))
+            {
+                await OnChatButtonAsync(from, chatData, chatButtonId, request.CallbackMessageId, cancellationToken);
+            }
             else if (request.CallbackData is { } buttonData && request.CallbackQueryId is { } buttonId)
             {
                 await OnButtonAsync(from, buttonData, buttonId, request.CallbackMessageId, cancellationToken);
             }
             else if (request.Kind == "Message" && request.Photo is { } photo)
             {
-                var reply = await sender.Send(new ReceiveBotPhotoCommand(from, photo, request.ReplyToMessageId, null), cancellationToken);
-                await bot.SendReplyAsync(from.ChatId, request.MessageId, reply.Text, reply.Keyboard, cancellationToken);
+                if (!await SendChatAsync(from, new ChatInput(ChatInputKind.Photo, Photo: photo), cancellationToken))
+                {
+                    var reply = await sender.Send(new ReceiveBotPhotoCommand(from, photo, request.ReplyToMessageId, null), cancellationToken);
+                    await bot.SendReplyAsync(from.ChatId, request.MessageId, reply.Text, reply.Keyboard, cancellationToken);
+                }
+            }
+            else if (request.Kind == "Message" && ChatInputOf(request) is { } chatInput)
+            {
+                if (!await SendChatAsync(from, chatInput, cancellationToken))
+                {
+                    await OnMessageAsync(from, request.BotCommand, cancellationToken);
+                }
             }
             else if (request.Kind == "Message")
             {
@@ -172,9 +195,9 @@ public sealed partial class HandleTelegramUpdateCommandHandler(
             _ => ((string?)null, (BotKeyboard?)null),
         };
 
-        if (status.State == BotUserState.Active && MiniAppPageOf(botCommand) is { } miniAppPage)
+        if (status.State == BotUserState.Active && botCommand == "players")
         {
-            await SendMiniAppLinkAsync(from, miniAppPage, null, cancellationToken);
+            await SendMyPlayersLinkAsync(from, null, cancellationToken);
             return;
         }
 
@@ -215,11 +238,12 @@ public sealed partial class HandleTelegramUpdateCommandHandler(
                 return;
 
             case BotCallbacks.NewPlayer:
-                await SendMiniAppLinkAsync(from, MiniAppPage.NewPlayer, callbackId, cancellationToken);
+                await bot.AnswerCallbackAsync(callbackId, null, false, cancellationToken);
+                await SendChatAsync(from, new ChatInput(ChatInputKind.Start), cancellationToken);
                 return;
 
             case BotCallbacks.MyPlayers:
-                await SendMiniAppLinkAsync(from, MiniAppPage.MyPlayers, callbackId, cancellationToken);
+                await SendMyPlayersLinkAsync(from, callbackId, cancellationToken);
                 return;
         }
 
@@ -251,31 +275,64 @@ public sealed partial class HandleTelegramUpdateCommandHandler(
         await ReplyAsync(from, messageId, outcomeText, null, cancellationToken);
     }
 
-    /// <summary>Tells which Mini App page a bot command opens.</summary>
-    /// <param name="botCommand">The bot command, if any.</param>
-    /// <returns>The page, or <see langword="null"/> for other commands.</returns>
-    private static MiniAppPage? MiniAppPageOf(string? botCommand) => botCommand switch
+    /// <summary>Tells what a message is for the new-player chat: <c>/new</c>, <c>/cancel</c> or typed text.</summary>
+    /// <param name="request">The update.</param>
+    /// <returns>The chat input, or <see langword="null"/> for other messages.</returns>
+    private static ChatInput? ChatInputOf(HandleTelegramUpdateCommand request) => request.BotCommand switch
     {
-        "new" => MiniAppPage.NewPlayer,
-        "players" => MiniAppPage.MyPlayers,
+        "new" => new ChatInput(ChatInputKind.Start),
+        "cancel" => new ChatInput(ChatInputKind.Cancel),
+        null when request.Text is { } text => new ChatInput(ChatInputKind.Text, Text: text),
         _ => null,
     };
 
+    /// <summary>Runs one step of the new-player chat and sends its answer as a new message.</summary>
+    /// <param name="from">The sender.</param>
+    /// <param name="input">What the sender did.</param>
+    /// <param name="cancellationToken">Cancels the work.</param>
+    /// <returns><see langword="false"/> when the input was not for the chat, so the caller handles it as before.</returns>
+    private async Task<bool> SendChatAsync(TelegramSender from, ChatInput input, CancellationToken cancellationToken)
+    {
+        var reply = await sender.Send(new ChatNewPlayerCommand(from, input), cancellationToken);
+        if (reply?.Text is { } text)
+        {
+            await bot.SendAsync(from.ChatId, text, reply.Keyboard, cancellationToken);
+        }
+
+        return reply is not null;
+    }
+
     /// <summary>
-    /// Sends a button that opens a Mini App page. Without a configured Mini App URL, a button press is answered with
-    /// a note instead (the Mini App guards access itself).
+    /// Handles a button of the new-player chat (T-10a): a short note on the press, and the message the button is on
+    /// edited into the next question.
+    /// </summary>
+    /// <param name="from">The presser.</param>
+    /// <param name="data">The button data.</param>
+    /// <param name="callbackId">The press, to answer.</param>
+    /// <param name="messageId">The message the button is on.</param>
+    /// <param name="cancellationToken">Cancels the work.</param>
+    /// <returns>A task that completes when the press is answered.</returns>
+    private async Task OnChatButtonAsync(TelegramSender from, string data, string callbackId, int? messageId, CancellationToken cancellationToken)
+    {
+        var reply = await sender.Send(new ChatNewPlayerCommand(from, new ChatInput(ChatInputKind.Button, Data: data)), cancellationToken);
+        await bot.AnswerCallbackAsync(callbackId, reply?.Toast, false, cancellationToken);
+        if (reply?.Text is { } text)
+        {
+            await ReplyAsync(from, messageId, text, reply.Keyboard, cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// Sends a button that opens My players in the Mini App (in the chat with T-10b). Without a configured Mini App URL,
+    /// a button press is answered with a note instead (the Mini App guards access itself).
     /// </summary>
     /// <param name="to">The chat.</param>
-    /// <param name="page">The page.</param>
     /// <param name="callbackId">The button press to answer, or <see langword="null"/> for a command.</param>
     /// <param name="cancellationToken">Cancels the calls.</param>
     /// <returns>A task that completes when the reply is sent.</returns>
-    private async Task SendMiniAppLinkAsync(TelegramSender to, MiniAppPage page, string? callbackId, CancellationToken cancellationToken)
+    private async Task SendMyPlayersLinkAsync(TelegramSender to, string? callbackId, CancellationToken cancellationToken)
     {
-        var (path, text, label) = page == MiniAppPage.MyPlayers
-            ? ("players", BotTexts.OpenMyPlayers, BotTexts.OpenMyPlayersButton)
-            : ("new", BotTexts.OpenNewPlayer, BotTexts.OpenNewPlayerButton);
-        var url = miniApp.PageUrl(path);
+        var url = miniApp.PageUrl("players");
         if (callbackId is not null)
         {
             await bot.AnswerCallbackAsync(callbackId, url is null ? BotTexts.MiniAppNotSetUp : null, false, cancellationToken);
@@ -283,7 +340,7 @@ public sealed partial class HandleTelegramUpdateCommandHandler(
 
         if (url is not null)
         {
-            await bot.SendAsync(to.ChatId, text, BotKeyboard.Column(BotButton.OpenMiniApp(label, url)), cancellationToken);
+            await bot.SendAsync(to.ChatId, BotTexts.OpenMyPlayers, BotKeyboard.Column(BotButton.OpenMiniApp(BotTexts.OpenMyPlayersButton, url)), cancellationToken);
         }
         else if (callbackId is null)
         {
@@ -341,14 +398,4 @@ public sealed partial class HandleTelegramUpdateCommandHandler(
     /// <param name="UpdateKind">The update type.</param>
     [LoggerMessage(Level = LogLevel.Debug, Message = "Telegram update {UpdateId} ({UpdateKind}) was already received; skipped")]
     private static partial void LogDuplicate(ILogger logger, long UpdateId, string UpdateKind);
-}
-
-/// <summary>A Mini App page the bot links to.</summary>
-internal enum MiniAppPage
-{
-    /// <summary>The new-player form (<c>/miniapp/new</c>).</summary>
-    NewPlayer,
-
-    /// <summary>My players (<c>/miniapp/players</c>).</summary>
-    MyPlayers,
 }

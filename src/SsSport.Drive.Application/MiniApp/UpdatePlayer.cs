@@ -178,19 +178,45 @@ public sealed class AddPlayerFolderCommandHandler(
     /// <exception cref="NotFoundException">The player does not exist.</exception>
     /// <exception cref="Domain.Primitives.DomainException">The link or the folder cannot be used.</exception>
     /// <exception cref="ServiceUnavailableException">Google Drive cannot be reached.</exception>
-    public async Task<DriveFolderDto> Handle(AddPlayerFolderCommand request, CancellationToken cancellationToken)
+    public async Task<DriveFolderDto> Handle(AddPlayerFolderCommand request, CancellationToken cancellationToken) =>
+        (await PlayerFolders.AddAsync(players, folders, drive, request.PlayerId, request.DriveFolderUrl, timeProvider.GetUtcNow(), cancellationToken)).ToDto();
+}
+
+/// <summary>Adds a Drive folder to a known player; shared by the Mini App (T-5) and the bot chat (T-10a).</summary>
+internal static class PlayerFolders
+{
+    /// <summary>Checks the player and the folder, then links the folder under its Drive name (the caller's transaction saves it).</summary>
+    /// <param name="players">The players.</param>
+    /// <param name="folders">The linked folders.</param>
+    /// <param name="drive">Reads the folder with the service account.</param>
+    /// <param name="playerId">The player.</param>
+    /// <param name="driveFolderUrl">The Drive folder link.</param>
+    /// <param name="now">The current time (UTC).</param>
+    /// <param name="cancellationToken">Cancels the work.</param>
+    /// <returns>The linked folder.</returns>
+    /// <exception cref="NotFoundException">The player does not exist.</exception>
+    /// <exception cref="Domain.Primitives.DomainException">The link or the folder cannot be used.</exception>
+    /// <exception cref="ServiceUnavailableException">Google Drive cannot be reached.</exception>
+    public static async Task<DriveFolder> AddAsync(
+        IRepository<Player, Guid> players,
+        IRepository<DriveFolder, Guid> folders,
+        IDriveFolderReader drive,
+        Guid playerId,
+        string? driveFolderUrl,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
     {
-        if (!await players.AnyAsync(new PlayerByIdReadOnlySpec(request.PlayerId), cancellationToken))
+        if (!await players.AnyAsync(new PlayerByIdReadOnlySpec(playerId), cancellationToken))
         {
             throw new NotFoundException("Player");
         }
 
-        var link = DriveFolderLink.Create(request.DriveFolderUrl);
+        var link = DriveFolderLink.Create(driveFolderUrl);
         await DriveFolderChecks.EnsureFreeAsync(folders, link.FolderId, cancellationToken);
         var summary = await DriveFolderChecks.ReadUsableAsync(drive, link.FolderId, cancellationToken);
-        var folder = DriveFolder.Link(request.PlayerId, link.FolderId, summary.Name!, timeProvider.GetUtcNow());
+        var folder = DriveFolder.Link(playerId, link.FolderId, summary.Name!, now);
         folders.Add(folder);
-        return folder.ToDto();
+        return folder;
     }
 }
 

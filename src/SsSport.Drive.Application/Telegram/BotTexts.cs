@@ -63,12 +63,6 @@ public static class BotTexts
     /// <summary>Gets the "OpenMyPlayersButton" text.</summary>
     public static string OpenMyPlayersButton => Get(nameof(OpenMyPlayersButton));
 
-    /// <summary>Gets the "OpenNewPlayer" text.</summary>
-    public static string OpenNewPlayer => Get(nameof(OpenNewPlayer));
-
-    /// <summary>Gets the "OpenNewPlayerButton" text.</summary>
-    public static string OpenNewPlayerButton => Get(nameof(OpenNewPlayerButton));
-
     /// <summary>Gets the "MiniAppNotSetUp" text.</summary>
     public static string MiniAppNotSetUp => Get(nameof(MiniAppNotSetUp));
 
@@ -211,6 +205,190 @@ public static class BotTexts
     /// <param name="args">The values for its placeholders.</param>
     /// <returns>The text.</returns>
     public static string FormatWelcomeBack(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("WelcomeBack"), args);
+
+    /// <summary>Gets the "ChatCategoryPrompt" text (T-10a chat).</summary>
+    public static string ChatCategoryPrompt => Get(nameof(ChatCategoryPrompt));
+
+    /// <summary>Gets the "ChatNamePrompt" text (T-10a chat).</summary>
+    public static string ChatNamePrompt => Get(nameof(ChatNamePrompt));
+
+    /// <summary>Gets the "ChatNationalityPrompt" text (T-10a chat).</summary>
+    public static string ChatNationalityPrompt => Get(nameof(ChatNationalityPrompt));
+
+    /// <summary>Gets the "ChatNationalityPick" text (T-10a chat).</summary>
+    public static string ChatNationalityPick => Get(nameof(ChatNationalityPick));
+
+    /// <summary>Formats the "ChatNationalityNone" text (T-10a chat).</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatChatNationalityNone(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("ChatNationalityNone"), args);
+
+    /// <summary>Formats the "ChatPositionsPrompt" text (T-10a chat).</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatChatPositionsPrompt(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("ChatPositionsPrompt"), args);
+
+    /// <summary>Gets the "ChatNoneChosen" text (T-10a chat).</summary>
+    public static string ChatNoneChosen => Get(nameof(ChatNoneChosen));
+
+    /// <summary>Gets the "ChatPositionsNone" text (T-10a chat).</summary>
+    public static string ChatPositionsNone => Get(nameof(ChatPositionsNone));
+
+    /// <summary>Gets the "ChatPositionsMax" text (T-10a chat).</summary>
+    public static string ChatPositionsMax => Get(nameof(ChatPositionsMax));
+
+    /// <summary>Gets the "ChatVolleyboxPrompt" text (T-10a chat).</summary>
+    public static string ChatVolleyboxPrompt => Get(nameof(ChatVolleyboxPrompt));
+
+    /// <summary>Formats the "ChatVolleyboxExisting" text (T-10a chat).</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatChatVolleyboxExisting(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("ChatVolleyboxExisting"), args);
+
+    /// <summary>Formats the "ChatAddFolderButton" text (T-10a chat).</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatChatAddFolderButton(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("ChatAddFolderButton"), args);
+
+    /// <summary>Gets the "ChatUpdateInMiniAppButton" text (T-10a chat).</summary>
+    public static string ChatUpdateInMiniAppButton => Get(nameof(ChatUpdateInMiniAppButton));
+
+    /// <summary>Gets the "ChatOtherLinkButton" text (T-10a chat).</summary>
+    public static string ChatOtherLinkButton => Get(nameof(ChatOtherLinkButton));
+
+    /// <summary>Gets the "ChatDrivePrompt" text (T-10a chat).</summary>
+    public static string ChatDrivePrompt => Get(nameof(ChatDrivePrompt));
+
+    /// <summary>Formats the "ChatDriveForExistingPrompt" text (T-10a chat).</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatChatDriveForExistingPrompt(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("ChatDriveForExistingPrompt"), args);
+
+    /// <summary>Formats the "ChatDriveFound" text (T-10a chat).</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatChatDriveFound(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("ChatDriveFound"), args);
+
+    /// <summary>Formats the "ChatDriveTaken" text (T-10a chat).</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatChatDriveTaken(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("ChatDriveTaken"), args);
+
+    /// <summary>Gets the "ChatPhotoPrompt" text (T-10a chat).</summary>
+    public static string ChatPhotoPrompt => Get(nameof(ChatPhotoPrompt));
+
+    /// <summary>Gets the "ChatSendPhotoOrSkip" text (T-10a chat).</summary>
+    public static string ChatSendPhotoOrSkip => Get(nameof(ChatSendPhotoOrSkip));
+
+    /// <summary>Gets the "ChatUseButtons" text (T-10a chat).</summary>
+    public static string ChatUseButtons => Get(nameof(ChatUseButtons));
+
+    /// <summary>Formats the "ChatSummary" text (T-10a chat).</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatChatSummary(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("ChatSummary"), args);
+
+    /// <summary>Gets the "ChatPhotoAdded" text (T-10a chat).</summary>
+    public static string ChatPhotoAdded => Get(nameof(ChatPhotoAdded));
+
+    /// <summary>Gets the "ChatPhotoLater" text (T-10a chat).</summary>
+    public static string ChatPhotoLater => Get(nameof(ChatPhotoLater));
+
+    /// <summary>Gets the "ChatIncomplete" text (T-10a chat).</summary>
+    public static string ChatIncomplete => Get(nameof(ChatIncomplete));
+
+    /// <summary>Formats the "ChatCreated" text (T-10a chat).</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatChatCreated(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("ChatCreated"), args);
+
+    /// <summary>Formats the "ChatFolderAdded" text (T-10a chat).</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatChatFolderAdded(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("ChatFolderAdded"), args);
+
+    /// <summary>Gets the "ChatCancelled" text (T-10a chat).</summary>
+    public static string ChatCancelled => Get(nameof(ChatCancelled));
+
+    /// <summary>Gets the "ChatNothingToCancel" text (T-10a chat).</summary>
+    public static string ChatNothingToCancel => Get(nameof(ChatNothingToCancel));
+
+    /// <summary>Gets the "ChatResume" text (T-10a chat).</summary>
+    public static string ChatResume => Get(nameof(ChatResume));
+
+    /// <summary>Gets the "ChatStaleButton" text (T-10a chat).</summary>
+    public static string ChatStaleButton => Get(nameof(ChatStaleButton));
+
+    /// <summary>Gets the "ChatTooLong" text (T-10a chat).</summary>
+    public static string ChatTooLong => Get(nameof(ChatTooLong));
+
+    /// <summary>Formats the "ChatProblem" text (T-10a chat).</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatChatProblem(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("ChatProblem"), args);
+
+    /// <summary>Gets the "ChatDriveUnavailable" text (T-10a chat).</summary>
+    public static string ChatDriveUnavailable => Get(nameof(ChatDriveUnavailable));
+
+    /// <summary>Gets the "ChatEditPick" text (T-10a chat).</summary>
+    public static string ChatEditPick => Get(nameof(ChatEditPick));
+
+    /// <summary>Gets the "ChatNeedsAccess" text (T-10a chat).</summary>
+    public static string ChatNeedsAccess => Get(nameof(ChatNeedsAccess));
+
+    /// <summary>Gets the "ChatContinueButton" text (T-10a chat).</summary>
+    public static string ChatContinueButton => Get(nameof(ChatContinueButton));
+
+    /// <summary>Gets the "ChatStartOverButton" text (T-10a chat).</summary>
+    public static string ChatStartOverButton => Get(nameof(ChatStartOverButton));
+
+    /// <summary>Gets the "ChatMenButton" text (T-10a chat).</summary>
+    public static string ChatMenButton => Get(nameof(ChatMenButton));
+
+    /// <summary>Gets the "ChatWomenButton" text (T-10a chat).</summary>
+    public static string ChatWomenButton => Get(nameof(ChatWomenButton));
+
+    /// <summary>Gets the "ChatBackButton" text (T-10a chat).</summary>
+    public static string ChatBackButton => Get(nameof(ChatBackButton));
+
+    /// <summary>Gets the "ChatCancelButton" text (T-10a chat).</summary>
+    public static string ChatCancelButton => Get(nameof(ChatCancelButton));
+
+    /// <summary>Gets the "ChatDoneButton" text (T-10a chat).</summary>
+    public static string ChatDoneButton => Get(nameof(ChatDoneButton));
+
+    /// <summary>Gets the "ChatSkipButton" text (T-10a chat).</summary>
+    public static string ChatSkipButton => Get(nameof(ChatSkipButton));
+
+    /// <summary>Gets the "ChatCreateButton" text (T-10a chat).</summary>
+    public static string ChatCreateButton => Get(nameof(ChatCreateButton));
+
+    /// <summary>Gets the "ChatEditButton" text (T-10a chat).</summary>
+    public static string ChatEditButton => Get(nameof(ChatEditButton));
+
+    /// <summary>Gets the "ChatOpenMiniAppButton" text (T-10a chat).</summary>
+    public static string ChatOpenMiniAppButton => Get(nameof(ChatOpenMiniAppButton));
+
+    /// <summary>Gets the "ChatFieldCategory" text (T-10a chat).</summary>
+    public static string ChatFieldCategory => Get(nameof(ChatFieldCategory));
+
+    /// <summary>Gets the "ChatFieldName" text (T-10a chat).</summary>
+    public static string ChatFieldName => Get(nameof(ChatFieldName));
+
+    /// <summary>Gets the "ChatFieldNationality" text (T-10a chat).</summary>
+    public static string ChatFieldNationality => Get(nameof(ChatFieldNationality));
+
+    /// <summary>Gets the "ChatFieldPositions" text (T-10a chat).</summary>
+    public static string ChatFieldPositions => Get(nameof(ChatFieldPositions));
+
+    /// <summary>Gets the "ChatFieldVolleybox" text (T-10a chat).</summary>
+    public static string ChatFieldVolleybox => Get(nameof(ChatFieldVolleybox));
+
+    /// <summary>Gets the "ChatFieldDriveFolder" text (T-10a chat).</summary>
+    public static string ChatFieldDriveFolder => Get(nameof(ChatFieldDriveFolder));
+
+    /// <summary>Gets the "ChatFieldPhoto" text (T-10a chat).</summary>
+    public static string ChatFieldPhoto => Get(nameof(ChatFieldPhoto));
 
     /// <summary>Reads a text.</summary>
     /// <param name="key">The resource key.</param>

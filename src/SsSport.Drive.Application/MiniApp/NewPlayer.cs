@@ -115,6 +115,25 @@ internal static class PlayerUniqueness
         }
     }
 
+    /// <summary>Parses a Volleybox link and names the player who already has its id (Mini App and bot chat).</summary>
+    /// <param name="players">The players.</param>
+    /// <param name="url">The pasted link.</param>
+    /// <param name="cancellationToken">Cancels the query.</param>
+    /// <returns>The parsed id, the normalised URL and any existing player.</returns>
+    /// <exception cref="DomainException">The link is not a Volleybox player page.</exception>
+    public static async Task<VolleyboxCheckDto> CheckVolleyboxAsync(IRepository<Player, Guid> players, string? url, CancellationToken cancellationToken)
+    {
+        var profile = VolleyboxProfile.Create(url);
+        var existing = await players.FirstOrDefaultAsync(new PlayerByVolleyboxIdSpec(profile.PlayerId), cancellationToken);
+        return new VolleyboxCheckDto
+        {
+            VolleyboxId = profile.PlayerId,
+            Url = profile.Url,
+            ExistingPlayerId = existing?.Id,
+            ExistingPlayerName = existing?.Name?.Value,
+        };
+    }
+
     /// <summary>Finds the first free slug for a name: its slug, then <c>-2</c>, <c>-3</c>…</summary>
     /// <param name="players">The players.</param>
     /// <param name="name">The name.</param>
@@ -178,18 +197,8 @@ public sealed class CheckVolleyboxQueryHandler(IRepository<Player, Guid> players
     /// <param name="cancellationToken">Cancels the query.</param>
     /// <returns>The parsed id, the normalised URL and any existing player.</returns>
     /// <exception cref="DomainException">The link is not a Volleybox player page.</exception>
-    public async Task<VolleyboxCheckDto> Handle(CheckVolleyboxQuery request, CancellationToken cancellationToken)
-    {
-        var profile = VolleyboxProfile.Create(request.Url);
-        var existing = await players.FirstOrDefaultAsync(new PlayerByVolleyboxIdSpec(profile.PlayerId), cancellationToken);
-        return new VolleyboxCheckDto
-        {
-            VolleyboxId = profile.PlayerId,
-            Url = profile.Url,
-            ExistingPlayerId = existing?.Id,
-            ExistingPlayerName = existing?.Name?.Value,
-        };
-    }
+    public Task<VolleyboxCheckDto> Handle(CheckVolleyboxQuery request, CancellationToken cancellationToken) =>
+        PlayerUniqueness.CheckVolleyboxAsync(players, request.Url, cancellationToken);
 }
 
 /// <summary>
@@ -269,6 +278,37 @@ public sealed class CreatePlayerCommandHandler(
             throw new UnauthenticatedException();
         }
 
+        var player = await PlayerCreation.CreateAsync(request, analystId, players, folders, drive, timeProvider.GetUtcNow(), cancellationToken);
+        return player.ToDetailsDto();
+    }
+}
+
+/// <summary>Builds a new player from the form's fields; shared by the Mini App (T-4a) and the bot chat (T-10a).</summary>
+internal static class PlayerCreation
+{
+    /// <summary>
+    /// Builds the player, after checking that its Volleybox id and Drive folder are free and that the service account
+    /// can read the folder, and adds it with its folder to the unit of work (the caller's transaction saves them).
+    /// </summary>
+    /// <param name="request">The fields, already validated by <see cref="CreatePlayerCommandValidator"/>.</param>
+    /// <param name="analystId">The analyst who owns the player.</param>
+    /// <param name="players">The players.</param>
+    /// <param name="folders">The linked Drive folders.</param>
+    /// <param name="drive">Reads the Drive folder.</param>
+    /// <param name="now">The current time (UTC).</param>
+    /// <param name="cancellationToken">Cancels the work.</param>
+    /// <returns>The new player.</returns>
+    /// <exception cref="DomainException">A field breaks a rule, or the Volleybox id or the Drive folder is taken or unusable.</exception>
+    /// <exception cref="ServiceUnavailableException">Google Drive cannot be reached.</exception>
+    public static async Task<Player> CreateAsync(
+        CreatePlayerCommand request,
+        Guid analystId,
+        IRepository<Player, Guid> players,
+        IRepository<DriveFolder, Guid> folders,
+        IDriveFolderReader drive,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
         var name = FullName.Create(request.Name);
         var nationality = Nationality.Create(request.NationalityCode);
         var positions = PlayerPositions.Create(request.Positions!.Select(code => PositionParser.TryParse(code, out var position) ? position : default));
@@ -280,7 +320,6 @@ public sealed class CreatePlayerCommandHandler(
         await DriveFolderChecks.EnsureFreeAsync(folders, folderLink.FolderId, cancellationToken);
         var folder = await DriveFolderChecks.ReadUsableAsync(drive, folderLink.FolderId, cancellationToken);
 
-        var now = timeProvider.GetUtcNow();
         var player = Player.Create(Enum.Parse<PlayerCategory>(request.Category!, ignoreCase: true), now);
         player.Rename(name, await PlayerUniqueness.FreeSlugAsync(players, name, null, cancellationToken));
         player.ChangeNationality(nationality);
@@ -290,7 +329,7 @@ public sealed class CreatePlayerCommandHandler(
         players.Add(player);
 
         folders.Add(DriveFolder.Link(player.Id, folderLink.FolderId, folder.Name!, now));
-        return player.ToDetailsDto();
+        return player;
     }
 }
 
@@ -353,6 +392,46 @@ internal static class DriveFolderChecks
         }
     }
 
+    /// <summary>
+    /// Parses a pasted link; names the player a linked folder already belongs to (T-5), otherwise reads the folder from
+    /// Drive (Mini App and bot chat).
+    /// </summary>
+    /// <param name="folders">The linked folders.</param>
+    /// <param name="players">The players, to name the one a linked folder belongs to.</param>
+    /// <param name="drive">Reads the folder with the service account.</param>
+    /// <param name="url">The pasted link or folder id.</param>
+    /// <param name="cancellationToken">Cancels the work.</param>
+    /// <returns>The folder name and what is in it, or the player who already has it.</returns>
+    /// <exception cref="DomainException">The link or the folder cannot be used.</exception>
+    /// <exception cref="ServiceUnavailableException">Google Drive cannot be reached.</exception>
+    public static async Task<DriveFolderCheckDto> CheckAsync(
+        IRepository<DriveFolder, Guid> folders,
+        IRepository<Player, Guid> players,
+        IDriveFolderReader drive,
+        string? url,
+        CancellationToken cancellationToken)
+    {
+        var link = DriveFolderLink.Create(url);
+        if (await folders.FirstOrDefaultAsync(new LinkedDriveFolderSpec(link.FolderId), cancellationToken) is { } linked)
+        {
+            var owner = await players.FirstOrDefaultAsync(new PlayerByIdReadOnlySpec(linked.PlayerId), cancellationToken);
+            return new DriveFolderCheckDto { FolderId = link.FolderId, Name = linked.Name, ExistingPlayerId = linked.PlayerId, ExistingPlayerName = owner?.Name?.Value };
+        }
+
+        var summary = await ReadUsableAsync(drive, link.FolderId, cancellationToken);
+        return new DriveFolderCheckDto
+        {
+            FolderId = link.FolderId,
+            Name = summary.Name ?? string.Empty,
+            VideoCount = summary.VideoCount,
+            DocumentCount = summary.DocumentCount,
+            ScoutCount = summary.ScoutCount,
+            OtherCount = summary.OtherCount,
+            TotalBytes = summary.TotalBytes,
+            IsTruncated = summary.IsTruncated,
+        };
+    }
+
     /// <summary>Reads the folder with the service account and refuses it unless it is a readable folder in the Shared Drive.</summary>
     /// <param name="drive">The Drive reader.</param>
     /// <param name="folderId">The Drive folder id.</param>
@@ -398,26 +477,6 @@ public sealed class CheckDriveFolderQueryHandler(IRepository<DriveFolder, Guid> 
     /// <returns>The folder name and what is in it, or the player who already has it.</returns>
     /// <exception cref="DomainException">The link or the folder cannot be used.</exception>
     /// <exception cref="ServiceUnavailableException">Google Drive cannot be reached.</exception>
-    public async Task<DriveFolderCheckDto> Handle(CheckDriveFolderQuery request, CancellationToken cancellationToken)
-    {
-        var link = DriveFolderLink.Create(request.Url);
-        if (await folders.FirstOrDefaultAsync(new LinkedDriveFolderSpec(link.FolderId), cancellationToken) is { } linked)
-        {
-            var owner = await players.FirstOrDefaultAsync(new PlayerByIdReadOnlySpec(linked.PlayerId), cancellationToken);
-            return new DriveFolderCheckDto { FolderId = link.FolderId, Name = linked.Name, ExistingPlayerId = linked.PlayerId, ExistingPlayerName = owner?.Name?.Value };
-        }
-
-        var summary = await DriveFolderChecks.ReadUsableAsync(drive, link.FolderId, cancellationToken);
-        return new DriveFolderCheckDto
-        {
-            FolderId = link.FolderId,
-            Name = summary.Name ?? string.Empty,
-            VideoCount = summary.VideoCount,
-            DocumentCount = summary.DocumentCount,
-            ScoutCount = summary.ScoutCount,
-            OtherCount = summary.OtherCount,
-            TotalBytes = summary.TotalBytes,
-            IsTruncated = summary.IsTruncated,
-        };
-    }
+    public Task<DriveFolderCheckDto> Handle(CheckDriveFolderQuery request, CancellationToken cancellationToken) =>
+        DriveFolderChecks.CheckAsync(folders, players, drive, request.Url, cancellationToken);
 }

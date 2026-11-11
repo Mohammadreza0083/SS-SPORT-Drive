@@ -249,14 +249,16 @@ public sealed class MiniAppMyPlayersTests : IAsyncLifetime
         button.WebAppUrl.Should().Be(MiniAppUrl + "/players");
     }
 
-    /// <summary>The New player button opens the new-player form in the Mini App.</summary>
+    /// <summary>
+    /// The New player button starts the chat (T-10a) and still offers the new-player form in the Mini App.
+    /// </summary>
     [Fact]
-    public async Task Bot_opens_the_new_player_form()
+    public async Task Bot_offers_the_new_player_form()
     {
         await CallbackAsync(OwnerTelegramId, "menu:new");
 
         _bot.ToChat(OwnerTelegramId).Should().ContainSingle(call => call.Kind == "Send")
-            .Which.Keyboard!.Rows[0][0].WebAppUrl.Should().Be(MiniAppUrl + "/new");
+            .Which.Keyboard!.Rows.SelectMany(row => row).Should().Contain(button => button.WebAppUrl == MiniAppUrl + "/new");
     }
 
     /// <summary>/players from someone outside the team gets the welcome, not the Mini App.</summary>

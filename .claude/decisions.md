@@ -442,6 +442,14 @@ Standing rules for every feature. Each control gets tests, and nothing is commit
 
 - **VPS purchase deferred (S-1, owner, 2026-10-24):** it is too early to buy the VPS. Everything runs locally in Docker until deploy work (Epic 9) begins.
 - **The bot works by chat too (T-10, owner, 2026-11-06):** the Mini App must stay optional. Today "New player" and "My players" only answer with a button that opens the Mini App. The owner wants analysts to be able to add a player and see their players by talking to the bot in the chat, with an "Open Mini App" button offered next to it (also as the chat's main Mini App button). The chat flow is designed with the owner before it is built.
+  - **Design (owner-approved 2026-11-06):** the chat reuses the Mini App's MediatR commands and queries, so the rules are the same in both.
+  - **Split:** **T-10a** = conversation state + New player in the chat; **T-10b** = My players (paged list, filters, search) + player card. Each is its own PR.
+  - **New player steps:** category (buttons) → name (typed) → nationality (type part of the name, pick from matching buttons) → positions (toggle buttons, max 2, then Done) → Volleybox link (live check; a known player offers the T-5 choices) → Drive folder link (live check: name, files, size) → photo (min 800 px) or **Skip** → summary with **Create / Edit a field / Cancel**. Every step has **Back** and **Cancel**, and the first message also offers **Open in Mini App**. Create makes a Waiting player owned by the analyst, as the Mini App does.
+  - **Photo is optional:** a player without a photo stays on the waiting list and gets one later, in the chat or the Mini App.
+  - **Drafts:** stored in the `bot_conversations` table, one open conversation per user, kept **24 hours**. Coming back to an unfinished draft asks "Continue or start over?". `/cancel` or starting another flow closes it.
+  - **Free text:** the bot reads a message's text only while a conversation waits for typed input, at most 500 characters. It is validated on the server and never logged.
+  - **Only active team members** (analysts and admins) can use the flows.
+  - **Not in the chat for now:** editing player details and the edit-video sheet stay in the Mini App.
 - **Mini App UI (T-9, owner-approved 2026-10-31):**
   - **Design first:** the Mini App had no styling. Five artboards were added to the design canvas (`MiniHome`, `MiniNewPlayer`, `MiniPhoto`, `MiniPlayers`, `MiniPlayer` with the edit-video sheet) and the owner approved them before any code.
   - **Telegram theme, SS-SPORT accents:** colours come from Telegram's `--tg-theme-*` variables, with the canvas's dark palette as the fallback; SS-SPORT red `#CC0000` stays the action colour in every theme.

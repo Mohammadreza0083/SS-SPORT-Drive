@@ -46,6 +46,9 @@ How it works:
   <data name="Help" xml:space="preserve"><value>SS-SPORT Drive bot
 
 /start: open the menu or ask for access
+/new: add a new player here in the chat
+/cancel: stop adding a player
+/players: open your players
 /help: show this message
 
 Questions? info@ss-sport.co</value></data>
@@ -77,8 +80,72 @@ Questions? info@ss-sport.co</value></data>
   <data name="NextButton" xml:space="preserve"><value>Next ▶</value></data>
   <data name="OpenMyPlayers" xml:space="preserve"><value>👥 Your players, their files and what needs attention are in the Mini App.</value></data>
   <data name="OpenMyPlayersButton" xml:space="preserve"><value>Open My players</value></data>
-  <data name="OpenNewPlayer" xml:space="preserve"><value>➕ Add a new player in the Mini App.</value></data>
-  <data name="OpenNewPlayerButton" xml:space="preserve"><value>Open New player</value></data>
   <data name="MiniAppNotSetUp" xml:space="preserve"><value>The Mini App is not set up yet. Ask an admin.</value></data>
   <data name="FirstAdminNeedsEmail" xml:space="preserve"><value>You are the configured admin, but Telegram__AdminEmail is not set. Add it to the settings to finish the first-admin setup.</value></data>
+  <data name="ChatCategoryPrompt" xml:space="preserve"><value>➕ New player (1/7)
+Men or women?</value></data>
+  <data name="ChatNamePrompt" xml:space="preserve"><value>(2/7) What is the player's full name, in Latin letters?</value></data>
+  <data name="ChatNationalityPrompt" xml:space="preserve"><value>(3/7) Nationality? Type part of the country name in English, e.g. ira.</value></data>
+  <data name="ChatNationalityPick" xml:space="preserve"><value>Pick the country:</value></data>
+  <data name="ChatNationalityNone" xml:space="preserve"><value>No country matches "{0}". Type part of the English name, e.g. ira.</value></data>
+  <data name="ChatPositionsPrompt" xml:space="preserve"><value>(4/7) Positions? Pick one or two, primary first, then Done.
+Chosen: {0}</value></data>
+  <data name="ChatNoneChosen" xml:space="preserve"><value>none yet</value></data>
+  <data name="ChatPositionsNone" xml:space="preserve"><value>Pick at least one position.</value></data>
+  <data name="ChatPositionsMax" xml:space="preserve"><value>At most two positions.</value></data>
+  <data name="ChatVolleyboxPrompt" xml:space="preserve"><value>(5/7) Paste the player's Volleybox link.</value></data>
+  <data name="ChatVolleyboxExisting" xml:space="preserve"><value>{0} is already in SS-SPORT Drive (same Volleybox page). What would you like to do?</value></data>
+  <data name="ChatAddFolderButton" xml:space="preserve"><value>📁 Add a Drive folder to {0}</value></data>
+  <data name="ChatUpdateInMiniAppButton" xml:space="preserve"><value>✏ Update in the Mini App</value></data>
+  <data name="ChatOtherLinkButton" xml:space="preserve"><value>↩ Use another link</value></data>
+  <data name="ChatDrivePrompt" xml:space="preserve"><value>(6/7) Paste the link of the player's Google Drive folder.</value></data>
+  <data name="ChatDriveForExistingPrompt" xml:space="preserve"><value>Paste the link of the Google Drive folder to add to {0}.</value></data>
+  <data name="ChatDriveFound" xml:space="preserve"><value>📁 {0}: {1} videos, {2} documents, {3} scout files, {4}.</value></data>
+  <data name="ChatDriveTaken" xml:space="preserve"><value>This Drive folder already belongs to {0}. Paste another folder link.</value></data>
+  <data name="ChatPhotoPrompt" xml:space="preserve"><value>(7/7) Send the player's photo (at least 800 px; send it as a File to keep full quality), or press Skip.</value></data>
+  <data name="ChatSendPhotoOrSkip" xml:space="preserve"><value>Send a photo, or press Skip.</value></data>
+  <data name="ChatUseButtons" xml:space="preserve"><value>Please answer with the buttons above, or press Cancel.</value></data>
+  <data name="ChatSummary" xml:space="preserve"><value>Check the new player:
+
+Category: {0}
+Name: {1}
+Nationality: {2}
+Positions: {3}
+Volleybox: {4}
+Drive folder: {5}
+Photo: {6}
+
+Press Create to add the player.</value></data>
+  <data name="ChatPhotoAdded" xml:space="preserve"><value>✅ added</value></data>
+  <data name="ChatPhotoLater" xml:space="preserve"><value>none yet, add it later</value></data>
+  <data name="ChatIncomplete" xml:space="preserve"><value>Some answers are missing. Press Edit a field to fill them in.</value></data>
+  <data name="ChatCreated" xml:space="preserve"><value>✅ {0} was added. The player waits for an admin to publish.</value></data>
+  <data name="ChatFolderAdded" xml:space="preserve"><value>✅ The Drive folder {1} was added to {0}.</value></data>
+  <data name="ChatCancelled" xml:space="preserve"><value>✖ Cancelled. Nothing was saved.</value></data>
+  <data name="ChatNothingToCancel" xml:space="preserve"><value>There is nothing to cancel.</value></data>
+  <data name="ChatResume" xml:space="preserve"><value>You have an unfinished new player. Continue or start over?</value></data>
+  <data name="ChatStaleButton" xml:space="preserve"><value>This button is no longer active.</value></data>
+  <data name="ChatTooLong" xml:space="preserve"><value>That is too long: an answer can have at most 500 characters.</value></data>
+  <data name="ChatProblem" xml:space="preserve"><value>⚠️ {0}</value></data>
+  <data name="ChatDriveUnavailable" xml:space="preserve"><value>⚠️ Google Drive cannot be reached right now. Try again in a moment.</value></data>
+  <data name="ChatEditPick" xml:space="preserve"><value>Which detail do you want to change?</value></data>
+  <data name="ChatNeedsAccess" xml:space="preserve"><value>Only SS-SPORT team members can add players. Send /start to ask for access.</value></data>
+  <data name="ChatContinueButton" xml:space="preserve"><value>▶ Continue</value></data>
+  <data name="ChatStartOverButton" xml:space="preserve"><value>↺ Start over</value></data>
+  <data name="ChatMenButton" xml:space="preserve"><value>Men</value></data>
+  <data name="ChatWomenButton" xml:space="preserve"><value>Women</value></data>
+  <data name="ChatBackButton" xml:space="preserve"><value>⬅ Back</value></data>
+  <data name="ChatCancelButton" xml:space="preserve"><value>✖ Cancel</value></data>
+  <data name="ChatDoneButton" xml:space="preserve"><value>✅ Done</value></data>
+  <data name="ChatSkipButton" xml:space="preserve"><value>Skip</value></data>
+  <data name="ChatCreateButton" xml:space="preserve"><value>✅ Create</value></data>
+  <data name="ChatEditButton" xml:space="preserve"><value>✏ Edit a field</value></data>
+  <data name="ChatOpenMiniAppButton" xml:space="preserve"><value>Open in Mini App</value></data>
+  <data name="ChatFieldCategory" xml:space="preserve"><value>Category</value></data>
+  <data name="ChatFieldName" xml:space="preserve"><value>Name</value></data>
+  <data name="ChatFieldNationality" xml:space="preserve"><value>Nationality</value></data>
+  <data name="ChatFieldPositions" xml:space="preserve"><value>Positions</value></data>
+  <data name="ChatFieldVolleybox" xml:space="preserve"><value>Volleybox</value></data>
+  <data name="ChatFieldDriveFolder" xml:space="preserve"><value>Drive folder</value></data>
+  <data name="ChatFieldPhoto" xml:space="preserve"><value>Photo</value></data>
 </root>
