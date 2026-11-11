@@ -9,7 +9,7 @@ Labels: `owner-owner` = the owner's task, `owner-claude` = Claude's, `owner-both
 |---|---|---|
 | 0 Setup & accounts | SSD-1 | S-1 SSD-12 · S-2 SSD-13 · S-3 SSD-14 · S-4 SSD-15 · S-5 SSD-24 · S-6 SSD-16 · S-7 SSD-17 · S-8 SSD-18 · S-9 SSD-19 · S-10 SSD-20 · S-11 SSD-23 · S-12 SSD-21 · S-13 SSD-22 · S-14 SSD-100 · S-15 SSD-102 |
 | 1 Core domain & persistence | SSD-2 | D-1 SSD-25 · D-2 SSD-26 · D-2b SSD-27 · D-2c SSD-28 · D-3 SSD-29 · D-4 SSD-30 · D-5 SSD-34 · D-6 SSD-31 · D-7 SSD-32 · D-8 SSD-33 · D-9 SSD-95 · D-10 SSD-104 · D-11 SSD-106 · D-12 SSD-107 · D-13 SSD-113 · D-14 SSD-121 · D-15 SSD-124 |
-| 2 Telegram bot & Mini App | SSD-3 | T-1 SSD-35 · T-2 SSD-36 · T-2a SSD-108 · T-3 SSD-37 · T-4a SSD-38 · T-4b SSD-109 · T-4c SSD-110 · T-4d SSD-116 · T-5 SSD-39 · T-6a SSD-40 · T-6b SSD-115 · T-6c SSD-120 · T-7a SSD-41 · T-7b SSD-117 · T-8 SSD-42 · T-9 SSD-122 |
+| 2 Telegram bot & Mini App | SSD-3 | T-1 SSD-35 · T-2 SSD-36 · T-2a SSD-108 · T-3 SSD-37 · T-4a SSD-38 · T-4b SSD-109 · T-4c SSD-110 · T-4d SSD-116 · T-5 SSD-39 · T-6a SSD-40 · T-6b SSD-115 · T-6c SSD-120 · T-7a SSD-41 · T-7b SSD-117 · T-8 SSD-42 · T-9 SSD-122 · T-10 SSD-126 |
 | 3 Ingest, transcode & sync | SSD-4 | I-1 SSD-43 · I-2 SSD-44 · I-3 SSD-45 · I-4 SSD-46 · I-5 SSD-47 · I-6 SSD-48 · I-7 SSD-49 · I-8 SSD-103 |
 | 4 Viewer site & media protection | SSD-5 | V-1 SSD-50 · V-2 SSD-56 · V-3 SSD-51 · V-4 SSD-57 · V-5a SSD-52 · V-5b SSD-118 · V-6 SSD-53 · V-7 SSD-54 · V-8 SSD-101 |
 | 5 Personal links, OTP & tracking | SSD-6 | L-1 SSD-55 · L-2 SSD-58 · L-3 SSD-59 · L-4 SSD-60 · L-5 SSD-61 · L-6 SSD-62 · L-7 SSD-63 |

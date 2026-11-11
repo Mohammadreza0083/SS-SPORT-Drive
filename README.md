@@ -221,6 +221,7 @@ SS-SPORT Drive/
   - CORS allow-list, server-side validation, parameterized SQL only;
   - a least-privilege database role.
 - 🌐 **English** in code, comments, logs and commits.
+- 🗄️ **Connection pools:** each process caps its PostgreSQL pool (`Database__MaxPoolSize`: API 40, workers 20) and waits at most `Database__PoolTimeoutSeconds` (5 s) for a connection; a busy database is a 503 `database.busy` with `Retry-After`.
 - 🪵 **Logs:** SQL commands are not logged one by one; a command slower than `Database__SlowQueryThresholdMs` (500 ms) is a Warning, without parameter values. No secrets, tokens, OTP codes or full emails are ever logged.
 - 📦 **NuGet versions** live only in `Directory.Packages.props`; `nuget.config` pins packages and the vulnerability audit to nuget.org, so builds stay warning-free.
 

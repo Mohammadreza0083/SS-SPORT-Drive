@@ -25,7 +25,8 @@ public static class ApiDocumentation
                 Title = Title,
                 Version = "v1",
                 Description = "Backend of SS-SPORT Drive: branded, trackable volleyball player pages built from Google Drive folders. " +
-                    "Errors are returned as RFC 9457 ProblemDetails; broken business rules use status 422 with a stable `code`.",
+                    "Errors are returned as RFC 9457 ProblemDetails; broken business rules use status 422 with a stable `code`. " +
+                    "Any endpoint that reads the database may answer 503 with `code: database.busy` and `Retry-After` when the database is busy.",
                 Contact = new OpenApiContact { Name = "SS-SPORT", Email = "info@ss-sport.co" },
             };
             document.Components ??= new OpenApiComponents();
