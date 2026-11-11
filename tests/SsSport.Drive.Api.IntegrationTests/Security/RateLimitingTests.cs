@@ -18,6 +18,9 @@ public sealed class RateLimitingTests : IDisposable
     /// <summary>A limited path that answers 404 without touching the database, so the tests need none.</summary>
     private const string LimitedPath = "/no-such-route";
 
+    /// <summary>A path under the link endpoints that answers 404 without touching the database.</summary>
+    private const string LimitedLinkPath = "/links/Ab3xYz/no-such-route";
+
     /// <summary>The client the tests act as.</summary>
     private const string ClientIp = "198.51.100.7";
 
@@ -114,11 +117,11 @@ public sealed class RateLimitingTests : IDisposable
         var statuses = new List<HttpStatusCode>();
         for (var i = 0; i < 3; i++)
         {
-            using var response = await SendAsync(client, "/links/Ab3xYz/email-code", ClientIp, HttpMethod.Post);
+            using var response = await SendAsync(client, LimitedLinkPath, ClientIp);
             statuses.Add(response.StatusCode);
         }
 
-        statuses.Take(2).Should().AllSatisfy(status => status.Should().Be(HttpStatusCode.BadRequest));
+        statuses.Take(2).Should().AllSatisfy(status => status.Should().Be(HttpStatusCode.NotFound));
         statuses[2].Should().Be(HttpStatusCode.TooManyRequests);
         using var general = await SendAsync(client, LimitedPath, ClientIp);
         general.StatusCode.Should().Be(HttpStatusCode.NotFound);
