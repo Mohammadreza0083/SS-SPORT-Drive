@@ -80,6 +80,7 @@ app.MapHealthEndpoints();
 app.MapTelegramWebhook();
 app.MapMiniApp();
 app.MapShareLinks();
+app.MapViewerGate();
 
 await app.RunAsync();
 

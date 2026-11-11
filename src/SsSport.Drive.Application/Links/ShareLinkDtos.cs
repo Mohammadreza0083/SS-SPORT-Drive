@@ -1,3 +1,5 @@
+using SsSport.Drive.Application.MiniApp;
+
 namespace SsSport.Drive.Application.Links;
 
 /// <summary>A recipient of personal links, as admins see it (full emails: admin-only).</summary>
@@ -141,4 +143,20 @@ public sealed record ResolvedShareLinkDto
 
     /// <summary>Gets the recipient's first email, masked (<c>m***@lube.it</c>).</summary>
     public string RecipientHint { get; init; } = string.Empty;
+
+    /// <summary>Gets the player on the gate card for a Personal link, or <see langword="null"/> for a Roster (L-2).</summary>
+    public GatePlayerDto? Player { get; init; }
+}
+
+/// <summary>What the gate card shows of a player before the email is verified (L-2): no photo, videos or files.</summary>
+public sealed record GatePlayerDto
+{
+    /// <summary>Gets the full name.</summary>
+    public string Name { get; init; } = string.Empty;
+
+    /// <summary>Gets the primary position's short code, e.g. <c>OPP</c>.</summary>
+    public string Position { get; init; } = string.Empty;
+
+    /// <summary>Gets the nationality.</summary>
+    public CountryDto Nationality { get; init; } = new();
 }

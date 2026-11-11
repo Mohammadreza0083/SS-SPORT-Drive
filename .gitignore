@@ -90,6 +90,8 @@ desktop.ini
 # --- Tools --------------------------------------------------------
 graphify-out/
 k6-results/
+# Gate code emails written locally (Email__PickupDirectory)
+.mail/
 
 # Python (brand tooling)
 __pycache__/

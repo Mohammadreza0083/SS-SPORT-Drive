@@ -625,8 +625,8 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
   - HLS URLs are HMAC-signed and **expire after 30 minutes**.
   - While the viewer is actively watching, the player **refreshes the token in the background**, extending it another 30 minutes.
   - **Implementation (V-5a, 2026-10-31; V-5 split into V-5a now and V-5b after L-2, owner):**
-    - Token = `base64url(JSON {v, p, s, e})` + `.` + `base64url(HMAC-SHA256(key, first part))`. `p` = the video's HLS folder, `s` = base64url of the first 16 bytes of SHA-256 of the viewer's session cookie (`ssd_vs`), `e` = expiry in Unix seconds. URL = `/hls/{token}/{p}/{file}`, so relative segment URIs in the playlists carry the token automatically.
-    - **Copied URLs fail:** the Worker checks the signature (constant time), the expiry, that the file is inside `p`, that it is an HLS file (`.m3u8`, `.ts`, `.m4s`, `init.mp4`), and that the request's `ssd_vs` cookie hashes to `s`. Pasting the URL into VLC, another browser or another viewer's browser gives 403, with no reason given.
+    - Token = `base64url(JSON {v, p, s, e})` + `.` + `base64url(HMAC-SHA256(key, first part))`. `p` = the video's HLS folder, `s` = base64url of the first 16 bytes of SHA-256 of the viewer's session cookie (`__Host-ssd_vs`), `e` = expiry in Unix seconds. URL = `/hls/{token}/{p}/{file}`, so relative segment URIs in the playlists carry the token automatically.
+    - **Copied URLs fail:** the Worker checks the signature (constant time), the expiry, that the file is inside `p`, that it is an HLS file (`.m3u8`, `.ts`, `.m4s`, `init.mp4`), and that the request's `__Host-ssd_vs` cookie hashes to `s`. Pasting the URL into VLC, another browser or another viewer's browser gives 403, with no reason given.
     - Format pinned by `contracts/hls-token-vectors.json`, which the .NET issuer (`HmacHlsTokenIssuer`, `Edge__HlsSigningKey`) and the Worker (`HLS_SIGNING_KEY` secret, `MEDIA` R2 binding) both test against.
     - Playlists are `Cache-Control: private, no-store`; segments `private, max-age=1800`.
     - The player renews the token every 20 minutes while playing, and on play after a longer pause. With hls.js the token is swapped into each following request (no interruption); with native HLS (iPhone/iPad) the source is swapped and playback resumes at the same second.
@@ -665,6 +665,35 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
   - **Public check:** `GET /links/{code}` answers type, player count and a masked hint of the recipient's first email (`m***@lube.it`) for the L-2 email gate, and nothing about the players.
   - **No probing:** unknown, malformed, paused, revoked and expired codes all answer the same 404 `share_link.unavailable`. Per-IP rate limits on this endpoint come with L-2's code-sending limits.
   - **The `/r/{code}` web page** (email gate, then the player page; the "link has expired" page for links that do not open) is built with L-2 from the canvas `Gate` artboard.
+- **Email gate, OTP and device binding (L-2; owner approved the plan 2026-11-06):**
+  - **Gate card:** before the gate, `GET /links/{code}` also answers the player's name, primary position and nationality for a Personal link (the canvas `Gate` card), and only the count for a Roster. No photo, videos or files before the gate. These are the same facts the public home page shows.
+  - **Which emails pass:**
+    - One of the recipient's emails always passes.
+    - Another email passes as a **forward** when the link allows forwarding and the scope fits (`SameDomain` = the domain of one of the recipient's emails).
+    - Anything else is refused with 422 `share_link.email_not_allowed`.
+    - L-3 adds the forward alert and Keep / Block.
+  - **Codes:**
+    - 6 digits, valid **10 minutes**, **5 tries**; the 5th wrong try spends the code (`email_code.exhausted`).
+    - A new code may be asked for after **60 seconds**, at most **5 codes per email per link per hour** (429 `email_code.too_many`, with `Retry-After`).
+    - The code is drawn **inside the background job that sends it**, so it never sits in the request, the Hangfire job arguments or a log. Only `HMAC-SHA256(pepper, salt + code)` with a per-code random salt is stored, and it is compared in constant time.
+    - The pepper and token key is `Viewer__TokenKey` (base64, 32 bytes or more).
+  - **Sending:**
+    - The code is sent by a Hangfire job: Resend first, Brevo when Resend fails.
+    - Until L-4 builds the email queue (own queue, admin page, Google SMTP), the job runs on the bot-notices queue.
+    - In development without provider keys, `Email__PickupDirectory` writes the mail as an `.eml` file instead. Production refuses the pickup directory.
+  - **Device and session:**
+    - **Device:** the browser gets `__Host-ssd_dev`, remembered **90 days** (canvas). It is trusted per link: one row per device and link (`trusted_devices`), with the verified email and whether it was a forward.
+    - **Session:** `__Host-ssd_vs` lasts **1 day** (§7a) and belongs to one link and one email. When it runs out, a trusted device gets a new session silently, with no new code.
+    - **Edge cookie:** the edge Worker's cookie is renamed from `ssd_vs` to `__Host-ssd_vs` to meet the cookie rule in §1b.
+    - **Storage and cookie flags:** tokens are stored only as HMAC-SHA256 hashes. Cookies are `HttpOnly`, `Secure`, `SameSite=Lax` and `Path=/`.
+  - **Links with "verify on new device" off** open without the gate. Their session carries the recipient's first email for the overlay.
+  - **Who talks to whom:**
+    - The browser only calls the web app's same-origin routes `/api/links/{code}/…`. Those routes refuse a cross-origin `Origin` and non-JSON bodies, which is the CSRF check.
+    - The routes forward to the API with the cookie values in `X-Viewer-Device` / `X-Viewer-Session` headers, and set the cookies themselves.
+    - The API never reads cookies.
+  - **Rate limits:** `/links/*` has its own per-address budget, `RateLimiting__LinkPermitsPerMinute` (30), on top of the per-email limits above.
+  - **Logging:** wrong codes, spent codes and refused emails are structured warnings with the link id only, never the email or code.
+  - **After the gate:** the real player page is V-2b (SSD-125). Until it lands, `/r/{code}` with a session shows the gate's "You're in" step.
 - **Public home page** (`drive.ss-sport.co`):
   - Visitors search players by name, with a position filter.
   - A result shows the full player page (photo, name, position, flag, counts), but **videos, stats and PDFs are blurred and locked**. The backend must not send real media or document URLs for locked pages.

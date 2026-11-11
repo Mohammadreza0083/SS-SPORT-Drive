@@ -355,7 +355,7 @@ public sealed class ShareLinkEndpointTests : IAsyncLifetime
         body.RootElement.GetProperty("type").GetString().Should().Be("Personal");
         body.RootElement.GetProperty("playerCount").GetInt32().Should().Be(1);
         body.RootElement.GetProperty("recipientHint").GetString().Should().Be("m***@lube.it");
-        body.RootElement.EnumerateObject().Select(property => property.Name).Should().BeEquivalentTo("code", "type", "playerCount", "recipientHint");
+        body.RootElement.EnumerateObject().Select(property => property.Name).Should().BeEquivalentTo("code", "type", "playerCount", "recipientHint", "player");
     }
 
     /// <summary>A paused, revoked, unknown or malformed code all answer the same 404, so codes cannot be probed.</summary>

@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using SsSport.Drive.Application.Exceptions;
@@ -6,8 +7,9 @@ namespace SsSport.Drive.Api.ErrorHandling;
 
 /// <summary>
 /// Turns failures raised by the MediatR pipeline into ProblemDetails: validation 400 (errors per field),
-/// sign-in required 401, missing role 403, not found 404, a concurrent change 409 and an outside service down 503
-/// (both with a <c>code</c>).
+/// sign-in required 401 (a viewer who must pass the email gate with a <c>code</c>), missing role 403, not found 404,
+/// a concurrent change 409, asking too often 429 (with <c>Retry-After</c>) and an outside service down 503 (all three
+/// with a <c>code</c>).
 /// Every other exception falls through to the next handler.
 /// </summary>
 /// <param name="problemDetails">Writes ProblemDetails responses.</param>
@@ -56,6 +58,18 @@ public sealed class ApplicationExceptionHandler(IProblemDetailsService problemDe
                 Title = conflict.Message,
                 Extensions = { ["code"] = ConcurrencyConflictException.Code },
             },
+            ViewerVerificationRequiredException verification => new ProblemDetails
+            {
+                Status = StatusCodes.Status401Unauthorized,
+                Title = verification.Message,
+                Extensions = { ["code"] = ViewerVerificationRequiredException.Code },
+            },
+            TooManyRequestsException tooMany => new ProblemDetails
+            {
+                Status = StatusCodes.Status429TooManyRequests,
+                Title = tooMany.Message,
+                Extensions = { ["code"] = tooMany.Code },
+            },
             ServiceUnavailableException unavailable => new ProblemDetails
             {
                 Status = StatusCodes.Status503ServiceUnavailable,
@@ -71,6 +85,11 @@ public sealed class ApplicationExceptionHandler(IProblemDetailsService problemDe
         }
 
         httpContext.Response.StatusCode = problem.Status!.Value;
+        if (exception is TooManyRequestsException limited)
+        {
+            httpContext.Response.Headers.RetryAfter = Math.Max(1, (int)Math.Ceiling(limited.RetryAfter.TotalSeconds)).ToString(CultureInfo.InvariantCulture);
+        }
+
         return await problemDetails.TryWriteAsync(new ProblemDetailsContext
         {
             HttpContext = httpContext,

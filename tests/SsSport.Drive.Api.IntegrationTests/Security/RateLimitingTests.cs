@@ -18,14 +18,18 @@ public sealed class RateLimitingTests : IDisposable
     /// <summary>A limited path that answers 404 without touching the database, so the tests need none.</summary>
     private const string LimitedPath = "/no-such-route";
 
+    /// <summary>A path under the link endpoints that answers 404 without touching the database.</summary>
+    private const string LimitedLinkPath = "/links/Ab3xYz/no-such-route";
+
     /// <summary>The client the tests act as.</summary>
     private const string ClientIp = "198.51.100.7";
 
-    /// <summary>The API host with a tiny budget (3 per minute, 5 for the webhook) so the limit is reached quickly.</summary>
+    /// <summary>The API host with a tiny budget (3 per minute, 5 for the webhook, 2 for links) so the limit is reached quickly.</summary>
     private readonly WebApplicationFactory<Program> _factory = new WebApplicationFactory<Program>()
         .WithWebHostBuilder(builder => builder
             .UseSetting("RateLimiting:PermitsPerMinute", "3")
             .UseSetting("RateLimiting:WebhookPermitsPerMinute", "5")
+            .UseSetting("RateLimiting:LinkPermitsPerMinute", "2")
             .ConfigureLogging(logging => logging.AddFakeLogging())
             .ConfigureTestServices(services => services.AddTransient<IStartupFilter, TestClientAddress>()));
 
@@ -100,6 +104,27 @@ public sealed class RateLimitingTests : IDisposable
 
         statuses.Take(5).Should().AllSatisfy(status => status.Should().Be(HttpStatusCode.Unauthorized));
         statuses[5].Should().Be(HttpStatusCode.TooManyRequests);
+    }
+
+    /// <summary>
+    /// The public link endpoints (<c>/links/*</c>: the gate, codes and sessions, L-2) have their own tighter budget, so
+    /// codes and link codes cannot be guessed quickly; it does not use up the general budget.
+    /// </summary>
+    [Fact]
+    public async Task Link_endpoints_have_a_tighter_budget()
+    {
+        using var client = _factory.CreateClient();
+        var statuses = new List<HttpStatusCode>();
+        for (var i = 0; i < 3; i++)
+        {
+            using var response = await SendAsync(client, LimitedLinkPath, ClientIp);
+            statuses.Add(response.StatusCode);
+        }
+
+        statuses.Take(2).Should().AllSatisfy(status => status.Should().Be(HttpStatusCode.NotFound));
+        statuses[2].Should().Be(HttpStatusCode.TooManyRequests);
+        using var general = await SendAsync(client, LimitedPath, ClientIp);
+        general.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     /// <summary>Health probes are never limited.</summary>

@@ -7,7 +7,7 @@
  */
 
 /** Name of the viewer's session cookie (set by the site after the email gate, L-2). */
-export const SESSION_COOKIE = "ssd_vs";
+export const SESSION_COOKIE = "__Host-ssd_vs";
 
 /** The token format version this worker understands. */
 const FORMAT_VERSION = 1;

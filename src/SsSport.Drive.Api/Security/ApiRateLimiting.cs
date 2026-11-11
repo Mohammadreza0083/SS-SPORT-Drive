@@ -21,6 +21,12 @@ public sealed class ApiRateLimitOptions
     /// so it gets its own, larger budget.
     /// </summary>
     public int WebhookPermitsPerMinute { get; set; } = 1800;
+
+    /// <summary>
+    /// Requests per minute to the public link endpoints (<c>/links/*</c>: the gate, codes and sessions, L-2), per
+    /// address. Tighter than the general budget so link codes and email codes cannot be guessed quickly.
+    /// </summary>
+    public int LinkPermitsPerMinute { get; set; } = 30;
 }
 
 /// <summary>
@@ -33,6 +39,9 @@ public static partial class ApiRateLimiting
     /// <summary>The log category of refusals.</summary>
     private const string LogCategory = "SsSport.Drive.Api.Security.RateLimiting";
 
+    /// <summary>The public link endpoints, which have their own budget.</summary>
+    private const string LinksPrefix = "/links";
+
     /// <summary>The length of one budget window.</summary>
     private static readonly TimeSpan _window = TimeSpan.FromMinutes(1);
 
@@ -43,7 +52,7 @@ public static partial class ApiRateLimiting
     {
         services.AddOptions<ApiRateLimitOptions>()
             .BindConfiguration(ApiRateLimitOptions.SectionName)
-            .Validate(options => options.PermitsPerMinute > 0 && options.WebhookPermitsPerMinute > 0, "Rate limits must be positive.")
+            .Validate(options => options.PermitsPerMinute > 0 && options.WebhookPermitsPerMinute > 0 && options.LinkPermitsPerMinute > 0, "Rate limits must be positive.")
             .ValidateOnStart();
 
         services.AddRateLimiter(_ => { });
@@ -57,7 +66,7 @@ public static partial class ApiRateLimiting
         return services;
     }
 
-    /// <summary>Picks the budget for a request: none for health probes, the webhook's own, or the general one.</summary>
+    /// <summary>Picks the budget for a request: none for health probes, the webhook's own, the links' own, or the general one.</summary>
     /// <param name="context">The request.</param>
     /// <param name="budgets">The configured budgets.</param>
     /// <returns>The partition the request counts against.</returns>
@@ -70,8 +79,13 @@ public static partial class ApiRateLimiting
         }
 
         var client = ClientAddress(context);
-        return path.StartsWithSegments(TelegramWebhookEndpoints.Route, StringComparison.OrdinalIgnoreCase)
-            ? FixedWindow($"webhook:{client}", budgets.WebhookPermitsPerMinute)
+        if (path.StartsWithSegments(TelegramWebhookEndpoints.Route, StringComparison.OrdinalIgnoreCase))
+        {
+            return FixedWindow($"webhook:{client}", budgets.WebhookPermitsPerMinute);
+        }
+
+        return path.StartsWithSegments(LinksPrefix, StringComparison.OrdinalIgnoreCase)
+            ? FixedWindow($"links:{client}", budgets.LinkPermitsPerMinute)
             : FixedWindow($"client:{client}", budgets.PermitsPerMinute);
     }
 

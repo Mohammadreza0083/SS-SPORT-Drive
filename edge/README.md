@@ -9,7 +9,7 @@ Cloudflare Worker in front of the viewer site: signed HLS delivery (V-5a) and, w
   - the signature is valid (checked with the `HLS_SIGNING_KEY` secret);
   - the token has not expired;
   - the file is inside the token's video folder and is an HLS file type;
-  - the viewer's `ssd_vs` session cookie matches the token.
+  - the viewer's `__Host-ssd_vs` session cookie matches the token.
 - Anything else gets a plain 403, so a copied playlist URL plays nowhere else.
 - The format is pinned by [`contracts/hls-token-vectors.json`](../contracts/hls-token-vectors.json); both the .NET and the Worker tests run against it.
 

@@ -84,6 +84,7 @@ Every Claude task follows the working agreement: explain → approve → tests �
 |---|---|---|---|
 | V-1 | Next.js viewer app shell, fonts (Barlow Condensed / Geist / Geist Mono), brand tokens, motion system | Claude | Matches canvas |
 | V-2 | Player page (desktop / tablet / mobile) per canvas | Claude | Playwright visual pass |
+| V-2b | Player page on real data: viewer API for a link's players, assets and PDFs behind the viewer session; `/r/{code}` renders it after the gate (found while planning L-2) | Claude | Tests green; the gate opens the link's real players |
 | V-3 | Media Chrome + hls-video-element player: speed, quality, frame step, no download, no context menu | Claude | Demo |
 | V-4 | Moving viewer-email overlay (20 %, small, repositions every few seconds) | Claude | Demo |
 | V-5a | Edge Worker: HMAC HLS tokens (30 min) bound to the viewer session cookie, R2 delivery, .NET token issuer, player background refresh (split 2026-10-31) | Claude | Copying the m3u8 elsewhere fails (Worker tests) |
@@ -97,6 +98,7 @@ Every Claude task follows the working agreement: explain → approve → tests �
 |---|---|---|---|
 | L-1 | Recipients + `/r/{code}` share links (expiry, pause, revoke) | Claude | Tests green |
 | L-2 | Device binding + email gate + OTP (6 digits, 10 min, 5 tries) | Claude | Tests green |
+| L-2b | Purge expired gate rows (email codes, viewer sessions, trusted devices) with a recurring Hangfire job; retention confirmed with the owner (found while building L-2) | Claude | Tests green |
 | L-3 | Forwarding: any OTP-verified email, LinkForwarded alert, Keep/Block | Claude | Tests green |
 | L-4 | Email queue on Hangfire: Resend → Brevo failover for OTP, Google SMTP for the rest, retries, admin view | Claude | Failover test green |
 | L-5 | Tracking events + heartbeats + sessions | Claude | Tests green |
