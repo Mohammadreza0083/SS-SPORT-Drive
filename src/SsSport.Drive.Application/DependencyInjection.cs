@@ -6,6 +6,7 @@ using SsSport.Drive.Application.Abstractions.Events;
 using SsSport.Drive.Application.Behaviors;
 using SsSport.Drive.Application.Events;
 using SsSport.Drive.Application.Paging;
+using SsSport.Drive.Application.Telegram.Notices;
 
 namespace SsSport.Drive.Application;
 
@@ -14,7 +15,7 @@ public static class DependencyInjection
 {
     /// <summary>
     /// Adds MediatR with its pipeline (logging → authorization → validation → transaction → handler),
-    /// the validators and domain event handlers of this assembly, the shared paging validators, the event dispatcher, the system clock, and an anonymous
+    /// the validators and domain event handlers of this assembly, the shared paging validators, the event dispatcher, the bot notice outbox (T-8), the system clock, and an anonymous
     /// caller for hosts without users (the API host replaces it with the signed-in user).
     /// </summary>
     /// <param name="services">The service collection to add to.</param>
@@ -37,6 +38,7 @@ public static class DependencyInjection
         services.Scan(AssemblyReference.Assembly);
         services.TryAddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
         services.TryAddScoped<IBackgroundEventRunner, BackgroundEventRunner>();
+        services.TryAddScoped<IBotNoticeOutbox, BotNoticeOutbox>();
         services.TryAddScoped<ICurrentUser, AnonymousCurrentUser>();
         services.TryAddSingleton(TimeProvider.System);
         return services;

@@ -344,6 +344,25 @@ Standing rules for every feature. Each control gets tests, and nothing is commit
     - **No shared Hangfire state:** the storage and the job activator are registered per DI container, not taken from Hangfire's process-wide `JobStorage.Current` / `JobActivator.Current`. With those statics, several hosts in one process (the test suite) took each other's jobs.
     - **Packages:** Hangfire.Core / Hangfire.NetCore 1.8.25 and Hangfire.PostgreSql 1.21.1, all LGPL-3.0. They are used unmodified as packages, which is compatible with the proprietary licence.
     - **Dashboard:** there is none for now. It comes behind admin auth with the admin console (Epic 7).
+- **Notification rules (T-8, owner-approved 2026-11-12, all four of Claude's proposals accepted):**
+  - **What the rules cover:** the notices that ping a team member about something someone else did: "folder added by someone else" (T-5) and the new **"player published"** notice to the owning analyst (§5, on `PlayerPublished`). Later notices (sync, build done, admin alerts from I-6, T-6b and L-7) use the same path.
+  - **Exempt (sent as before):**
+    - The progress message (T-6a). It is edited in place, and Telegram does not ping for an edit.
+    - Replies to the user's own button or command.
+    - Access request, approval and decline messages. They stay **immediate** because someone is waiting for the answer (owner's choice).
+  - **Throttle per recipient:** at most one notice message per team member every **10 minutes**, counted per recipient, not per player (owner's choice).
+  - **Quiet hours 23:00–08:00 Tehran:** notices are **held and sent at 08:00** as one message, not sent silently (owner's choice). Start included, end excluded. A throttled notice whose turn falls in the quiet hours also waits for 08:00.
+  - **Grouping:** everything held for a recipient goes out together. One notice is sent as written. Several get a header with their count ("🔔 3 updates while notices were paused:"), grouped by player in the order the players first came up. A digest over Telegram's 4096 characters is split between lines, never inside one.
+  - **Settings are global, from configuration** (owner's choice): `Notifications__ThrottleMinutes` (10), `Notifications__QuietHoursStart` (`23:00`), `Notifications__QuietHoursEnd` (`08:00`), `Notifications__TimeZone` (`Asia/Tehran`). They are checked at start-up. The same start and end turns quiet hours off. Editing them in the console comes with A-10; per-user preferences are not planned.
+  - **How it is built:**
+    - The Domain has `NotificationRules`, which works out the next send time from now and the last message. It also has a `NoticeBox` aggregate, one per team member (`notice_boxes`), whose held lines live in `pending_notices`. A box knows its `DueAt` and `LastSentAt`.
+    - A notice handler hands its line to `IBotNoticeOutbox`. The first notice in a quiet period is sent at once, inside the notice job. Later ones are held.
+    - `SendDueNoticesCommand` (MediatR) sends every due box. It pages through the due boxes in SQL (50 per page, oldest due first) and saves after each box, so a crash never sends one twice. It is run by the recurring Hangfire job `bot-notices-due`, every minute, on the `notices` queue with its single worker, so it never overlaps a notice job.
+    - **`migrate` registers the recurring job**, right after installing Hangfire's schema. The API never registers it on start-up, so instances never race and a host started before `migrate` cannot fail on it.
+    - **Telegram down:** the notices stay held and are tried again one throttle later (Warning logged).
+    - **Recipient left the team:** their held notices are dropped (Information logged).
+  - **Time zone:** Linux images use the system tz database. A Windows host with invariant globalization cannot map `Asia/Tehran`, so it falls back to a fixed UTC+3:30, which is correct because Iran has had no daylight saving time since 2022.
+  - **Tests:** the API test process turns quiet hours off (`Notifications__QuietHours*` = `00:00`), so tests that expect an immediate notice pass at any hour. `BotNoticeRulesTests` sets the owner's rules back and drives its own clock.
 - **SQL logging (D-14, owner-approved 2026-11-01; found by the K-9 benchmark):**
   - **Why:** the base config logged the text of every SQL command at Information, in every environment (about 92 000 commands, 90 MB, in one load run). Parameter values were never logged.
   - **EF Core logs at Warning** in the base `appsettings.json` of the API and the workers, so in every environment, Development included. Failed commands are still logged as Errors.
@@ -765,7 +784,7 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
   - **The first admin** comes from configuration (`Telegram__AdminUserId` plus an email) and is `Active` + `Admin` straight away.
   - **An admin must have an email** for console magic-link sign-in. Approving or promoting to Admin without one fails (`user.admin_needs_email`), and an admin's email cannot be cleared.
   - **Never remove or demote the last active admin.** This needs a count, so the Application layer enforces it (A-8).
-  - Notification preferences (quiet hours etc.) come with T-8.
+  - Notification rules (quiet hours, throttle) are global settings since T-8 (§3a, "Notification rules"); per-user preferences are not planned.
 - **Roles** are `Analyst` and `Admin`. The list is closed but extensible: new roles are added in code. Names match the role claims the API checks.
 - **`Player.AnalystId`** is the analyst responsible for a player. It is empty for archive players. `AssignAnalyst` sets or reassigns it: removing a user reassigns their players to a chosen admin.
 - **`AuditEntry`:**

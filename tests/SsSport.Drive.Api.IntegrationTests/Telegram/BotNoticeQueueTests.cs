@@ -103,6 +103,17 @@ public sealed class BotNoticeQueueTests : IAsyncLifetime
         ((bool)(await command.ExecuteScalarAsync(TestContext.Current.CancellationToken))!).Should().BeTrue();
     }
 
+    /// <summary>`migrate` registers the recurring job that sends held notices once they are due (T-8).</summary>
+    [Fact]
+    public async Task Migrate_registers_the_due_notices_job()
+    {
+        await using var connection = new NpgsqlConnection(_postgres.GetConnectionString());
+        await connection.OpenAsync(TestContext.Current.CancellationToken);
+        await using var command = new NpgsqlCommand("SELECT count(*) FROM hangfire.set WHERE key = 'recurring-jobs' AND value = 'bot-notices-due'", connection);
+
+        ((long)(await command.ExecuteScalarAsync(TestContext.Current.CancellationToken))!).Should().Be(1);
+    }
+
     /// <summary>
     /// With Telegram taking 5 s per message, creating a player still answers at once; the progress message arrives
     /// afterwards from the queue.

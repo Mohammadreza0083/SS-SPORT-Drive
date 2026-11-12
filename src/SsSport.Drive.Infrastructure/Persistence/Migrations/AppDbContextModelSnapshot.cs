@@ -1884,6 +1884,86 @@ namespace SsSport.Drive.Infrastructure.Persistence.Migrations
                     b.ToTable("viewer_sessions", (string)null);
                 });
 
+            modelBuilder.Entity("SsSport.Drive.Domain.Notifications.NoticeBox", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long>("ChatId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("chat_id");
+
+                    b.Property<DateTimeOffset?>("DueAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("due_at");
+
+                    b.Property<DateTimeOffset?>("LastSentAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_sent_at");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_notice_boxes");
+
+                    b.HasIndex("DueAt")
+                        .HasDatabaseName("ix_notice_boxes_due_at");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_notice_boxes_user_id");
+
+                    b.ToTable("notice_boxes", (string)null);
+                });
+
+            modelBuilder.Entity("SsSport.Drive.Domain.Notifications.PendingNotice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("kind");
+
+                    b.Property<Guid>("NoticeBoxId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("notice_box_id");
+
+                    b.Property<Guid?>("PlayerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("player_id");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("text");
+
+                    b.HasKey("Id")
+                        .HasName("pk_pending_notices");
+
+                    b.HasIndex("NoticeBoxId")
+                        .HasDatabaseName("ix_pending_notices_notice_box_id");
+
+                    b.ToTable("pending_notices", (string)null);
+                });
+
             modelBuilder.Entity("SsSport.Drive.Domain.Notifications.ProgressMessage", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2161,6 +2241,16 @@ namespace SsSport.Drive.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_renditions_assets_asset_id");
                 });
 
+            modelBuilder.Entity("SsSport.Drive.Domain.Notifications.PendingNotice", b =>
+                {
+                    b.HasOne("SsSport.Drive.Domain.Notifications.NoticeBox", null)
+                        .WithMany("Notices")
+                        .HasForeignKey("NoticeBoxId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_pending_notices_notice_boxes_notice_box_id");
+                });
+
             modelBuilder.Entity("SsSport.Drive.Domain.Players.Player", b =>
                 {
                     b.OwnsOne("SsSport.Drive.Domain.Players.VolleyboxProfile", "Volleybox", b1 =>
@@ -2199,6 +2289,11 @@ namespace SsSport.Drive.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("SsSport.Drive.Domain.Assets.Asset", b =>
                 {
                     b.Navigation("Renditions");
+                });
+
+            modelBuilder.Entity("SsSport.Drive.Domain.Notifications.NoticeBox", b =>
+                {
+                    b.Navigation("Notices");
                 });
 #pragma warning restore 612, 618
         }

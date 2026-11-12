@@ -1,3 +1,4 @@
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -8,7 +9,7 @@ using SsSport.Drive.Infrastructure.BackgroundJobs;
 namespace SsSport.Drive.Infrastructure.Persistence;
 
 /// <summary>
-/// Applies pending EF Core migrations, installs Hangfire's schema and keeps the least-privilege application role
+/// Applies pending EF Core migrations, installs Hangfire's schema and recurring jobs, and keeps the least-privilege application role
 /// (<see cref="DatabaseAppRole"/>). Run as its own step (<c>SsSport.Drive.Api migrate</c>: a one-shot container
 /// locally and a pipeline step in CD), never on normal start-up, so app instances never race to change the schema.
 /// </summary>
@@ -46,6 +47,7 @@ public static partial class DatabaseMigrator
 
         // Hangfire keeps its own versioned scripts in its own schema; installing is a no-op when it is current (T-6c).
         await HangfireStorage.InstallAsync(scope.ServiceProvider.GetRequiredService<NpgsqlDataSource>(), cancellationToken);
+        HangfireStorage.RegisterRecurringJobs(scope.ServiceProvider.GetRequiredService<JobStorage>());
         LogHangfireReady(logger, HangfireStorage.Schema);
 
         if (manageAppRole)
@@ -76,7 +78,7 @@ public static partial class DatabaseMigrator
     /// <summary>Logs that Hangfire's schema is current.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="Schema">Hangfire's schema.</param>
-    [LoggerMessage(Level = LogLevel.Information, Message = "Hangfire schema {Schema} is up to date")]
+    [LoggerMessage(Level = LogLevel.Information, Message = "Hangfire schema {Schema} and recurring jobs are up to date")]
     private static partial void LogHangfireReady(ILogger logger, string Schema);
 
     /// <summary>Logs that the application role is current (its name only; never the password).</summary>

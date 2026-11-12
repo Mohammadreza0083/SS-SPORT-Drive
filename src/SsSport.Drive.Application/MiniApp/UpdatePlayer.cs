@@ -10,7 +10,9 @@ using SsSport.Drive.Application.DriveFolders;
 using SsSport.Drive.Application.Exceptions;
 using SsSport.Drive.Application.Players;
 using SsSport.Drive.Application.Telegram;
+using SsSport.Drive.Application.Telegram.Notices;
 using SsSport.Drive.Domain.DriveFolders;
+using SsSport.Drive.Domain.Notifications;
 using SsSport.Drive.Domain.Players;
 using SsSport.Drive.Domain.Users;
 
@@ -314,18 +316,19 @@ public sealed class UpdatePlayerDetailsCommandHandler(IRepository<Player, Guid> 
 /// <summary>
 /// Tells the owning analyst when someone else adds a Drive folder to their player (T-5). Runs in a background job after
 /// the save (T-6c); the owner adding a folder, archive players without an analyst and system changes notify nobody.
+/// The notice goes through the notification rules (T-8): throttled, grouped and held in the quiet hours.
 /// </summary>
 /// <param name="folders">The linked folders.</param>
 /// <param name="players">The players.</param>
 /// <param name="users">The team.</param>
-/// <param name="bot">The messenger.</param>
+/// <param name="outbox">Holds and sends notices under the notification rules.</param>
 public sealed class NotifyOwnerOfAddedFolder(
     IRepository<DriveFolder, Guid> folders,
     IRepository<Player, Guid> players,
     IRepository<User, Guid> users,
-    ITelegramMessenger bot) : IBackgroundEventHandler<DriveFolderLinked>
+    IBotNoticeOutbox outbox) : IBackgroundEventHandler<DriveFolderLinked>
 {
-    /// <summary>Sends the notice to the owner when the folder was added by someone else.</summary>
+    /// <summary>Hands the notice for the owner to the outbox when the folder was added by someone else.</summary>
     /// <param name="domainEvent">The event.</param>
     /// <param name="context">Who added the folder.</param>
     /// <param name="cancellationToken">Cancels the send.</param>
@@ -345,7 +348,7 @@ public sealed class NotifyOwnerOfAddedFolder(
 
         var actor = await users.FirstOrDefaultAsync(new UserByIdReadOnlySpec(actorId), cancellationToken);
         var text = BotTexts.FormatFolderAddedByOther(player.Name?.Value ?? player.Id.ToString(), actor?.DisplayName ?? string.Empty, folder.Name);
-        await bot.SendAsync(owner.TelegramId, text, null, cancellationToken);
+        await outbox.QueueAsync(owner, NoticeKind.FolderAdded, player.Id, text, cancellationToken);
     }
 }
 

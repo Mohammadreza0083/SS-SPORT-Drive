@@ -46,6 +46,11 @@ import exec from 'k6/execution';
 import { check, fail } from 'k6';
 
 const BASE_URL = (__ENV.BASE_URL || 'http://localhost:5080').replace(/\/$/, '');
+/**
+ * Sent with every request, as the reverse proxy does: outside Development the API redirects plain HTTP to HTTPS
+ * (O-9) unless a trusted proxy (loopback included) says the client used HTTPS.
+ */
+const PROXY_HEADERS = { 'X-Forwarded-Proto': 'https' };
 const BOT_TOKEN = __ENV.BOT_TOKEN || '';
 const ANALYST_ID = Number(__ENV.ANALYST_TELEGRAM_ID || 0);
 const PROFILE = (__ENV.PROFILE || 'smoke').toLowerCase();
@@ -202,7 +207,7 @@ function initData(telegramId, token) {
  * @returns {object} the k6 params.
  */
 function signed(data, extra = {}) {
-  return { headers: { Authorization: `tma ${data}`, 'Content-Type': 'application/json' }, ...extra };
+  return { headers: { ...PROXY_HEADERS, Authorization: `tma ${data}`, 'Content-Type': 'application/json' }, ...extra };
 }
 
 /**
@@ -321,7 +326,7 @@ function playerId(n) {
  */
 function putPhoto(n) {
   return http.put(`${BASE_URL}/miniapp/players/${playerId(n)}/photo`, PHOTO, {
-    headers: { Authorization: `tma ${initData(ANALYST_ID)}`, 'Content-Type': 'image/jpeg' },
+    headers: { ...PROXY_HEADERS, Authorization: `tma ${initData(ANALYST_ID)}`, 'Content-Type': 'image/jpeg' },
   });
 }
 

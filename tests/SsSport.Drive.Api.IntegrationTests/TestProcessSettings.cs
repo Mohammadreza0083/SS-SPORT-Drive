@@ -13,4 +13,15 @@ internal static class TestProcessSettings
     /// </summary>
     [ModuleInitializer]
     internal static void TurnOffBackgroundJobServer() => Environment.SetEnvironmentVariable("BackgroundJobs__RunServer", "false");
+
+    /// <summary>
+    /// Turns the bot notice quiet hours off (T-8), so tests that expect a notice right away pass at any time of day.
+    /// <see cref="Telegram.BotNoticeRulesTests"/> sets the owner's quiet hours back and drives its own clock.
+    /// </summary>
+    [ModuleInitializer]
+    internal static void TurnOffQuietHours()
+    {
+        Environment.SetEnvironmentVariable("Notifications__QuietHoursStart", "00:00");
+        Environment.SetEnvironmentVariable("Notifications__QuietHoursEnd", "00:00");
+    }
 }

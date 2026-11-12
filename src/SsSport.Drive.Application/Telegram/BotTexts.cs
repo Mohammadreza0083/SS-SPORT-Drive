@@ -390,6 +390,16 @@ public static class BotTexts
     /// <summary>Gets the "ChatFieldPhoto" text (T-10a chat).</summary>
     public static string ChatFieldPhoto => Get(nameof(ChatFieldPhoto));
 
+    /// <summary>Formats the "PlayerPublishedNotice" text (T-8): {0} the player.</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatPlayerPublishedNotice(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("PlayerPublishedNotice"), args);
+
+    /// <summary>Formats the "NoticeDigestHeader" text (T-8 grouped notices): {0} how many.</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatNoticeDigestHeader(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("NoticeDigestHeader"), args);
+
     /// <summary>Reads a text.</summary>
     /// <param name="key">The resource key.</param>
     /// <returns>The text.</returns>

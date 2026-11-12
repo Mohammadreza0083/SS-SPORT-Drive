@@ -44,7 +44,7 @@ With k6 installed, drop the `docker run …` prefix and use `BASE_URL=http://loc
 ### Notes
 
 - **It writes data.** Every new update adds a row to `telegram_updates`, so a `load` run adds about 10 000. Run it on local or staging only, never on production.
-- **No real Telegram traffic is involved.** The script talks to the API directly, so no VPN is needed.
+- **Telegram is called for every new text update.** Since T-2 and T-10a, the bot answers a `/start` inline, because the user is waiting (T-6c). So each `new_updates` request includes one real Bot API round trip to `api.telegram.org`. With the benchmark's fake token that call fails with 401 after the round trip (logged as an Error, answered 200). The `new_updates` latency is therefore mostly Telegram's network latency from the machine running the API. Redeliveries and wrong secrets never call Telegram.
 - **Each run gets its own `update_id` window** of 60 000 ids, chosen by the start minute, so ids stay 32-bit like Telegram's. Two runs started in the same minute share a window, so wait a minute between runs.
 - **CI runs the smoke profile** against staging after each deploy once K-1 is in place.
 
@@ -110,6 +110,31 @@ Across the whole run, fewer than 1 % of requests may fail and more than 99 % of 
    ```
 
    For the full run, use `-e PROFILE=load`, and optionally `-e PEAK_RATE=200`. Remove the database afterwards with `docker rm -f ssd-bench-pg`.
+
+### Running against the security baseline (O-9, since 2026-11-01)
+
+Outside Development the API redirects plain HTTP to HTTPS (308), and it allows 300 requests per client per minute (1 800 for the webhook). Both scripts therefore send `X-Forwarded-Proto: https`, as the reverse proxy does. The API trusts it from loopback, which includes Docker Desktop's `host.docker.internal`. For a load run, also start the API with higher budgets, for the benchmark only:
+
+```bash
+export RateLimiting__PermitsPerMinute=1000000 RateLimiting__WebhookPermitsPerMinute=1000000
+```
+
+### Results (2026-11-12, T-8 branch: security baseline, D-15 pool cap, T-10a bot chat and T-8 notices all in)
+
+Same machine and recipe as below: API in Release (Production), PostgreSQL 17 in Docker, rate limits raised as above. Another worktree's compose stack (API, workers, web, PostgreSQL, RustFS) was running idle on the same machine.
+
+| Run | Requests | Failed | p95 profile | p99 profile | p95 Volleybox | p95 countries | p95 stranger (403) | Rate |
+|---|---|---|---|---|---|---|---|---|
+| `miniapp.js` `smoke` | 634 | 0 | 14.7 ms | 34.3 ms | 17.3 ms | 15.2 ms | 22.2 ms | 20/s |
+| `miniapp.js` `load`, peak 200 | 62 837 | 0 | 52.6 ms | 120 ms | 52.5 ms | 43.3 ms | 40.1 ms | 299/s avg |
+
+| Run | Requests | Failed | p95 new updates | p99 new updates | p95 redeliveries | p95 wrong secret | Rate |
+|---|---|---|---|---|---|---|---|
+| `telegram-webhook.js` `load`, peak 50 | 11 446 | 0 | **364 ms ✗** (< 250) | **728 ms ✗** (< 500) | 64.4 ms | 38.5 ms | 53/s avg |
+
+- **Mini App:** every threshold passed, with 0 failed requests and 100 % of checks. There were no `too many clients` errors at 4× the default peak, so the D-15 pool cap holds. p95 is about 5× the 2026-10-29 run at the same peak (52.6 vs 10.1 ms). Since then the security baseline (rate limiter, headers, forwarded headers) and the T-10a/T-8 code have landed, and this run shared the machine with another stack. A rerun on a quiet machine should tell which of these it is.
+- **Webhook:** the redelivery and wrong-secret thresholds pass. The `new_updates` thresholds fail because each such update waits for a real call to Telegram (see the notes on `telegram-webhook.js`): the fastest one took 99 ms. The handler itself is not the slow part. Measuring our own code needs a Bot API stand-in (follow-up).
+- **T-8** adds no endpoint. Adding a folder only queues its notice (T-6c), and the notice job and the every-minute `bot-notices-due` round run outside the request.
 
 ### Results (2026-10-29, local Windows machine, API in Release, PostgreSQL 17 in Docker)
 
