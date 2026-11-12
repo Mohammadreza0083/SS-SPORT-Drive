@@ -185,15 +185,15 @@ public sealed class TelegramAccessFlowTests : IAsyncLifetime
         (await UserStatusAsync(207)).Should().Be(("Pending", "Analyst"));
     }
 
-    /// <summary>/help answers with the help text; without a Mini App URL the menu buttons say the Mini App is not set up.</summary>
+    /// <summary>/help answers with the help text; someone outside the team who presses My players is told they need access (T-10b).</summary>
     [Fact]
-    public async Task Help_and_mini_app_not_set_up()
+    public async Task Help_and_strangers_need_access_for_my_players()
     {
         await MessageAsync(208, "/help");
         _bot.ToChat(208).Last().Text.Should().Contain("/start");
 
         await CallbackAsync(208, "menu:players", 5);
-        _bot.Calls.Last().Should().Match<BotCall>(call => call.Kind == "Answer" && call.Text!.Contains("not set up", StringComparison.OrdinalIgnoreCase));
+        _bot.ToChat(208).Last().Text.Should().Contain("team members");
     }
 
     /// <summary>Posts a text message update from a user.</summary>

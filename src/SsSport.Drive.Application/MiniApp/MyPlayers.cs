@@ -33,7 +33,8 @@ public enum PlayerListFilter
 /// <param name="AnalystId">Only this analyst's players, or <see langword="null"/> for every player (admins).</param>
 /// <param name="Search">Part of the name or the exact Volleybox id, or <see langword="null"/>.</param>
 /// <param name="Filter">The filter chip.</param>
-public sealed record PlayerListCriteria(Guid? AnalystId, string? Search, PlayerListFilter Filter);
+/// <param name="PlayerId">Only this player (the bot's player card reads its counts this way), or <see langword="null"/>.</param>
+public sealed record PlayerListCriteria(Guid? AnalystId, string? Search, PlayerListFilter Filter, Guid? PlayerId = null);
 
 /// <summary>One row of My players: who the player is and the state of their files and folders.</summary>
 public sealed record PlayerListItemDto

@@ -432,6 +432,146 @@ public static class BotTexts
     /// <returns>The text.</returns>
     public static string FormatNoticeDigestHeader(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("NoticeDigestHeader"), args);
 
+    /// <summary>Formats the "MyPlayersHeader" text (T-10b chat).</summary>
+    /// <param name="args">The values to insert.</param>
+    /// <returns>The text.</returns>
+    public static string FormatMyPlayersHeader(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("MyPlayersHeader"), args);
+
+    /// <summary>Formats the "MyPlayersSearching" text (T-10b chat).</summary>
+    /// <param name="args">The values to insert.</param>
+    /// <returns>The text.</returns>
+    public static string FormatMyPlayersSearching(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("MyPlayersSearching"), args);
+
+    /// <summary>Formats the "MyPlayersEmpty" text (T-10b chat).</summary>
+    /// <param name="args">The values to insert.</param>
+    /// <returns>The text.</returns>
+    public static string FormatMyPlayersEmpty(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("MyPlayersEmpty"), args);
+
+    /// <summary>Formats the "MyPlayersNoMatch" text (T-10b chat).</summary>
+    /// <param name="args">The values to insert.</param>
+    /// <returns>The text.</returns>
+    public static string FormatMyPlayersNoMatch(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("MyPlayersNoMatch"), args);
+
+    /// <summary>Gets the "MyPlayersOnePlayer" text (T-10b chat).</summary>
+    public static string MyPlayersOnePlayer => Get(nameof(MyPlayersOnePlayer));
+
+    /// <summary>Formats the "MyPlayersManyPlayers" text (T-10b chat).</summary>
+    /// <param name="args">The values to insert.</param>
+    /// <returns>The text.</returns>
+    public static string FormatMyPlayersManyPlayers(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("MyPlayersManyPlayers"), args);
+
+    /// <summary>Gets the "MyPlayersOneFile" text (T-10b chat).</summary>
+    public static string MyPlayersOneFile => Get(nameof(MyPlayersOneFile));
+
+    /// <summary>Formats the "MyPlayersManyFiles" text (T-10b chat).</summary>
+    /// <param name="args">The values to insert.</param>
+    /// <returns>The text.</returns>
+    public static string FormatMyPlayersManyFiles(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("MyPlayersManyFiles"), args);
+
+    /// <summary>Gets the "MyPlayersFilterAll" text (T-10b chat).</summary>
+    public static string MyPlayersFilterAll => Get(nameof(MyPlayersFilterAll));
+
+    /// <summary>Gets the "MyPlayersFilterLive" text (T-10b chat).</summary>
+    public static string MyPlayersFilterLive => Get(nameof(MyPlayersFilterLive));
+
+    /// <summary>Gets the "MyPlayersFilterProcessing" text (T-10b chat).</summary>
+    public static string MyPlayersFilterProcessing => Get(nameof(MyPlayersFilterProcessing));
+
+    /// <summary>Gets the "MyPlayersFilterAttention" text (T-10b chat).</summary>
+    public static string MyPlayersFilterAttention => Get(nameof(MyPlayersFilterAttention));
+
+    /// <summary>Gets the "MyPlayersSearchButton" text (T-10b chat).</summary>
+    public static string MyPlayersSearchButton => Get(nameof(MyPlayersSearchButton));
+
+    /// <summary>Gets the "MyPlayersClearSearchButton" text (T-10b chat).</summary>
+    public static string MyPlayersClearSearchButton => Get(nameof(MyPlayersClearSearchButton));
+
+    /// <summary>Gets the "MyPlayersSearchPrompt" text (T-10b chat).</summary>
+    public static string MyPlayersSearchPrompt => Get(nameof(MyPlayersSearchPrompt));
+
+    /// <summary>Gets the "MyPlayersSearchTooLong" text (T-10b chat).</summary>
+    public static string MyPlayersSearchTooLong => Get(nameof(MyPlayersSearchTooLong));
+
+    /// <summary>Gets the "MyPlayersSearchBusy" text (T-10b chat).</summary>
+    public static string MyPlayersSearchBusy => Get(nameof(MyPlayersSearchBusy));
+
+    /// <summary>Gets the "MyPlayersNotFound" text (T-10b chat).</summary>
+    public static string MyPlayersNotFound => Get(nameof(MyPlayersNotFound));
+
+    /// <summary>Gets the "MyPlayersFilesButton" text (T-10b chat).</summary>
+    public static string MyPlayersFilesButton => Get(nameof(MyPlayersFilesButton));
+
+    /// <summary>Gets the "MyPlayersEditButton" text (T-10b chat).</summary>
+    public static string MyPlayersEditButton => Get(nameof(MyPlayersEditButton));
+
+    /// <summary>Gets the "MyPlayersBackToListButton" text (T-10b chat).</summary>
+    public static string MyPlayersBackToListButton => Get(nameof(MyPlayersBackToListButton));
+
+    /// <summary>Gets the "MyPlayersBackButton" text (T-10b chat).</summary>
+    public static string MyPlayersBackButton => Get(nameof(MyPlayersBackButton));
+
+    /// <summary>Formats the "MyPlayersCard" text (T-10b chat).</summary>
+    /// <param name="args">The values to insert.</param>
+    /// <returns>The text.</returns>
+    public static string FormatMyPlayersCard(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("MyPlayersCard"), args);
+
+    /// <summary>Formats the "MyPlayersCardProcessing" text (T-10b chat).</summary>
+    /// <param name="args">The values to insert.</param>
+    /// <returns>The text.</returns>
+    public static string FormatMyPlayersCardProcessing(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("MyPlayersCardProcessing"), args);
+
+    /// <summary>Formats the "MyPlayersCardFailed" text (T-10b chat).</summary>
+    /// <param name="args">The values to insert.</param>
+    /// <returns>The text.</returns>
+    public static string FormatMyPlayersCardFailed(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("MyPlayersCardFailed"), args);
+
+    /// <summary>Formats the "MyPlayersCardFolders" text (T-10b chat).</summary>
+    /// <param name="args">The values to insert.</param>
+    /// <returns>The text.</returns>
+    public static string FormatMyPlayersCardFolders(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("MyPlayersCardFolders"), args);
+
+    /// <summary>Gets the "MyPlayersCardNoFolders" text (T-10b chat).</summary>
+    public static string MyPlayersCardNoFolders => Get(nameof(MyPlayersCardNoFolders));
+
+    /// <summary>Formats the "MyPlayersCardVolleybox" text (T-10b chat).</summary>
+    /// <param name="args">The values to insert.</param>
+    /// <returns>The text.</returns>
+    public static string FormatMyPlayersCardVolleybox(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("MyPlayersCardVolleybox"), args);
+
+    /// <summary>Formats the "MyPlayersCardAttention" text (T-10b chat).</summary>
+    /// <param name="args">The values to insert.</param>
+    /// <returns>The text.</returns>
+    public static string FormatMyPlayersCardAttention(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("MyPlayersCardAttention"), args);
+
+    /// <summary>Formats the "MyPlayersCardMissing" text (T-10b chat).</summary>
+    /// <param name="args">The values to insert.</param>
+    /// <returns>The text.</returns>
+    public static string FormatMyPlayersCardMissing(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("MyPlayersCardMissing"), args);
+
+    /// <summary>Gets the "MyPlayersCardFailedFiles" text (T-10b chat).</summary>
+    public static string MyPlayersCardFailedFiles => Get(nameof(MyPlayersCardFailedFiles));
+
+    /// <summary>Gets the "MyPlayersCardLostFolder" text (T-10b chat).</summary>
+    public static string MyPlayersCardLostFolder => Get(nameof(MyPlayersCardLostFolder));
+
+    /// <summary>Formats the "MyPlayersFilesHeader" text (T-10b chat).</summary>
+    /// <param name="args">The values to insert.</param>
+    /// <returns>The text.</returns>
+    public static string FormatMyPlayersFilesHeader(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("MyPlayersFilesHeader"), args);
+
+    /// <summary>Formats the "MyPlayersFilesEmpty" text (T-10b chat).</summary>
+    /// <param name="args">The values to insert.</param>
+    /// <returns>The text.</returns>
+    public static string FormatMyPlayersFilesEmpty(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("MyPlayersFilesEmpty"), args);
+
+    /// <summary>Formats the "MyPlayersFileLine" text (T-10b chat).</summary>
+    /// <param name="args">The values to insert.</param>
+    /// <returns>The text.</returns>
+    public static string FormatMyPlayersFileLine(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("MyPlayersFileLine"), args);
+
+    /// <summary>Gets the "MyPlayersFileHidden" text (T-10b chat).</summary>
+    public static string MyPlayersFileHidden => Get(nameof(MyPlayersFileHidden));
+
     /// <summary>Reads a text.</summary>
     /// <param name="key">The resource key.</param>
     /// <returns>The text.</returns>

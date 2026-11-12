@@ -46,6 +46,11 @@ public sealed class PlayerListReader(DbContext context) : IPlayerListReader
     /// <returns>The matching rows, not yet ordered or paged.</returns>
     private static IQueryable<PlayerRow> Filter(IQueryable<PlayerRow> rows, PlayerListCriteria criteria)
     {
+        if (criteria.PlayerId is { } playerId)
+        {
+            rows = rows.Where(row => row.Id == playerId);
+        }
+
         if (criteria.AnalystId is { } analystId)
         {
             rows = rows.Where(row => row.AnalystId == analystId);

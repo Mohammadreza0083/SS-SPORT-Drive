@@ -163,4 +163,48 @@ It stays closed for this email until you keep it.</value></data>
   <data name="ForwardAlreadyDecided" xml:space="preserve"><value>ℹ️ {0} on link {1} was already {2} by {3}.</value></data>
   <data name="ForwardGone" xml:space="preserve"><value>ℹ️ This forward no longer exists.</value></data>
   <data name="OnlyAdminsForwards" xml:space="preserve"><value>Only admins can keep or block forwarded links.</value></data>
+  <data name="MyPlayersHeader" xml:space="preserve"><value>👥 My players ({0})
+{1} · page {2} of {3}</value></data>
+  <data name="MyPlayersSearching" xml:space="preserve"><value>🔍 Search: {0}</value></data>
+  <data name="MyPlayersEmpty" xml:space="preserve"><value>👥 My players ({0})
+No players here yet.</value></data>
+  <data name="MyPlayersNoMatch" xml:space="preserve"><value>👥 My players ({0})
+🔍 Search: {1}
+No players match.</value></data>
+  <data name="MyPlayersOnePlayer" xml:space="preserve"><value>1 player</value></data>
+  <data name="MyPlayersManyPlayers" xml:space="preserve"><value>{0} players</value></data>
+  <data name="MyPlayersOneFile" xml:space="preserve"><value>1 file</value></data>
+  <data name="MyPlayersManyFiles" xml:space="preserve"><value>{0} files</value></data>
+  <data name="MyPlayersFilterAll" xml:space="preserve"><value>All</value></data>
+  <data name="MyPlayersFilterLive" xml:space="preserve"><value>Live</value></data>
+  <data name="MyPlayersFilterProcessing" xml:space="preserve"><value>Processing</value></data>
+  <data name="MyPlayersFilterAttention" xml:space="preserve"><value>Needs attention</value></data>
+  <data name="MyPlayersSearchButton" xml:space="preserve"><value>🔍 Search</value></data>
+  <data name="MyPlayersClearSearchButton" xml:space="preserve"><value>✕ Clear search</value></data>
+  <data name="MyPlayersSearchPrompt" xml:space="preserve"><value>🔍 Type part of the player's name, or the Volleybox id.</value></data>
+  <data name="MyPlayersSearchTooLong" xml:space="preserve"><value>That is too long: search with at most 100 characters.</value></data>
+  <data name="MyPlayersSearchBusy" xml:space="preserve"><value>Finish or cancel your new player first (/cancel).</value></data>
+  <data name="MyPlayersNotFound" xml:space="preserve"><value>Player not found.</value></data>
+  <data name="MyPlayersFilesButton" xml:space="preserve"><value>📁 Files</value></data>
+  <data name="MyPlayersEditButton" xml:space="preserve"><value>Edit in Mini App</value></data>
+  <data name="MyPlayersBackToListButton" xml:space="preserve"><value>◀ Back to list</value></data>
+  <data name="MyPlayersBackButton" xml:space="preserve"><value>◀ Back</value></data>
+  <data name="MyPlayersCard" xml:space="preserve"><value>{0}
+{1}
+Status: {2}
+{3}</value></data>
+  <data name="MyPlayersCardProcessing" xml:space="preserve"><value>{0} processing</value></data>
+  <data name="MyPlayersCardFailed" xml:space="preserve"><value>{0} failed</value></data>
+  <data name="MyPlayersCardFolders" xml:space="preserve"><value>📂 Drive folders: {0}</value></data>
+  <data name="MyPlayersCardNoFolders" xml:space="preserve"><value>📂 No Drive folder linked</value></data>
+  <data name="MyPlayersCardVolleybox" xml:space="preserve"><value>Volleybox: {0}</value></data>
+  <data name="MyPlayersCardAttention" xml:space="preserve"><value>⚠️ Needs attention: {0}</value></data>
+  <data name="MyPlayersCardMissing" xml:space="preserve"><value>missing {0}</value></data>
+  <data name="MyPlayersCardFailedFiles" xml:space="preserve"><value>a file failed</value></data>
+  <data name="MyPlayersCardLostFolder" xml:space="preserve"><value>a Drive folder lost access</value></data>
+  <data name="MyPlayersFilesHeader" xml:space="preserve"><value>📁 Files of {0} · page {1} of {2}</value></data>
+  <data name="MyPlayersFilesEmpty" xml:space="preserve"><value>📁 Files of {0}
+No files yet.</value></data>
+  <data name="MyPlayersFileLine" xml:space="preserve"><value>{0}. {1}{2} — {3} · {4}</value></data>
+  <data name="MyPlayersFileHidden" xml:space="preserve"><value>hidden</value></data>
 </root>

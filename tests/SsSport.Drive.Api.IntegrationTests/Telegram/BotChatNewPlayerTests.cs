@@ -12,6 +12,7 @@ using SsSport.Drive.Application.Abstractions.Persistence;
 using SsSport.Drive.Application.Abstractions.Storage;
 using SsSport.Drive.Application.Telegram;
 using SsSport.Drive.Application.Telegram.Access;
+using SsSport.Drive.Domain.Primitives;
 using SsSport.Drive.Domain.Users;
 using SsSport.Drive.Infrastructure.Persistence;
 using Testcontainers.PostgreSql;
@@ -96,6 +97,18 @@ public sealed class BotChatFixture : IAsyncLifetime
         var analyst = User.RequestAccess(telegramId, $"chat_{telegramId}", $"Chat {telegramId}", DateTimeOffset.UtcNow);
         analyst.Approve(Role.Analyst);
         scope.ServiceProvider.GetRequiredService<IRepository<User, Guid>>().Add(analyst);
+        await scope.ServiceProvider.GetRequiredService<IUnitOfWork>().SaveChangesAsync(TestContext.Current.CancellationToken);
+        return telegramId;
+    }
+
+    /// <summary>Stores a new active admin.</summary>
+    /// <returns>The admin's Telegram id.</returns>
+    public async Task<long> NewAdminAsync()
+    {
+        var telegramId = Interlocked.Increment(ref _nextTelegramId);
+        using var scope = Api.Services.CreateScope();
+        var admin = User.CreateFirstAdmin(telegramId, $"Admin {telegramId}", EmailAddress.Create($"admin{telegramId}@ss-sport.co"), DateTimeOffset.UtcNow);
+        scope.ServiceProvider.GetRequiredService<IRepository<User, Guid>>().Add(admin);
         await scope.ServiceProvider.GetRequiredService<IUnitOfWork>().SaveChangesAsync(TestContext.Current.CancellationToken);
         return telegramId;
     }
