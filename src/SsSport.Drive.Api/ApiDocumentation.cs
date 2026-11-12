@@ -61,6 +61,13 @@ public static class ApiDocumentation
                 Name = Links.ViewerGateEndpoints.SessionHeader,
                 Description = "A viewer's session (L-2): the value of the browser's `__Host-ssd_vs` cookie, forwarded by the web app. One day, one link.",
             };
+            document.Components.SecuritySchemes[Public.PublicAccessEndpoints.AccountSchemeName] = new OpenApiSecurityScheme
+            {
+                Type = SecuritySchemeType.ApiKey,
+                In = ParameterLocation.Header,
+                Name = Public.PublicAccessEndpoints.AccountHeader,
+                Description = "A signed-in viewer's session on the public site: the value of the browser's `__Host-ssd_acct` cookie, forwarded by the web app. One day.",
+            };
             return Task.CompletedTask;
         }));
 

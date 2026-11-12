@@ -64,6 +64,12 @@ public sealed class ApplicationExceptionHandler(IProblemDetailsService problemDe
                 Title = verification.Message,
                 Extensions = { ["code"] = ViewerVerificationRequiredException.Code },
             },
+            ViewerSignInRequiredException signIn => new ProblemDetails
+            {
+                Status = StatusCodes.Status401Unauthorized,
+                Title = signIn.Message,
+                Extensions = { ["code"] = ViewerSignInRequiredException.Code },
+            },
             ForwardPendingException pending => new ProblemDetails
             {
                 Status = StatusCodes.Status403Forbidden,

@@ -1138,3 +1138,31 @@
     transition: none;
   }
 }
+
+/* Pager under the player results (P-8) */
+.viewer .ph-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 28px;
+  font-size: 14px;
+  color: #8a93a6;
+}
+
+.viewer .ph-pager a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 4px;
+  color: #fff;
+  text-decoration: none;
+}
+
+.viewer .ph-pager a:hover {
+  text-decoration: underline;
+}
+
+.viewer .pm-turnstile {
+  margin-top: 12px;
+}

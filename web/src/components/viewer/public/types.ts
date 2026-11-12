@@ -27,6 +27,16 @@ export type HomeData = {
   players: PublicPlayer[];
   /** Who is signed in, if anyone. */
   viewer: PublicViewer;
+  /** The search text of this page. Present when the API did the search (the real home page). */
+  query?: string;
+  /** The position chip of this page (`All` or a code). Present when the API did the search. */
+  position?: string;
+  /** The page number, starting at 1. Present when the API did the search. */
+  page?: number;
+  /** How many players match in all, across pages. Present when the API did the search. */
+  totalCount?: number;
+  /** How many pages the search has. Present when the API did the search. */
+  totalPages?: number;
 };
 
 /** A locked video: its title, tag and length only. It has no address, stream or thumbnail (P-2). */

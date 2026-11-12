@@ -34,6 +34,18 @@ public sealed class ApiRateLimitOptions
     /// cannot share the gate's tight budget; every one of them still needs a live session token.
     /// </summary>
     public int ViewerPermitsPerMinute { get; set; } = 240;
+
+    /// <summary>
+    /// Gets or sets the per-address budget of the public site's reads (P-8: <c>/public/*</c>, the player search, the locked
+    /// pages and photos). Home cards load a photo each, so it is larger than the gate's.
+    /// </summary>
+    public int PublicPermitsPerMinute { get; set; } = 120;
+
+    /// <summary>
+    /// Gets or sets the per-address budget of the two anti-spam writes of the public site (P-8: <c>POST /public/access-code</c>
+    /// and <c>POST /public/access-requests</c>). Very small: a person asks for a code a few times at most.
+    /// </summary>
+    public int AccessPermitsPerMinute { get; set; } = 10;
 }
 
 /// <summary>
@@ -49,6 +61,12 @@ public static partial class ApiRateLimiting
     /// <summary>The public link endpoints, which have their own budget.</summary>
     private const string LinksPrefix = "/links";
 
+    /// <summary>The public site's endpoints (P-8).</summary>
+    private const string PublicPrefix = "/public";
+
+    /// <summary>The two public writes that get the tight anti-spam budget.</summary>
+    private static readonly string[] _accessWrites = ["/public/access-code", "/public/access-requests"];
+
     /// <summary>The length of one budget window.</summary>
     private static readonly TimeSpan _window = TimeSpan.FromMinutes(1);
 
@@ -59,7 +77,7 @@ public static partial class ApiRateLimiting
     {
         services.AddOptions<ApiRateLimitOptions>()
             .BindConfiguration(ApiRateLimitOptions.SectionName)
-            .Validate(options => options.PermitsPerMinute > 0 && options.WebhookPermitsPerMinute > 0 && options.LinkPermitsPerMinute > 0 && options.ViewerPermitsPerMinute > 0, "Rate limits must be positive.")
+            .Validate(options => options.PermitsPerMinute > 0 && options.WebhookPermitsPerMinute > 0 && options.LinkPermitsPerMinute > 0 && options.ViewerPermitsPerMinute > 0 && options.PublicPermitsPerMinute > 0 && options.AccessPermitsPerMinute > 0, "Rate limits must be positive.")
             .ValidateOnStart();
 
         services.AddRateLimiter(_ => { });
@@ -89,6 +107,13 @@ public static partial class ApiRateLimiting
         if (path.StartsWithSegments(TelegramWebhookEndpoints.Route, StringComparison.OrdinalIgnoreCase))
         {
             return FixedWindow($"webhook:{client}", budgets.WebhookPermitsPerMinute);
+        }
+
+        if (path.StartsWithSegments(PublicPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return HttpMethods.IsPost(context.Request.Method) && _accessWrites.Any(write => path.StartsWithSegments(write, StringComparison.OrdinalIgnoreCase))
+                ? FixedWindow($"access:{client}", budgets.AccessPermitsPerMinute)
+                : FixedWindow($"public:{client}", budgets.PublicPermitsPerMinute);
         }
 
         if (IsViewerContentRead(context.Request))

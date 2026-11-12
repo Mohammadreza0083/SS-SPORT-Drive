@@ -35,3 +35,30 @@ export function filterPlayers(players: readonly PublicPlayer[], query: string, p
 export function resultCountLabel(count: number): string {
   return `${count} ${count === 1 ? "player" : "players"}`;
 }
+
+/**
+ * The address of a home page state, so the search, the chips and the pager live in the URL (and the player QR code's
+ * `/?q=<name>` keeps working).
+ *
+ * @param query - The search text; empty leaves `q` out.
+ * @param position - A position code, or "All" which leaves `position` out.
+ * @param page - The page number; 1 leaves `page` out.
+ * @returns For example `/?q=tehr&position=OPP&page=2`, or `/`.
+ */
+export function homeHref(query: string, position: string, page: number): string {
+  const params = new URLSearchParams();
+  if (query.trim()) {
+    params.set("q", query.trim());
+  }
+
+  if (position !== "All") {
+    params.set("position", position);
+  }
+
+  if (page > 1) {
+    params.set("page", String(page));
+  }
+
+  const text = params.toString();
+  return text ? `/?${text}` : "/";
+}

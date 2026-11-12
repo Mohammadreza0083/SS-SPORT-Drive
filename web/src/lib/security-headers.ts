@@ -7,6 +7,9 @@ const OWN_SUBDOMAINS = "https://*.ss-sport.co";
 /** Telegram Web, the only page allowed to frame the Mini App. */
 const TELEGRAM_WEB = "https://web.telegram.org";
 
+/** Cloudflare Turnstile: the request-access dialog loads its script and shows its widget in a frame (P-8). */
+const TURNSTILE = "https://challenges.cloudflare.com";
+
 /** Where the Mini App loads `telegram-web-app.js` from. */
 const TELEGRAM_SCRIPTS = "https://telegram.org";
 
@@ -20,8 +23,8 @@ const SITE_SOURCE = "/:path((?!miniapp(?:/|$)).*)";
  * @param options - `isDev` adds eval and hot-reload sockets; `scripts` and `frameAncestors` vary per area.
  * @returns The policy as one header value.
  */
-function contentSecurityPolicy(options: { isDev: boolean; scripts: string[]; frameAncestors: string }): string {
-  const { isDev, scripts, frameAncestors } = options;
+function contentSecurityPolicy(options: { isDev: boolean; scripts: string[]; frames?: string[]; frameAncestors: string }): string {
+  const { isDev, scripts, frames, frameAncestors } = options;
   const directives = [
     "default-src 'self'",
     `script-src ${["'self'", "'unsafe-inline'", ...(isDev ? ["'unsafe-eval'"] : []), ...scripts].join(" ")}`,
@@ -30,6 +33,7 @@ function contentSecurityPolicy(options: { isDev: boolean; scripts: string[]; fra
     `media-src 'self' blob: ${OWN_SUBDOMAINS}`,
     `connect-src ${["'self'", OWN_SUBDOMAINS, ...(isDev ? ["ws:"] : [])].join(" ")}`,
     "font-src 'self'",
+    ...(frames ? [`frame-src ${["'self'", ...frames].join(" ")}`] : []),
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
@@ -71,7 +75,7 @@ export function securityHeaders(options: { isDev: boolean }): HeaderRule[] {
     {
       source: SITE_SOURCE,
       headers: [
-        { key: "Content-Security-Policy", value: contentSecurityPolicy({ isDev, scripts: [], frameAncestors: "'none'" }) },
+        { key: "Content-Security-Policy", value: contentSecurityPolicy({ isDev, scripts: [TURNSTILE], frames: [TURNSTILE], frameAncestors: "'none'" }) },
         { key: "X-Frame-Options", value: "DENY" },
       ],
     },

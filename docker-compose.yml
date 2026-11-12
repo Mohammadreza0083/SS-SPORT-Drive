@@ -128,6 +128,9 @@ services:
   web:
     build:
       context: web
+      args:
+        # Cloudflare's always-pass test key by default; set the real site key in .env for staging and production.
+        NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${NEXT_PUBLIC_TURNSTILE_SITE_KEY:-1x00000000000000000000AA}
     restart: unless-stopped
     environment:
       # Server-side calls from Next.js go over the Docker network.

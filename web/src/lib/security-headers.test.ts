@@ -56,7 +56,9 @@ describe("securityHeaders (decisions §1b)", () => {
     expect(csp["base-uri"]).toBe("'self'");
     expect(csp["form-action"]).toBe("'self'");
     // Owner, 2026-11-01: static CSP with 'unsafe-inline' scripts, so cached and prerendered pages keep working.
-    expect(csp["script-src"]).toBe("'self' 'unsafe-inline'");
+    // P-8: the request-access dialog loads the Cloudflare Turnstile widget (a script and an iframe), and nothing else.
+    expect(csp["script-src"]).toBe("'self' 'unsafe-inline' https://challenges.cloudflare.com");
+    expect(csp["frame-src"]).toBe("'self' https://challenges.cloudflare.com");
     expect(csp["connect-src"]).toBe("'self' https://*.ss-sport.co");
     expect(csp["media-src"]).toBe("'self' blob: https://*.ss-sport.co");
     expect(csp).toHaveProperty("upgrade-insecure-requests");
@@ -68,6 +70,7 @@ describe("securityHeaders (decisions §1b)", () => {
     const csp = directives(miniapp["Content-Security-Policy"]);
     expect(csp["frame-ancestors"]).toBe("https://web.telegram.org");
     expect(csp["script-src"]).toBe("'self' 'unsafe-inline' https://telegram.org");
+    expect(csp["frame-src"]).toBeUndefined();
     expect(csp["default-src"]).toBe("'self'");
   });
 

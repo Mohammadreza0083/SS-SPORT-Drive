@@ -144,3 +144,19 @@ public sealed class ForbiddenAccessException : Exception
     {
     }
 }
+
+/// <summary>
+/// A signed-in viewer's session is missing, unknown, ended or signed out (P-8). Clients answer by asking the visitor
+/// for an email code instead (401 <c>viewer.sign_in_required</c>).
+/// </summary>
+public sealed class ViewerSignInRequiredException : Exception
+{
+    /// <summary>The code clients see.</summary>
+    public const string Code = "viewer.sign_in_required";
+
+    /// <summary>Initializes the exception.</summary>
+    public ViewerSignInRequiredException()
+        : base("Sign in to continue.")
+    {
+    }
+}
