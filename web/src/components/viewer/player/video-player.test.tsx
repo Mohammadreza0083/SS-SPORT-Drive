@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { createElement, forwardRef, type ReactNode } from "react";
+import { hydrateRoot } from "react-dom/client";
+import { renderToString } from "react-dom/server";
 
 /**
  * Stands in for one Media Chrome React component: renders its custom element with the given props,
@@ -222,5 +224,34 @@ describe("VideoPlayer", () => {
     await mediaElement(container);
 
     expect(container.querySelector("img")).toBeNull();
+  });
+
+  // Media Chrome renders declarative shadow DOM on the server. When the page streams in after its scripts have
+  // defined the custom elements (every `/r/{code}` page, inside <Suspense>), the browser keeps those templates as
+  // plain children and hydration fails. So the server sends only the empty stage.
+  it("renders no Media Chrome on the server, only the empty stage and the title row", () => {
+    desktop();
+
+    const html = renderToString(<VideoPlayer src="https://example.test/v/master.m3u8" title="Highlights 2026" tag="Spike" />);
+
+    expect(html).not.toContain("<media-");
+    expect(html).toContain('class="ss-player-stage"');
+    expect(html).toContain("Highlights 2026");
+  });
+
+  it("hydrates the server HTML without a mismatch, then mounts the controls", async () => {
+    desktop();
+    const element = <VideoPlayer src="https://example.test/v/master.m3u8" title="Highlights 2026" />;
+    const container = document.createElement("div");
+    container.innerHTML = renderToString(element);
+    document.body.appendChild(container);
+    const onRecoverableError = vi.fn();
+
+    const root = await act(async () => hydrateRoot(container, element, { onRecoverableError }));
+
+    expect((await mediaElement(container)).tagName).toBe("HLS-VIDEO");
+    expect(onRecoverableError).not.toHaveBeenCalled();
+    act(() => root.unmount());
+    container.remove();
   });
 });
