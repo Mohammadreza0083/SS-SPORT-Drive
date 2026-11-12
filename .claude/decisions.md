@@ -37,6 +37,7 @@ Last updated: 2026-10-29
 - **Specification pattern** for all query and filter logic, used together with the generic repository.
 - **Logging:** professional structured logging with **Serilog** (enrichers: correlation ID, environment, user, player). Logs ship to **Grafana Loki** with **Grafana** dashboards and alerts. Secrets, tokens, OTP codes and full emails are never logged.
 - **Performance:** benchmark each area of the site (viewer pages, HLS token endpoint, tracking ingest, search, admin APIs) with **k6**. Claude reminds the owner after each area is finished.
+  - **K-10 closed as not reproducible (owner, 2026-11-12).** The email-code slowdown from the first V-2b k6 runs did not come back on a clean re-run. The synchronous Hangfire enqueue stays as it is until a run shows it costs something. Run `SEND_CODES=1` again on staging (`perf/k6/README.md`).
 - **Git:**
   - One branch per feature or page (`feature/<area>-<name>`).
   - Commit as soon as a feature is implemented and green.
@@ -727,7 +728,14 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
     - The API never reads cookies.
   - **Rate limits:** `/links/*` has its own per-address budget, `RateLimiting__LinkPermitsPerMinute` (30), on top of the per-email limits above.
   - **Logging:** wrong codes, spent codes and refused emails are structured warnings with the link id only, never the email or code.
-  - **After the gate:** the real player page is V-2b (SSD-125). Until it lands, `/r/{code}` with a session shows the gate's "You're in" step.
+  - **After the gate (V-2b, SSD-125; owner approved the plan 2026-11-12, with the Roster page in the same task):**
+    - `/r/{code}` with a live session opens a `Personal` link on its player's page and a `Roster` link on the canvas `Roster` artboard. Roster cards open `/r/{code}/p/{playerId}`; position chips filter the cards in the browser (a link holds at most 20 players, all on one page). The gate's "You're in" step opens the content after its loading bar (3 s).
+    - **API** (public; the proof is `X-Viewer-Session`): `GET /links/{code}/content`, `/players` (paged), `/players/{id}`, `/players/{id}/videos` and `/documents` (paged in SQL), `/players/{id}/photo`. Order of checks: a link that does not open is 404 `share_link.unavailable`; no live session for this link is 401 `viewer.verification_required`; a player not on the link is 404. No storage key, checksum or Drive id is sent.
+    - **What counts:** only ready, visible videos and documents (PDFs, images). The hero video comes first, then the page order. A video's tag is its first tag (Highlight, Spike, Serve, Block, Reception, Defence, Full match, Stats), or "Video" when untagged. Minutes are the rounded total. DataVolley files wait for V-8.
+    - **The note** is signed "SS-SPORT". A recipient without an organisation shows their name in "Prepared for" and "Shared privately with".
+    - **Paging:** the player page asks for the first 100 videos and 100 documents (the largest page); more than that waits for a "Show more" when a real player needs it.
+    - **Until V-5b and I-4:** videos are listed with no stream (they play once the edge signs them) and documents with no page images.
+    - **Viewer addresses:** the web app passes each viewer's address to the API in `X-Forwarded-For` (gate and content calls), so per-address limits count viewers, not the web server; `Security__TrustedProxies` must include the web app's network. Content reads have their own budget, `RateLimiting__ViewerPermitsPerMinute` (240), because a roster page alone loads about 20 photos; the gate keeps its 30.
 - **Public home page** (`drive.ss-sport.co`):
   - Visitors search players by name, with a position filter.
   - A result shows the full player page (photo, name, position, flag, counts), but **videos, stats and PDFs are blurred and locked**. The backend must not send real media or document URLs for locked pages.

@@ -279,3 +279,83 @@ Since D-14, EF Core logs at Warning: no SQL command is logged unless it fails or
 - **It writes data.** Each `create_player` iteration adds a player and a Drive folder; a peak-200 `load` run adds about 4 000 of each. Run it on a throwaway database or on staging only, never on production.
 - **Each run gets its own Volleybox id window** of 100 000 ids between 100 000 000 and 999 999 999 (Volleybox ids have at most 9 digits), chosen by the start minute. Two runs started in the same minute share a window, and `create_player` would then hit `player.volleybox_taken`. Wait a minute between runs.
 - **The bot token never leaves the machine:** k6 only uses it to sign. It is not logged, and the API logs only rejection reasons.
+
+## `viewer-links.js`: personal links (L-2 gate, V-2b viewer content)
+
+The script calls the API the way the web app does for a viewer: tokens in `X-Viewer-Device` / `X-Viewer-Session` headers, never cookies.
+
+| Scenario | Endpoint | Expected | Threshold (p95) |
+|---|---|---|---|
+| `gate_card` | `GET /links/{code}` | 200 | < 150 ms (p99 < 300 ms) |
+| `unknown_link` | `GET /links/{unknown}` | 404 | < 100 ms |
+| `wrong_code` | `POST /links/{code}/verify` with a wrong code | 422 | < 200 ms |
+| `stale_device` | `POST /links/{code}/session` with a device token never issued | 401 | < 150 ms |
+| `email_code` (opt-in, `SEND_CODES=1`) | `POST /links/{code}/email-code`, a fresh forward address each time | 202 | < 300 ms |
+| `session` | `GET /links/{code}/session` | 200 | < 150 ms |
+| `content` | `GET /links/{code}/content` | 200 | < 150 ms (p99 < 300 ms) |
+| `players` | `GET /links/{code}/players` | 200 | < 200 ms (p99 < 400 ms) |
+| `player`, `videos`, `documents` | `GET /links/{code}/players/{id}[/videos\|/documents]` | 200 | < 200 ms (p99 < 400 ms) |
+| `photo` | `GET /links/{code}/players/{id}/photo` | 200 (404 when a player has no photo) | < 250 ms |
+| `no_session` | `GET /links/{code}/content` without a token | 401 | < 100 ms |
+
+The viewer scenarios run only with `SESSION_TOKEN`. Smoke runs 30 s at light rates; `load` ramps the player-page reads to `PEAK_RATE`/s (default 50) over 1 min, holds 2 min and ramps down 30 s.
+
+### Run it locally (Docker)
+
+1. **Raise the per-address budgets for the run.** One k6 machine is one address, so add these to `.env` and start the stack (`docker compose up -d --build --wait`). Remove them afterwards:
+
+   ```bash
+   RateLimiting__LinkPermitsPerMinute=1000000
+   RateLimiting__ViewerPermitsPerMinute=1000000
+   ```
+
+2. **Make a link and a session.** Create a link for one or more published players (`POST /admin/links`, or the Mini App), then open the gate once. With `Email__PickupDirectory=.mail` the code lands as an `.eml` file in the API container:
+
+   ```bash
+   curl -s -X POST http://localhost:5080/links/<code>/email-code -H "Content-Type: application/json" -d '{"email":"<recipient email>"}'
+   docker compose exec api sh -c 'grep -h -o "[0-9]\{6\}" .mail/*.eml | tail -1'
+   curl -s -X POST http://localhost:5080/links/<code>/verify -H "Content-Type: application/json" -d '{"email":"<recipient email>","code":"<the code>"}'
+   ```
+
+   The last answer's `sessionToken` lasts one day.
+
+3. **Run it:**
+
+   ```bash
+   docker run --rm -v "$PWD:/work" -w /work grafana/k6:2.2.0 run -e BASE_URL=http://host.docker.internal:5080 -e LINK_CODE=<code> -e RECIPIENT=<recipient email> -e SESSION_TOKEN=<token> -e PROFILE=smoke --summary-export k6-results/viewer-links-smoke.json perf/k6/viewer-links.js
+   ```
+
+**HTTPS:** outside Development the API redirects plain HTTP to HTTPS, as a real proxy terminates TLS. The script therefore sends `X-Forwarded-Proto: https` on every request. Start the API with `Security__TrustedProxies` covering the k6 machine; for a local run, `0.0.0.0/0,::/0`.
+
+### Results (2026-11-12, local Windows machine, API in Release as Staging, PostgreSQL 17 and RustFS in Docker, pool 40)
+
+Seed: 12 published players on one Roster link, each with 8 videos (one hidden, the 5th the hero) and 2 documents (one still processing), 10 photos. The session came from the real gate (pickup directory). The API's pool is 40 connections (`Database:MaxPoolSize` in the API's `appsettings.json`).
+
+**First runs:**
+
+| Run | Requests | Rate | Failed | p95 content | p95 player | p95 videos | p95 documents | p95 photo | p95 gate card | p95 wrong code |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `smoke` (with `SEND_CODES=1`) | 2 162 | 71/s | 0 | 35 ms | 38 ms | 67 ms | 48 ms | 169 ms | 23 ms | 45 ms |
+| `load`, peak 20, no codes | 21 425 | 102/s | 0 | 28 ms | 29 ms | 45 ms | 35 ms | 142 ms | 31 ms | 28 ms |
+| `load`, peak 20, `SEND_CODES=1` | 20 844 | 99/s | 0 | 3.36 s | 3.41 s | 3.87 s | 3.55 s | 9.42 s | 2.88 s | 2.73 s |
+| `load`, peak 50, `SEND_CODES=1` | 41 102 | 196/s | 5.5 % (503) | 14.4 s | 14.6 s | 17.0 s | 16.0 s | 19.2 s | 12.1 s | 11.9 s |
+
+**Re-run for K-10** (same seed, same build, fresh database, with `dotnet-counters` and `pg_stat_activity` sampling):
+
+| Run | Requests | Rate | Failed | p95 content | p95 player | p95 videos | p95 documents | p95 photo | p95 gate card | p95 wrong code | p95 email code |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `load`, peak 20, `SEND_CODES=1` | 21 659 | 103/s | 0 | 26 ms | 27 ms | 38 ms | 32 ms | 81 ms | 25 ms | 31 ms | 74 ms |
+| `load`, peak 50, `SEND_CODES=1` | 53 630 | 255/s | 0 | 51 ms | 51 ms | 69 ms | 58 ms | 136 ms | 44 ms | 48 ms | 95 ms |
+| `load`, peak 20, `SEND_CODES=1`, straight after peak 50 | 21 649 | 103/s | 0 | 31 ms | 32 ms | 47 ms | 37 ms | 92 ms | 27 ms | 41 ms | 100 ms |
+
+**Findings:**
+- **Viewer reads and the gate are fast:** every threshold passes at about 100 requests a second (roughly 20 player pages opened per second), with or without code requests.
+- **K-10 (SSD-128) did not reproduce.** In the first runs, about one code request a second slowed every request to seconds, and single-row lookups logged as slow SQL. The re-run used the same rates and the same order (peak 50, then peak 20). It passed every threshold, with no slow SQL. All 915 email jobs succeeded. The thread-pool queue never went above 4 work items, and no request waited for a pool connection. The first runs were most likely slowed by the machine itself: the same peak-50 run that answered 503 at 196/s served 255/s with no errors in the re-run. The synchronous Hangfire enqueue in the code request is left as it is, since nothing showed it to be a cost. Run `SEND_CODES=1` again on staging.
+- At peak 50 every endpoint runs at the full peak, about 6× a real page-view rate. The 503 `database.busy` in the first runs is D-15's answer to a full pool.
+- The `ssd-hardening` stack was running on the same machine during all of these runs.
+
+### Notes
+
+- **The wrong-code scenario spends the recipient's latest code.** Ask for a new code before you use the link in a browser.
+- **`SEND_CODES=1` queues one email job per request.** Use it only with a pickup directory, never with real email keys.
+- Until ingest (Epic 3) exists, players have no ready videos or documents, so `videos` and `documents` measure the query on an empty result.

@@ -23,5 +23,5 @@ export default function GatePreview() {
     notFound();
   }
 
-  return <EmailGate link={sampleLink} />;
+  return <EmailGate link={sampleLink} stayOnDone />;
 }

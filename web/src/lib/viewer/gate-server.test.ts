@@ -78,6 +78,18 @@ describe("forwardGate (CSRF)", () => {
 });
 
 describe("forwardGate (API calls)", () => {
+  it("passes the viewer's address on to the API (V-2b)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({ email: "m***@lube.it", resendAfterSeconds: 60, expiresInSeconds: 600 }, { status: 202 }));
+    const request = browserRequest("email-code", { body: { email: "marco@lube.it" } });
+    request.headers.set("X-Forwarded-For", "203.0.113.9, 10.0.0.2");
+
+    await forwardGate(request, API, "Ab3xYz", "email-code", fetchMock);
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(new Headers(init.headers).get("X-Forwarded-For")).toBe("203.0.113.9");
+  });
+
+
   it("asks for a code: forwards the JSON body and passes the answer back", async () => {
     const fetchMock = vi.fn().mockResolvedValue(Response.json({ email: "m***@lube.it", resendAfterSeconds: 60, expiresInSeconds: 600 }, { status: 202 }));
 
@@ -172,6 +184,15 @@ describe("resolveLink", () => {
 
     expect(await resolveLink(API, "Ab3xYz", fetchMock)).toEqual(link);
     expect(fetchMock).toHaveBeenCalledWith("http://api:8080/links/Ab3xYz", expect.objectContaining({ cache: "no-store" }));
+  });
+
+  it("sends the viewer's address, so the API's limits count each viewer (V-2b)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 404 }));
+
+    await resolveLink(API, "Ab3xYz", fetchMock, "203.0.113.9");
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(new Headers(init.headers).get("X-Forwarded-For")).toBe("203.0.113.9");
   });
 
   it("answers null for a link that does not open", async () => {
