@@ -34,7 +34,7 @@ SS-SPORT analysts drop a player's footage into a Google Drive folder named `SS-S
 |---|---|
 | 🎬 **Ingest** | Reads Drive folders and subfolders, copies originals to Cloudflare R2, transcodes to HLS (360p / 720p / 1080p) with the burned-in SS-SPORT watermark. |
 | 🔗 **Personal links** | Every club, scout or agent gets their own `/r/{code}` link, gated by email OTP, with device binding and forwarding alerts. |
-| 🛡️ **Protection** | HLS segments only, 30-minute HMAC-signed tokens refreshed while watching, a moving viewer-email overlay. No downloads, ever. |
+| 🛡️ **Protection** | HLS segments and rendered PDF pages only, 30-minute HMAC-signed tokens bound to the viewer session and refreshed while watching, a moving viewer-email overlay. DataVolley files are parsed on the server and shown as stats. No downloads, ever. |
 | 📊 **Tracking** | Plays, minutes watched, completion, replay hotspots and last-seen time per viewer, per player and per video. |
 | 🔎 **Public search** | Anyone can search players. Media stays blurred and locked until an admin approves an access request. |
 | 🤖 **Telegram** | Analysts add players by chatting with the bot or in its Mini App; admins get approvals, alerts and a daily digest from the bot. |
@@ -53,7 +53,7 @@ flowchart LR
     Analyst([Analyst]) --> TG[Telegram bot & Mini App]:::ext
 
     subgraph Cloudflare
-        Edge[Edge Worker<br/>short links · HLS tokens]:::edge
+        Edge[Edge Worker<br/>short links · HLS and page tokens]:::edge
         R2[(R2<br/>originals · HLS)]:::edge
     end
 
@@ -241,8 +241,8 @@ SS-SPORT Drive/
 | 1 | Core domain & persistence | ✅ Done |
 | 2 | Telegram bot & Mini App | 🚧 In progress |
 | 3 | Ingest, transcode & sync | 🚧 In progress (I-1 Drive reader done) |
-| 4 | Viewer site & media protection | 🚧 In progress (V-1–V-4, V-5a, V-6 PDF viewer done) |
-| 5 | Personal links, OTP & tracking | 🚧 In progress (L-1 share links, L-2 email gate, L-2b clean-up, L-3 forwarding done) |
+| 4 | Viewer site & media protection | ✅ Done |
+| 5 | Personal links, OTP & tracking | 🚧 In progress (L-1 share links, L-2 email gate, L-2b clean-up, L-3 forwarding, L-7 alerts and digest done; L-4–L-6 and the digest's watching numbers pending) |
 | 6 | Public search & access requests | ⏳ Planned |
 | 7 | Admin console | ⏳ Planned |
 | 8 | Archive migration | ⏳ Planned |
