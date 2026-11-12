@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
-using SsSport.Drive.Application.Abstractions.Persistence;
 using SsSport.Drive.Application.Abstractions.Events;
+using SsSport.Drive.Application.Abstractions.Persistence;
 using SsSport.Drive.Application.Links;
 using SsSport.Drive.Application.Telegram.Notices;
 using SsSport.Drive.Application.Users;

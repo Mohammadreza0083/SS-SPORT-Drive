@@ -1,4 +1,3 @@
-using SsSport.Drive.Application.Telegram.Digest;
 using System.Text.Json;
 using Hangfire;
 using Hangfire.PostgreSql;
@@ -11,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Npgsql;
 using SsSport.Drive.Application.Abstractions.Events;
 using SsSport.Drive.Application.Links;
+using SsSport.Drive.Application.Telegram.Digest;
 using SsSport.Drive.Application.Telegram.Notices;
 using SsSport.Drive.Domain.Emails;
 using SsSport.Drive.Domain.Primitives;
