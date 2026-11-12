@@ -3,6 +3,7 @@
 import { useId, useState } from "react";
 import { Chip } from "@/components/viewer/chip";
 import { VideoPlayer } from "@/components/viewer/player/video-player";
+import { useSignedSource } from "@/components/viewer/player/use-signed-source";
 import { pageCopy } from "./copy";
 import { formatDuration, videoTags } from "./format";
 import type { PlayerVideo } from "./types";
@@ -40,6 +41,8 @@ export function VideosSection({ videos, viewerEmail }: VideosSectionProps) {
 
   const current = videos.find((video) => video.id === selectedId) ?? videos[0];
   const shown = tag === pageCopy.allTag ? videos : videos.filter((video) => video.tag === tag);
+  // Only the video on show is signed (V-5b), and again every 20 minutes while it plays; never the whole playlist.
+  const source = useSignedSource(current?.streamPath, current?.src ?? "");
 
   if (!current) {
     return null;
@@ -62,9 +65,21 @@ export function VideosSection({ videos, viewerEmail }: VideosSectionProps) {
 
       <div className="pp-videos-body">
         <div className="pp-videos-player ss-sr">
-          <VideoPlayer src={current.src} title={current.title} tag={current.tag} fps={current.fps} autoPlay={autoPlay}
-            viewerEmail={viewerEmail}
-          />
+          {source.failed ? (
+            <p className="pp-unavailable" role="alert">
+              {pageCopy.videoUnavailable}
+            </p>
+          ) : (
+            <VideoPlayer
+              src={source.src}
+              title={current.title}
+              tag={current.tag}
+              fps={current.fps}
+              autoPlay={autoPlay}
+              viewerEmail={viewerEmail}
+              refreshSource={source.refreshSource}
+            />
+          )}
         </div>
 
         <ul className="pp-playlist ss-sr" aria-label={pageCopy.playlist}>

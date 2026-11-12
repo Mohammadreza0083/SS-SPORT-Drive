@@ -163,4 +163,28 @@ It stays closed for this email until you keep it.</value></data>
   <data name="ForwardAlreadyDecided" xml:space="preserve"><value>ℹ️ {0} on link {1} was already {2} by {3}.</value></data>
   <data name="ForwardGone" xml:space="preserve"><value>ℹ️ This forward no longer exists.</value></data>
   <data name="OnlyAdminsForwards" xml:space="preserve"><value>Only admins can keep or block forwarded links.</value></data>
+  <data name="LinkOpenedAlert" xml:space="preserve"><value>👀 Link {0} for {1} was opened by {2} · {3}</value></data>
+  <data name="LinkOpenedForwardSuffix" xml:space="preserve"><value> (forwarded)</value></data>
+  <data name="DigestHeader" xml:space="preserve"><value>📊 Daily digest · {0}</value></data>
+  <data name="DigestNoActivity" xml:space="preserve"><value>Yesterday: no activity.</value></data>
+  <data name="DigestActivity" xml:space="preserve"><value>Yesterday: {0} · {1} · {2} · {3}</value></data>
+  <data name="DigestLinksOpenedOne" xml:space="preserve"><value>{0} link opened</value></data>
+  <data name="DigestLinksOpenedMany" xml:space="preserve"><value>{0} links opened</value></data>
+  <data name="DigestViewersOne" xml:space="preserve"><value>{0} viewer</value></data>
+  <data name="DigestViewersMany" xml:space="preserve"><value>{0} viewers</value></data>
+  <data name="DigestPlaysOne" xml:space="preserve"><value>{0} play</value></data>
+  <data name="DigestPlaysMany" xml:space="preserve"><value>{0} plays</value></data>
+  <data name="DigestMinutes" xml:space="preserve"><value>{0} min watched</value></data>
+  <data name="DigestTopPlayers" xml:space="preserve"><value>Top players: {0}</value></data>
+  <data name="DigestTopPlayer" xml:space="preserve"><value>{0} {1} min</value></data>
+  <data name="DigestWaiting" xml:space="preserve"><value>Waiting on you: {0}</value></data>
+  <data name="DigestNothingWaiting" xml:space="preserve"><value>Nothing is waiting on you.</value></data>
+  <data name="DigestForwardsOne" xml:space="preserve"><value>{0} forward to keep or block</value></data>
+  <data name="DigestForwardsMany" xml:space="preserve"><value>{0} forwards to keep or block</value></data>
+  <data name="DigestWaitingPlayersOne" xml:space="preserve"><value>{0} player on the waiting list</value></data>
+  <data name="DigestWaitingPlayersMany" xml:space="preserve"><value>{0} players on the waiting list</value></data>
+  <data name="DigestAccessRequestsOne" xml:space="preserve"><value>{0} access request</value></data>
+  <data name="DigestAccessRequestsMany" xml:space="preserve"><value>{0} access requests</value></data>
+  <data name="DigestFailedEmailsOne" xml:space="preserve"><value>⚠️ {0} email failed after every retry</value></data>
+  <data name="DigestFailedEmailsMany" xml:space="preserve"><value>⚠️ {0} emails failed after every retry</value></data>
 </root>

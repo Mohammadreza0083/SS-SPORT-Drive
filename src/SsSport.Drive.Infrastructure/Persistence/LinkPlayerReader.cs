@@ -35,7 +35,9 @@ public sealed class LinkPlayerReader(DbContext context) : ILinkPlayerReader
                 (SELECT coalesce(sum(a.duration_seconds), 0)::float8 FROM assets a
                     WHERE a.player_id = p.id AND a.kind = 'Video' AND a.visibility = 'Visible' AND a.state = 'Ready') AS video_seconds,
                 (SELECT count(*)::int FROM assets a
-                    WHERE a.player_id = p.id AND a.kind = 'Document' AND a.visibility = 'Visible' AND a.state = 'Ready') AS document_count
+                    WHERE a.player_id = p.id AND a.kind = 'Document' AND a.visibility = 'Visible' AND a.state = 'Ready') AS document_count,
+                (SELECT count(*)::int FROM assets a
+                    WHERE a.player_id = p.id AND a.kind = 'Scout' AND a.visibility = 'Visible' AND a.state = 'Ready') AS scout_count
             FROM players p
             WHERE p.id = ANY({ids}) AND p.status = 'Published'
             """)
@@ -50,7 +52,8 @@ public sealed class LinkPlayerReader(DbContext context) : ILinkPlayerReader
             row.VolleyboxUrl ?? string.Empty,
             row.VideoCount,
             row.VideoSeconds,
-            row.DocumentCount))];
+            row.DocumentCount,
+            row.ScoutCount))];
     }
 
     /// <summary>One row of the projection.</summary>
@@ -82,5 +85,8 @@ public sealed class LinkPlayerReader(DbContext context) : ILinkPlayerReader
 
         /// <summary>Gets the number of ready, visible documents.</summary>
         public int DocumentCount { get; init; }
+
+        /// <summary>Gets the number of ready, visible DataVolley scout files.</summary>
+        public int ScoutCount { get; init; }
     }
 }

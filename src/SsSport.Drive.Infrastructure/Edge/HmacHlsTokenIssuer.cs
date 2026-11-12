@@ -27,6 +27,9 @@ public sealed partial class HmacHlsTokenIssuer(IOptions<EdgeOptions> options, Ti
     private const int SessionHashBytes = 16;
 
     /// <inheritdoc />
+    public bool IsEnabled => EdgeOptions.IsValidSigningKey(options.Value.HlsSigningKey);
+
+    /// <inheritdoc />
     public HlsAccess Issue(string pathPrefix, string sessionCookie)
     {
         if (!IsSafePrefix(pathPrefix))

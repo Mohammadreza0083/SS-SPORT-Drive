@@ -22,7 +22,7 @@ const player = {
   nationality: { code: "IR", name: "Iran" },
   volleyboxUrl: "https://volleybox.net/arash-tehrani-p80001",
   hasPhoto: true,
-  stats: { videos: 2, minutes: 110, documents: 1 },
+  stats: { videos: 2, minutes: 110, documents: 1, matches: 1 },
 };
 
 /**
@@ -110,6 +110,7 @@ describe("loadViewerPage", () => {
       [`/links/Ab3xYz/players/${player.id}`]: { body: player },
       [`/links/Ab3xYz/players/${player.id}/videos`]: { body: paged([]) },
       [`/links/Ab3xYz/players/${player.id}/documents`]: { body: paged([]) },
+      [`/links/Ab3xYz/players/${player.id}/scouts`]: { body: paged([]) },
     });
 
     const page = await loadViewerPage(API, "Ab3xYz", SESSION, null, fetchMock);
@@ -172,6 +173,7 @@ describe("loadPlayerPage", () => {
         ]),
       },
       [`/links/Ab3xYz/players/${player.id}/documents`]: { body: paged([{ id: "d1", title: "Season stats 2026", pageCount: 2 }]) },
+      [`/links/Ab3xYz/players/${player.id}/scouts`]: { body: paged([{ id: "s1", title: "Match vs Volley Nord" }]) },
     });
 
   it("builds the player page from the API", async () => {
@@ -191,12 +193,15 @@ describe("loadPlayerPage", () => {
         viewerEmail: "j.demir@aurora-volley.example",
         recipient: { organisation: "Club Aurora", name: "Jan Demir" },
         note: { text: "Hi Jan, as discussed.", author: "SS-SPORT" },
-        stats: { videos: 2, minutes: 110, documents: 1 },
+        stats: { videos: 2, minutes: 110, documents: 1, matches: 1 },
+        // V-5b: the stream and page URLs are signed per viewer when needed, from these same-origin routes.
         videos: [
-          { id: "v1", title: "Full match vs Paykan", tag: "Full match", durationSeconds: 6490, src: "" },
-          { id: "v2", title: "Highlights 2026", tag: "Highlight", durationSeconds: 84, src: "" },
+          { id: "v1", title: "Full match vs Paykan", tag: "Full match", durationSeconds: 6490, src: "", streamPath: `/api/links/Ab3xYz/players/${player.id}/videos/v1/stream` },
+          { id: "v2", title: "Highlights 2026", tag: "Highlight", durationSeconds: 84, src: "", streamPath: `/api/links/Ab3xYz/players/${player.id}/videos/v2/stream` },
         ],
-        documents: [{ id: "d1", title: "Season stats 2026", pageCount: 2, pages: [] }],
+        documents: [{ id: "d1", title: "Season stats 2026", pageCount: 2, pages: [], pagesPath: `/api/links/Ab3xYz/players/${player.id}/documents/d1/pages` }],
+        // V-8: the player's scout files; a report is read when one is opened.
+        scouts: [{ id: "s1", title: "Match vs Volley Nord", reportPath: `/api/links/Ab3xYz/players/${player.id}/scouts/s1` }],
       },
     });
   });
@@ -209,6 +214,7 @@ describe("loadPlayerPage", () => {
     const urls = fetchMock.mock.calls.map((call) => String(call[0]));
     expect(urls.find((url) => url.includes("/videos"))).toContain("pageSize=100");
     expect(urls.find((url) => url.includes("/documents"))).toContain("pageSize=100");
+    expect(urls.find((url) => url.includes("/scouts"))).toContain("pageSize=100");
   });
 
   it("leaves out the note and the organisation when the link has none", async () => {
@@ -217,6 +223,7 @@ describe("loadPlayerPage", () => {
       [`/links/Ab3xYz/players/${player.id}`]: { body: { ...player, hasPhoto: false } },
       [`/links/Ab3xYz/players/${player.id}/videos`]: { body: paged([]) },
       [`/links/Ab3xYz/players/${player.id}/documents`]: { body: paged([]) },
+      [`/links/Ab3xYz/players/${player.id}/scouts`]: { body: paged([]) },
     });
 
     const page = await loadPlayerPage(API, "Ab3xYz", player.id, SESSION, null, fetchMock);

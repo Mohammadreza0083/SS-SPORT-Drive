@@ -7,6 +7,9 @@ namespace SsSport.Drive.Application.Abstractions.Media;
 /// </summary>
 public interface IHlsTokenIssuer
 {
+    /// <summary>Gets a value indicating whether tokens can be signed: <see langword="false"/> when <c>Edge__HlsSigningKey</c> is empty.</summary>
+    bool IsEnabled { get; }
+
     /// <summary>
     /// Signs a token for the HLS folder of one video, bound to the viewer's session.
     /// </summary>

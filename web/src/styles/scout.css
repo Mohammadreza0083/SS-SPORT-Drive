@@ -1,0 +1,168 @@
+/*
+ * Match stats (backlog V-8): the section of DataVolley cards and the view-only stats dialog. There is no canvas artboard
+ * for it yet, so it borrows the document viewer's shell (.dv-root, .dv-backdrop, .dv, .dv-head, .dv-foot) and the player
+ * page's document cards, and only adds what is new. The owner reviews it on /design/scout.
+ */
+
+/* ---------- Page: messages when media cannot be signed ---------- */
+.viewer .pp-unavailable {
+  margin: 14px 0 0;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--ss-red-tint-border);
+  background: var(--ss-red-tint);
+  color: var(--ss-red-tint-text);
+  font-size: 14px;
+}
+
+.viewer .pp-videos-player .pp-unavailable {
+  margin: 0;
+  aspect-ratio: 16 / 9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+/* ---------- Section ---------- */
+.viewer .sr-section {
+  padding-top: 8px;
+}
+
+/* ---------- Dialog: sized to its content, centred without a transform (the shared entrance animation owns it) ---------- */
+.viewer .dv.sr {
+  inset: 0;
+  margin: auto;
+  width: min(720px, calc(100vw - 32px));
+  height: fit-content;
+  max-height: calc(100vh - 48px);
+}
+
+.viewer .sr-body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 24px 28px 28px;
+  overflow-y: auto;
+}
+
+.viewer .sr-match {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  text-align: center;
+}
+
+.viewer .sr-teams {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 16px;
+  font-family: var(--ss-font-display);
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+
+.viewer .sr-vs {
+  font-family: var(--ss-font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: .12em;
+  color: var(--ss-muted);
+}
+
+.viewer .sr-result {
+  font-family: var(--ss-font-display);
+  font-size: 44px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ss-red-light);
+}
+
+.viewer .sr-sets,
+.viewer .sr-player {
+  font-family: var(--ss-font-mono);
+  font-size: 13px;
+  color: var(--ss-muted);
+}
+
+.viewer .sr-player {
+  color: var(--ss-text-soft);
+}
+
+/* ---------- Stats table ---------- */
+.viewer .sr-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.viewer .sr-table th,
+.viewer .sr-table td {
+  padding: 12px 10px;
+  text-align: right;
+  border-bottom: 1px solid var(--ss-divider);
+  font-size: 15px;
+}
+
+.viewer .sr-table th {
+  font-family: var(--ss-font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ss-muted);
+}
+
+.viewer .sr-table th:first-child,
+.viewer .sr-table td:first-child {
+  text-align: left;
+}
+
+.viewer .sr-skill {
+  font-weight: 700;
+}
+
+.viewer .sr-missing {
+  margin: 0;
+  text-align: center;
+  color: var(--ss-muted);
+}
+
+/* ---------- Phone ---------- */
+@media (max-width: 640px) {
+  .viewer .dv.sr {
+    inset: auto 0 0 0;
+    margin: 0;
+    width: 100%;
+    max-height: 88vh;
+    border-radius: 24px 24px 0 0;
+  }
+
+  .viewer .sr-body {
+    padding: 20px 16px 24px;
+  }
+
+  .viewer .sr-teams {
+    font-size: 24px;
+  }
+
+  .viewer .sr-result {
+    font-size: 36px;
+  }
+
+  .viewer .sr-table th,
+  .viewer .sr-table td {
+    padding: 10px 6px;
+    font-size: 14px;
+  }
+
+  .viewer .sr-table th {
+    font-size: 10px;
+    letter-spacing: .06em;
+  }
+}

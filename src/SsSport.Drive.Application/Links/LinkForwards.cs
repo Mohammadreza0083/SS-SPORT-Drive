@@ -22,6 +22,16 @@ public sealed class LinkForwardSpec : Specification<LinkForward>, ISingleResultS
         Query.Where(forward => forward.ShareLinkId == shareLinkId && forward.Email == email);
 }
 
+/// <summary>The first-open record of one email on one link (L-7), if it has opened it before.</summary>
+public sealed class LinkOpenSpec : Specification<LinkOpen>, ISingleResultSpecification<LinkOpen>
+{
+    /// <summary>Builds the specification.</summary>
+    /// <param name="shareLinkId">The link.</param>
+    /// <param name="email">The viewer's email.</param>
+    public LinkOpenSpec(Guid shareLinkId, EmailAddress email) =>
+        Query.Where(open => open.ShareLinkId == shareLinkId && open.Email == email);
+}
+
 /// <summary>The devices an email is trusted on for one link: a handful per person, removed when a forward is blocked.</summary>
 public sealed class TrustedDevicesOfEmailSpec : Specification<TrustedDevice>
 {

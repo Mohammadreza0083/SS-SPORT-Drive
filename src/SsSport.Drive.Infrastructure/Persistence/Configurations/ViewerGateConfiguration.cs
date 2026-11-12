@@ -98,3 +98,27 @@ internal sealed class LinkForwardConfiguration : IEntityTypeConfiguration<LinkFo
         builder.HasIndex(forward => new { forward.ShareLinkId, forward.Email }).IsUnique();
     }
 }
+
+/// <summary>
+/// Maps <see cref="LinkOpen"/> to <c>link_opens</c>: the first time an email opened a link (L-7). Never purged by the gate
+/// clean-up. The index on link and email is deliberately not unique: two first sessions racing must never fail a viewer's
+/// sign-in, and the worst case is a second alert.
+/// </summary>
+internal sealed class LinkOpenConfiguration : IEntityTypeConfiguration<LinkOpen>
+{
+    /// <summary>Configures the first-open table.</summary>
+    /// <param name="builder">The entity builder.</param>
+    public void Configure(EntityTypeBuilder<LinkOpen> builder)
+    {
+        builder.ToTable("link_opens");
+        builder.HasKey(open => open.Id);
+
+        // Get-only properties are mapped explicitly; EF Core skips them by convention.
+        builder.Property(open => open.ShareLinkId);
+        builder.Property(open => open.Email).HasConversion(ValueConverters.RequiredEmail).HasMaxLength(254);
+        builder.Property(open => open.IsForward);
+        builder.Property(open => open.FirstOpenedAt);
+
+        builder.HasIndex(open => new { open.ShareLinkId, open.Email });
+    }
+}
