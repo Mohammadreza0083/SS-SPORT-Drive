@@ -37,6 +37,7 @@ Last updated: 2026-10-29
 - **Specification pattern** for all query and filter logic, used together with the generic repository.
 - **Logging:** professional structured logging with **Serilog** (enrichers: correlation ID, environment, user, player). Logs ship to **Grafana Loki** with **Grafana** dashboards and alerts. Secrets, tokens, OTP codes and full emails are never logged.
 - **Performance:** benchmark each area of the site (viewer pages, HLS token endpoint, tracking ingest, search, admin APIs) with **k6**. Claude reminds the owner after each area is finished.
+  - **K-10 closed as not reproducible (owner, 2026-11-12).** The email-code slowdown from the first V-2b k6 runs did not come back on a clean re-run. The synchronous Hangfire enqueue stays as it is until a run shows it costs something. Run `SEND_CODES=1` again on staging (`perf/k6/README.md`).
 - **Git:**
   - One branch per feature or page (`feature/<area>-<name>`).
   - Commit as soon as a feature is implemented and green.

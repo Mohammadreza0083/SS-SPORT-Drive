@@ -302,9 +302,11 @@ The viewer scenarios run only with `SESSION_TOKEN`. Smoke runs 30 s at light rat
 
 **HTTPS:** outside Development the API redirects plain HTTP to HTTPS, as a real proxy terminates TLS. The script therefore sends `X-Forwarded-Proto: https` on every request. Start the API with `Security__TrustedProxies` covering the k6 machine; for a local run, `0.0.0.0/0,::/0`.
 
-### Results (2026-11-12, local Windows machine, API in Release as Staging, PostgreSQL 17 and RustFS in Docker, pool 20)
+### Results (2026-11-12, local Windows machine, API in Release as Staging, PostgreSQL 17 and RustFS in Docker, pool 40)
 
-Seed: 12 published players on one Roster link, each with 8 videos (one hidden, the 5th the hero) and 2 documents (one still processing), 10 photos. The session came from the real gate (pickup directory).
+Seed: 12 published players on one Roster link, each with 8 videos (one hidden, the 5th the hero) and 2 documents (one still processing), 10 photos. The session came from the real gate (pickup directory). The API's pool is 40 connections (`Database:MaxPoolSize` in the API's `appsettings.json`).
+
+**First runs:**
 
 | Run | Requests | Rate | Failed | p95 content | p95 player | p95 videos | p95 documents | p95 photo | p95 gate card | p95 wrong code |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -313,11 +315,19 @@ Seed: 12 published players on one Roster link, each with 8 videos (one hidden, t
 | `load`, peak 20, `SEND_CODES=1` | 20 844 | 99/s | 0 | 3.36 s | 3.41 s | 3.87 s | 3.55 s | 9.42 s | 2.88 s | 2.73 s |
 | `load`, peak 50, `SEND_CODES=1` | 41 102 | 196/s | 5.5 % (503) | 14.4 s | 14.6 s | 17.0 s | 16.0 s | 19.2 s | 12.1 s | 11.9 s |
 
+**Re-run for K-10** (same seed, same build, fresh database, with `dotnet-counters` and `pg_stat_activity` sampling):
+
+| Run | Requests | Rate | Failed | p95 content | p95 player | p95 videos | p95 documents | p95 photo | p95 gate card | p95 wrong code | p95 email code |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `load`, peak 20, `SEND_CODES=1` | 21 659 | 103/s | 0 | 26 ms | 27 ms | 38 ms | 32 ms | 81 ms | 25 ms | 31 ms | 74 ms |
+| `load`, peak 50, `SEND_CODES=1` | 53 630 | 255/s | 0 | 51 ms | 51 ms | 69 ms | 58 ms | 136 ms | 44 ms | 48 ms | 95 ms |
+| `load`, peak 20, `SEND_CODES=1`, straight after peak 50 | 21 649 | 103/s | 0 | 31 ms | 32 ms | 47 ms | 37 ms | 92 ms | 27 ms | 41 ms | 100 ms |
+
 **Findings:**
-- **Viewer reads and the gate are fast while no codes are being sent:** every threshold passes at about 100 requests a second, which is roughly 20 player pages opened per second.
-- **About one code request a second slows the whole API down:** at the same rate, everything goes from tens of milliseconds to seconds, and even single-row lookups by index log as slow SQL (about 500 ms). All 578 email jobs succeeded and none backed up, so the cause is not a job backlog. It needs its own investigation: K-10 (SSD-128).
-- At peak 50 (about 200 requests a second, every endpoint at the full peak) the 20-connection pool runs out and the API answers 503 `database.busy`, as D-15 intends. The default peak counts every endpoint at the full rate, so it is about 6× a real page-view rate.
-- The `ssd-hardening` stack was running on the same machine during these runs.
+- **Viewer reads and the gate are fast:** every threshold passes at about 100 requests a second (roughly 20 player pages opened per second), with or without code requests.
+- **K-10 (SSD-128) did not reproduce.** In the first runs, about one code request a second slowed every request to seconds, and single-row lookups logged as slow SQL. The re-run used the same rates and the same order (peak 50, then peak 20). It passed every threshold, with no slow SQL. All 915 email jobs succeeded. The thread-pool queue never went above 4 work items, and no request waited for a pool connection. The first runs were most likely slowed by the machine itself: the same peak-50 run that answered 503 at 196/s served 255/s with no errors in the re-run. The synchronous Hangfire enqueue in the code request is left as it is, since nothing showed it to be a cost. Run `SEND_CODES=1` again on staging.
+- At peak 50 every endpoint runs at the full peak, about 6× a real page-view rate. The 503 `database.busy` in the first runs is D-15's answer to a full pool.
+- The `ssd-hardening` stack was running on the same machine during all of these runs.
 
 ### Notes
 
