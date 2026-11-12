@@ -4,6 +4,8 @@ export const pageCopy = {
   videosNav: "Videos",
   documentsNav: "Documents",
   preparedFor: "Prepared for",
+  /** Who signs the link's note on real pages. */
+  noteAuthor: "SS-SPORT",
   noteTitle: "A note for you",
   watchHighlights: "Watch highlights",
   volleybox: "Volleybox profile",

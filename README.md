@@ -123,7 +123,7 @@ Forwards (L-3): an email that is not the recipient's is alerted to every admin i
 
 ### Viewer design previews and visual tests
 
-In development, `/design/shell`, `/design/player`, `/design/player-page` (open a document card for the PDF viewer), `/design/gate` and `/design/gate-unavailable` show the viewer pages with the design canvas's sample player (production answers 404). Playwright compares them at 1440 / 834 / 390 px with motion reduced. The Telegram Mini App screens are compared at 390 px with Telegram's script and the API stubbed, so they need no bot or backend. The baselines are Linux screenshots, so run the tests, or regenerate the baselines after an intended design change, in the same Docker image CI uses. From `web/`:
+In development, `/design/shell`, `/design/player`, `/design/player-page` (open a document card for the PDF viewer), `/design/gate`, `/design/gate-unavailable` and `/design/roster` show the viewer pages with the design canvas's sample player (production answers 404). Playwright compares them at 1440 / 834 / 390 px with motion reduced. The Telegram Mini App screens are compared at 390 px with Telegram's script and the API stubbed, so they need no bot or backend. The baselines are Linux screenshots, so run the tests, or regenerate the baselines after an intended design change, in the same Docker image CI uses. From `web/`:
 
 ```bash
 docker run --rm --ipc=host -v "$PWD:/work" -v /work/node_modules -v /work/.next -w /work -e CI=1 mcr.microsoft.com/playwright:v1.64.1-noble bash -c "npm ci && npx playwright test"

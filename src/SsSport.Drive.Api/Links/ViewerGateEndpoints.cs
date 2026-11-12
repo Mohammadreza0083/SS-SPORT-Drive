@@ -192,13 +192,13 @@ public static class ViewerGateEndpoints
 
     /// <summary>Adds the examples and the gate's token requirement to an operation.</summary>
     /// <param name="status">The success status.</param>
-    /// <param name="responseExample">The success example.</param>
+    /// <param name="responseExample">The success example, or <see langword="null"/> to keep one set elsewhere (paged lists).</param>
     /// <param name="requestExample">The request example, if any.</param>
     /// <param name="scheme">The token scheme, if any.</param>
     /// <param name="optional">Whether the operation also works without the token.</param>
     /// <returns>The transformer.</returns>
-    private static Func<OpenApiOperation, OpenApiOperationTransformerContext, CancellationToken, Task> Document(
-        string status, string responseExample, string? requestExample, string? scheme = null, bool optional = false) =>
+    internal static Func<OpenApiOperation, OpenApiOperationTransformerContext, CancellationToken, Task> Document(
+        string status, string? responseExample, string? requestExample, string? scheme = null, bool optional = false) =>
         (operation, context, _) =>
         {
             var requirements = new List<OpenApiSecurityRequirement>();
@@ -213,7 +213,7 @@ public static class ViewerGateEndpoints
             }
 
             operation.Security = requirements;
-            if (operation.Responses?.TryGetValue(status, out var success) == true && success.Content?.TryGetValue("application/json", out var media) == true)
+            if (responseExample is not null && operation.Responses?.TryGetValue(status, out var success) == true && success.Content?.TryGetValue("application/json", out var media) == true)
             {
                 media.Example = JsonNode.Parse(responseExample);
             }

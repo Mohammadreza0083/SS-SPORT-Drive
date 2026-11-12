@@ -12,7 +12,19 @@ type EmailGateProps = {
   link: GateLink;
   /** Whether the viewer already has a session for this link: the gate opens on "You're in". */
   signedIn?: boolean;
+  /** Called once the "You're in" loading bar has run, to show the link's content (V-2b); reloads the page by default. */
+  onOpened?: () => void;
+  /** Keeps the "You're in" step on screen: the development preview and its visual tests have no content to open. */
+  stayOnDone?: boolean;
 };
+
+/** How long the "You're in" step shows before the content opens: the loading bar's delay plus its run (gate.css). */
+const OPEN_AFTER_MS = 3000;
+
+/** Reloads the page, so the server renders the link's content with the new session cookie. */
+function reloadPage() {
+  window.location.reload();
+}
 
 /** The gate's steps, as in the canvas. */
 type Step = "email" | "code" | "done" | "pending";
@@ -40,7 +52,7 @@ function refusalText(message: string | null, retryAfterSeconds: number | null = 
  * @param props - See {@link EmailGateProps}.
  * @returns The gate.
  */
-export function EmailGate({ link, signedIn = false }: EmailGateProps) {
+export function EmailGate({ link, signedIn = false, onOpened = reloadPage, stayOnDone = false }: EmailGateProps) {
   const silhouetteId = useId();
   const [step, setStep] = useState<Step>(signedIn ? "done" : "email");
   const [email, setEmail] = useState("");
@@ -69,6 +81,16 @@ export function EmailGate({ link, signedIn = false }: EmailGateProps) {
       active = false;
     };
   }, [link.code, signedIn]);
+
+  // Once in, the content opens after the loading bar has run; a page that was already signed in stays as it is.
+  useEffect(() => {
+    if (step !== "done" || signedIn || stayOnDone) {
+      return;
+    }
+
+    const timer = setTimeout(onOpened, OPEN_AFTER_MS);
+    return () => clearTimeout(timer);
+  }, [step, signedIn, stayOnDone, onOpened]);
 
   // The resend countdown ticks while the code step is shown.
   useEffect(() => {

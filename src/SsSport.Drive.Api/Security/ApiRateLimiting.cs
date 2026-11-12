@@ -27,6 +27,13 @@ public sealed class ApiRateLimitOptions
     /// address. Tighter than the general budget so link codes and email codes cannot be guessed quickly.
     /// </summary>
     public int LinkPermitsPerMinute { get; set; } = 30;
+
+    /// <summary>
+    /// Gets or sets the per-address budget of a signed-in viewer's content reads (V-2b: <c>GET /links/{code}/content</c>
+    /// and <c>/links/{code}/players/…</c>, photos included). A roster page alone reads about 20 photos, so these reads
+    /// cannot share the gate's tight budget; every one of them still needs a live session token.
+    /// </summary>
+    public int ViewerPermitsPerMinute { get; set; } = 240;
 }
 
 /// <summary>
@@ -52,7 +59,7 @@ public static partial class ApiRateLimiting
     {
         services.AddOptions<ApiRateLimitOptions>()
             .BindConfiguration(ApiRateLimitOptions.SectionName)
-            .Validate(options => options.PermitsPerMinute > 0 && options.WebhookPermitsPerMinute > 0 && options.LinkPermitsPerMinute > 0, "Rate limits must be positive.")
+            .Validate(options => options.PermitsPerMinute > 0 && options.WebhookPermitsPerMinute > 0 && options.LinkPermitsPerMinute > 0 && options.ViewerPermitsPerMinute > 0, "Rate limits must be positive.")
             .ValidateOnStart();
 
         services.AddRateLimiter(_ => { });
@@ -84,9 +91,30 @@ public static partial class ApiRateLimiting
             return FixedWindow($"webhook:{client}", budgets.WebhookPermitsPerMinute);
         }
 
+        if (IsViewerContentRead(context.Request))
+        {
+            return FixedWindow($"viewer:{client}", budgets.ViewerPermitsPerMinute);
+        }
+
         return path.StartsWithSegments(LinksPrefix, StringComparison.OrdinalIgnoreCase)
             ? FixedWindow($"links:{client}", budgets.LinkPermitsPerMinute)
             : FixedWindow($"client:{client}", budgets.PermitsPerMinute);
+    }
+
+    /// <summary>Whether a request is a viewer's content read: a GET or HEAD of <c>/links/{code}/content…</c> or <c>/links/{code}/players…</c>.</summary>
+    /// <param name="request">The request.</param>
+    /// <returns>True for content reads; the gate's own endpoints and every write are not.</returns>
+    private static bool IsViewerContentRead(HttpRequest request)
+    {
+        if (!HttpMethods.IsGet(request.Method) && !HttpMethods.IsHead(request.Method))
+        {
+            return false;
+        }
+
+        var segments = (request.Path.Value ?? string.Empty).Split('/', StringSplitOptions.RemoveEmptyEntries);
+        return segments.Length >= 3
+            && string.Equals(segments[0], "links", StringComparison.OrdinalIgnoreCase)
+            && (string.Equals(segments[2], "content", StringComparison.OrdinalIgnoreCase) || string.Equals(segments[2], "players", StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>A fixed one-minute window with no queue: over the budget is refused at once.</summary>

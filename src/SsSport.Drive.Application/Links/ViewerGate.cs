@@ -595,17 +595,7 @@ public sealed class GetViewerSessionQueryHandler(
     {
         var now = timeProvider.GetUtcNow();
         var link = await links.OpenLinkAsync(request.Code, now, cancellationToken);
-        if (string.IsNullOrWhiteSpace(request.SessionToken))
-        {
-            throw new ViewerVerificationRequiredException();
-        }
-
-        var session = await sessions.FirstOrDefaultAsync(new ViewerSessionByTokenSpec(secrets.HashToken(request.SessionToken)), cancellationToken);
-        if (session is null || session.ShareLinkId != link.Id || !session.IsActiveAt(now))
-        {
-            throw new ViewerVerificationRequiredException();
-        }
-
+        var session = await sessions.RequireSessionAsync(secrets, link, request.SessionToken, now, cancellationToken);
         return new ViewerSessionDto { Email = session.Email.Value, IsForward = session.IsForward, ExpiresAt = session.ExpiresAt };
     }
 }

@@ -1,6 +1,6 @@
 /**
- * What the player page (backlog V-2) needs to render. The API fills it for a personal link once L-1 lands;
- * until then the design preview uses {@link "./sample"}.
+ * What the player page (backlog V-2) needs to render. On `/r/{code}` it is built from the viewer API (V-2b,
+ * `lib/viewer/content-server.ts`); the design preview uses {@link "./sample"}.
  */
 export type PlayerPageData = {
   /** The player shown on the page. */
@@ -20,8 +20,8 @@ export type PlayerPageData = {
   };
   /** The signed-in viewer's email, laid faintly over the videos (V-4). */
   viewerEmail?: string;
-  /** Who the personal link was prepared for; absent on links without a named recipient. */
-  recipient?: { organisation: string; name: string };
+  /** Who the personal link was prepared for: their club or agency when known, and their name. */
+  recipient?: { organisation?: string; name: string };
   /** The personal note an admin wrote on the link. */
   note?: { text: string; author: string };
   /** Totals shown in the stats row. */

@@ -177,47 +177,56 @@ export function VideoPlayer({ src, title, tag, poster, fps = DEFAULT_FPS, autoPl
         onKeyDown={onKeyDown}
         onContextMenu={blockMenu}
       >
-        <MediaController ref={controllerRef as never} className="ss-player-stage" defaultStreamType="on-demand">
-          {ready && mode === "hls" ? (
-            <hls-video ref={(el: PlayerMedia | null) => void (mediaRef.current = el)} slot="media" poster={poster} />
-          ) : null}
-          {ready && mode === "native" ? (
-            <video ref={(el) => void (mediaRef.current = el as PlayerMedia | null)} slot="media" poster={poster} />
-          ) : null}
-          {mode === "unsupported" ? <p className="ss-player-unsupported">{playerCopy.unsupported}</p> : null}
+        {/*
+          The server and the hydrating render send only the empty stage (`mode` is null until hydration ends): Media
+          Chrome renders declarative shadow DOM, which the browser drops when a page streams in after the custom
+          elements are defined (every `/r/{code}` page), and hydration then fails. The controls mount right after.
+        */}
+        {mode === null ? (
+          <div className="ss-player-stage" />
+        ) : (
+          <MediaController ref={controllerRef as never} className="ss-player-stage" defaultStreamType="on-demand">
+            {ready && mode === "hls" ? (
+              <hls-video ref={(el: PlayerMedia | null) => void (mediaRef.current = el)} slot="media" poster={poster} />
+            ) : null}
+            {ready && mode === "native" ? (
+              <video ref={(el) => void (mediaRef.current = el as PlayerMedia | null)} slot="media" poster={poster} />
+            ) : null}
+            {mode === "unsupported" ? <p className="ss-player-unsupported">{playerCopy.unsupported}</p> : null}
 
-          <MediaLoadingIndicator slot="centered-chrome" className="ss-player-loading" noAutohide />
-          <MediaPlayButton slot="centered-chrome" className="ss-player-big" />
+            <MediaLoadingIndicator slot="centered-chrome" className="ss-player-loading" noAutohide />
+            <MediaPlayButton slot="centered-chrome" className="ss-player-big" />
 
-          {/* Menus sit above the control bar and open over the video. */}
-          <MediaPlaybackRateMenu id={rateMenu} className="ss-player-menu" hidden anchor="auto" rates={[...PLAYBACK_RATES]} />
-          <MediaRenditionMenu id={qualityMenu} className="ss-player-menu" hidden anchor="auto" />
-          <MediaControlBar className="ss-player-bar">
-            <MediaTimeRange className="ss-player-progress" />
-            <div className="ss-player-row">
-              <MediaPlayButton className="ss-player-btn" />
-              <MediaTimeDisplay className="ss-player-time" showDuration />
-              <span className="ss-player-spacer" />
-              <span className="ss-player-label">{playerCopy.frameByFrame}</span>
-              <button type="button" className="ss-player-btn ss-player-frame-btn" aria-label={playerCopy.previousFrame} onClick={() => step(-1)}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M6 5h2v14H6zM20 5v14l-10-7z" />
-                </svg>
-              </button>
-              <button type="button" className="ss-player-btn ss-player-frame-btn" aria-label={playerCopy.nextFrame} onClick={() => step(1)}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M16 5h2v14h-2zM4 5v14l10-7z" />
-                </svg>
-              </button>
-              <MediaPlaybackRateMenuButton className="ss-player-chip" invokeTarget={rateMenu} />
-              <MediaRenditionMenuButton className="ss-player-chip" invokeTarget={qualityMenu} />
-              <MediaMuteButton className="ss-player-btn ss-player-mute" />
-              <MediaVolumeRange className="ss-player-volume" />
-              <MediaFullscreenButton className="ss-player-btn" />
-            </div>
-          </MediaControlBar>
+            {/* Menus sit above the control bar and open over the video. */}
+            <MediaPlaybackRateMenu id={rateMenu} className="ss-player-menu" hidden anchor="auto" rates={[...PLAYBACK_RATES]} />
+            <MediaRenditionMenu id={qualityMenu} className="ss-player-menu" hidden anchor="auto" />
+            <MediaControlBar className="ss-player-bar">
+              <MediaTimeRange className="ss-player-progress" />
+              <div className="ss-player-row">
+                <MediaPlayButton className="ss-player-btn" />
+                <MediaTimeDisplay className="ss-player-time" showDuration />
+                <span className="ss-player-spacer" />
+                <span className="ss-player-label">{playerCopy.frameByFrame}</span>
+                <button type="button" className="ss-player-btn ss-player-frame-btn" aria-label={playerCopy.previousFrame} onClick={() => step(-1)}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M6 5h2v14H6zM20 5v14l-10-7z" />
+                  </svg>
+                </button>
+                <button type="button" className="ss-player-btn ss-player-frame-btn" aria-label={playerCopy.nextFrame} onClick={() => step(1)}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M16 5h2v14h-2zM4 5v14l10-7z" />
+                  </svg>
+                </button>
+                <MediaPlaybackRateMenuButton className="ss-player-chip" invokeTarget={rateMenu} />
+                <MediaRenditionMenuButton className="ss-player-chip" invokeTarget={qualityMenu} />
+                <MediaMuteButton className="ss-player-btn ss-player-mute" />
+                <MediaVolumeRange className="ss-player-volume" />
+                <MediaFullscreenButton className="ss-player-btn" />
+              </div>
+            </MediaControlBar>
 
-        </MediaController>
+          </MediaController>
+        )}
         {viewerEmail ? <EmailOverlay email={viewerEmail} /> : null}
       </div>
 

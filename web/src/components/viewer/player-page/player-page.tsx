@@ -34,7 +34,8 @@ export function PlayerPage({ data }: PlayerPageProps) {
   const { player, recipient, note, stats, documents } = data;
   const preparedFor = recipient ? (
     <>
-      {pageCopy.preparedFor} <b>{recipient.organisation}</b> · {recipient.name}
+      {pageCopy.preparedFor} <b>{recipient.organisation ?? recipient.name}</b>
+      {recipient.organisation ? <> · {recipient.name}</> : null}
     </>
   ) : null;
 
@@ -178,7 +179,7 @@ export function PlayerPage({ data }: PlayerPageProps) {
       </section>
 
       <SiteFooter>
-        {recipient ? <>{pageCopy.sharedWith(recipient.organisation)} · </> : null}
+        {recipient ? <>{pageCopy.sharedWith(recipient.organisation ?? recipient.name)} · </> : null}
         <a href="#contact">{pageCopy.privacy}</a>
       </SiteFooter>
     </>

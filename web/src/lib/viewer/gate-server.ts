@@ -54,6 +54,21 @@ export function readCookie(header: string | null, name: string): string | null {
 }
 
 /**
+ * The viewer's address as the reverse proxy forwarded it: the first `X-Forwarded-For` entry, else `X-Real-IP`.
+ *
+ * @param headers - The incoming request's headers.
+ * @returns The address, or null when the proxy sent none.
+ */
+export function clientAddress(headers: Headers): string | null {
+  const forwarded = headers.get("X-Forwarded-For")?.split(",")[0]?.trim();
+  if (forwarded) {
+    return forwarded;
+  }
+
+  return headers.get("X-Real-IP")?.trim() || null;
+}
+
+/**
  * The CSRF check of the cookie-carrying gate routes: the browser's `Origin` must be this site. Behind the reverse
  * proxy the public host arrives as `X-Forwarded-Host`.
  *
@@ -123,6 +138,11 @@ export async function forwardGate(
     headers.set("Content-Type", "application/json");
   }
 
+  const clientIp = clientAddress(request.headers);
+  if (clientIp) {
+    headers.set("X-Forwarded-For", clientIp);
+  }
+
   const device = readCookie(request.headers.get("Cookie"), DEVICE_COOKIE);
   if (device && action !== "email-code") {
     headers.set(DEVICE_HEADER, device);
@@ -169,11 +189,15 @@ export async function forwardGate(
  * @param apiBaseUrl - Where the API is.
  * @param linkCode - The link code.
  * @param fetchImpl - The fetch to use (tests pass a stub).
+ * @param clientIp - The viewer's address, passed on so the API's per-address limits count each viewer.
  * @returns The link, or null when it does not open.
  * @throws When the API cannot be reached or fails, so the page shows its error rather than "not available".
  */
-export async function resolveLink(apiBaseUrl: string, linkCode: string, fetchImpl: typeof fetch = fetch): Promise<GateLink | null> {
-  const response = await fetchImpl(`${apiBaseUrl.replace(/\/+$/, "")}/links/${encodeURIComponent(linkCode)}`, { cache: "no-store" });
+export async function resolveLink(apiBaseUrl: string, linkCode: string, fetchImpl: typeof fetch = fetch, clientIp: string | null = null): Promise<GateLink | null> {
+  const response = await fetchImpl(`${apiBaseUrl.replace(/\/+$/, "")}/links/${encodeURIComponent(linkCode)}`, {
+    headers: clientIp ? { "X-Forwarded-For": clientIp } : {},
+    cache: "no-store",
+  });
   if (response.status === 404) {
     return null;
   }

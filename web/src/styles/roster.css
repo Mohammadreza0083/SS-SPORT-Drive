@@ -1,0 +1,238 @@
+/*
+ * Roster page (backlog V-2b), from the design canvas's `Roster` artboard (1440 px): values copied from
+ * project/Roster.dc.html. The card grid fills by itself (auto-fill, 260 px minimum), so tablet and phone keep
+ * the same cards in fewer columns; only the gutters and the heading change with the shared tokens.
+ */
+
+.viewer .rs-page {
+  position: relative;
+  min-height: 1180px;
+  overflow: hidden;
+  /* The canvas floats the mark a little slower and further here than on the player page. */
+  --ss-drift-x: -24px;
+  --ss-drift-y: 16px;
+  --ss-drift-duration: 16s;
+}
+
+.viewer .rs-inner {
+  position: relative;
+  max-width: var(--ss-page-max);
+  margin: 0 auto;
+  padding: 0 var(--ss-gutter) 70px;
+}
+
+.viewer .rs-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin: 34px 0 34px;
+}
+
+.viewer .rs-eyebrow {
+  font-family: var(--ss-font-mono);
+  font-size: 13px;
+  letter-spacing: .2em;
+  color: var(--ss-red-light);
+  font-weight: 700;
+}
+
+.viewer .rs-ribbon {
+  margin-top: 14px;
+}
+
+.viewer .rs-title {
+  margin: 8px 0 0;
+  font-family: var(--ss-font-sans);
+  font-weight: 700;
+  letter-spacing: -.035em;
+  font-size: clamp(56px, 7vw, 96px);
+  line-height: .9;
+}
+
+.viewer .rs-rise {
+  display: inline-block;
+  animation: rs-rise .9s .1s cubic-bezier(.2, .9, .2, 1) both;
+}
+
+@keyframes rs-rise { from { transform: translateY(105%); } to { transform: none; } }
+
+.viewer .rs-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.viewer .rs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.viewer .rs-card {
+  position: relative;
+  display: block;
+  height: 380px;
+  border-radius: 24px;
+  overflow: hidden;
+  text-decoration: none;
+  color: #fff;
+  border: 1px solid var(--ss-border);
+  background: radial-gradient(circle at 70% 25%, #5c0a0a 0, #1f0707 40%, #0B0C10 78%);
+  animation: ss-card-in .8s cubic-bezier(.2, .8, .2, 1) both;
+  transition: transform .45s cubic-bezier(.2, .8, .2, 1), box-shadow .45s, border-color .3s;
+  -webkit-touch-callout: none;
+}
+
+.viewer .rs-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 34px 60px -30px rgba(204, 0, 0, .75);
+  border-color: #5a1414;
+}
+
+.viewer .rs-card:focus-visible {
+  outline: 2px solid var(--ss-red-light);
+  outline-offset: 3px;
+}
+
+.viewer .rs-photo {
+  position: absolute;
+  right: -20px;
+  bottom: 0;
+  height: 300px;
+  width: auto;
+  user-select: none;
+  transition: transform .6s cubic-bezier(.2, .8, .2, 1);
+}
+
+.viewer .rs-card:hover .rs-photo {
+  transform: scale(1.07) translateY(-6px);
+}
+
+.viewer .rs-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 60%;
+  background: linear-gradient(transparent, rgba(7, 8, 11, .95));
+  display: block;
+}
+
+.viewer .rs-pos {
+  position: absolute;
+  left: 18px;
+  top: 18px;
+  font-family: var(--ss-font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, .45);
+  color: var(--ss-red-soft);
+  letter-spacing: .1em;
+}
+
+.viewer .rs-body {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  bottom: 20px;
+  display: block;
+}
+
+.viewer .rs-meta {
+  display: block;
+  font-size: 12px;
+  color: var(--ss-text-soft);
+  letter-spacing: .14em;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.viewer .rs-name {
+  display: block;
+  font-family: var(--ss-font-display);
+  font-weight: 800;
+  font-size: 44px;
+  line-height: .9;
+  text-transform: uppercase;
+  margin-top: 6px;
+  white-space: pre-line;
+}
+
+.viewer .rs-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.viewer .rs-under {
+  display: block;
+  height: 3px;
+  width: 70px;
+  background: var(--ss-red);
+  border-radius: 2px;
+  transform: scaleX(.25);
+  transform-origin: left;
+  transition: transform .45s cubic-bezier(.2, .8, .2, 1);
+}
+
+.viewer .rs-card:hover .rs-under,
+.viewer .rs-card:focus-visible .rs-under {
+  transform: scaleX(1);
+}
+
+.viewer .rs-go {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ss-red-light);
+  opacity: 0;
+  transform: translateX(-8px);
+  transition: opacity .3s, transform .3s;
+}
+
+.viewer .rs-card:hover .rs-go,
+.viewer .rs-card:focus-visible .rs-go {
+  opacity: 1;
+  transform: none;
+}
+
+/* Phones: no hover, so the card says where it leads; the chips scroll sideways instead of wrapping onto many lines. */
+@media (max-width: 640px) {
+  .viewer .rs-head {
+    margin-top: 24px;
+  }
+
+  .viewer .rs-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    max-width: 100%;
+    scrollbar-width: none;
+  }
+
+  .viewer .rs-go {
+    opacity: 1;
+    transform: none;
+  }
+
+  .viewer .rs-under {
+    transform: scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .viewer .rs-rise,
+  .viewer .rs-card {
+    animation: none;
+  }
+
+  .viewer .rs-card,
+  .viewer .rs-photo,
+  .viewer .rs-under,
+  .viewer .rs-go {
+    transition: none;
+  }
+}
