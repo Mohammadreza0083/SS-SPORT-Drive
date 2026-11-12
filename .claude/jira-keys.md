@@ -17,4 +17,4 @@ Labels: `owner-owner` = the owner's task, `owner-claude` = Claude's, `owner-both
 | 7 Admin console | SSD-8 | A-1 SSD-68 · A-2 SSD-69 · A-3 SSD-70 · A-4 SSD-71 · A-5 SSD-72 · A-6 SSD-73 · A-7 SSD-74 · A-8 SSD-75 · A-9 SSD-76 · A-10 SSD-77 · A-11 SSD-98 |
 | 8 Archive migration | SSD-9 | M-1 SSD-78 · M-2 SSD-79 · M-3 SSD-80 · M-4 SSD-87 · M-5 SSD-81 |
 | 9 Deploy & operations | SSD-10 | O-1 SSD-82 · O-2 SSD-83 · O-3 SSD-84 · O-4 SSD-85 · O-5 SSD-86 · O-6 SSD-88 · O-7 SSD-89 · O-8 SSD-105 · O-9 SSD-123 |
-| 10 Performance (k6) | SSD-11 | K-1 SSD-90 · K-2 SSD-91 · K-3 SSD-92 · K-4 SSD-93 · K-5 SSD-94 · K-6 SSD-111 · K-7 SSD-112 · K-8 SSD-114 · K-9 SSD-119 |
+| 10 Performance (k6) | SSD-11 | K-1 SSD-90 · K-2 SSD-91 · K-3 SSD-92 · K-4 SSD-93 · K-5 SSD-94 · K-6 SSD-111 · K-7 SSD-112 · K-8 SSD-114 · K-9 SSD-119 · K-10 SSD-129 |
