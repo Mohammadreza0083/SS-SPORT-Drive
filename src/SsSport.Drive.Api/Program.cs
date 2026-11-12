@@ -96,6 +96,7 @@ app.MapViewerGate();
 app.MapViewerContent();
 app.MapPublicPlayers();
 app.MapPublicAccess();
+app.MapViewerMedia();
 app.MapTracking();
 
 await app.RunAsync();

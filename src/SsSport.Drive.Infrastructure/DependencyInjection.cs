@@ -18,7 +18,9 @@ using SsSport.Drive.Application.Abstractions.Persistence;
 using SsSport.Drive.Application.Abstractions.Security;
 using SsSport.Drive.Application.Abstractions.Storage;
 using SsSport.Drive.Application.Abstractions.Web;
+using SsSport.Drive.Application.Links;
 using SsSport.Drive.Application.Telegram;
+using SsSport.Drive.Application.Telegram.Digest;
 using SsSport.Drive.Application.Telegram.Notices;
 using SsSport.Drive.Application.Tracking;
 using SsSport.Drive.Infrastructure.BackgroundJobs;
@@ -28,6 +30,7 @@ using SsSport.Drive.Infrastructure.Email;
 using SsSport.Drive.Infrastructure.Images;
 using SsSport.Drive.Infrastructure.Links;
 using SsSport.Drive.Infrastructure.Persistence;
+using SsSport.Drive.Infrastructure.Scouting;
 using SsSport.Drive.Infrastructure.Security;
 using SsSport.Drive.Infrastructure.Storage;
 using SsSport.Drive.Infrastructure.Telegram;
@@ -91,6 +94,7 @@ public static class DependencyInjection
         services.AddScoped<IPlayerListReader, PlayerListReader>();
         services.AddScoped<ILinkPlayerReader, LinkPlayerReader>();
         services.AddScoped<IPublicPlayerReader, PublicPlayerReader>();
+        services.AddScoped<IDigestFactsReader, DigestFactsReader>();
         services.AddScoped<IShareLinkListReader, ShareLinkListReader>();
         services.AddScoped<IViewingReader, ViewingReader>();
 
@@ -125,6 +129,8 @@ public static class DependencyInjection
             .Validate(options => options.HlsSigningKey.Length == 0 || EdgeOptions.IsValidSigningKey(options.HlsSigningKey), "Edge__HlsSigningKey must be base64 of at least 32 random bytes (or empty to turn HLS tokens off).")
             .ValidateOnStart();
         services.AddSingleton<IHlsTokenIssuer, HmacHlsTokenIssuer>();
+        services.AddMemoryCache();
+        services.AddSingleton<IScoutMatchCache, MemoryScoutMatchCache>();
 
         // The email gate (L-2): token and code hashes, and the code email (Resend, then Brevo).
         services.AddOptions<ViewerOptions>()

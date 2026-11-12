@@ -76,25 +76,36 @@ public static partial class ViewerGateRules
     /// stored.
     /// </summary>
     /// <param name="sessions">The sessions.</param>
+    /// <param name="opens">The first-open records (L-7).</param>
     /// <param name="secrets">The gate's secrets.</param>
     /// <param name="link">The link.</param>
     /// <param name="email">The viewer's email.</param>
     /// <param name="isForward">Whether the email is a forward.</param>
     /// <param name="deviceId">The trusted device, or <see langword="null"/>.</param>
     /// <param name="now">The current time (UTC).</param>
+    /// <param name="cancellationToken">Cancels the lookup.</param>
     /// <returns>The session token and when it ends.</returns>
-    public static (string Token, DateTimeOffset ExpiresAt) StartSession(
+    public static async Task<(string Token, DateTimeOffset ExpiresAt)> StartSessionAsync(
         IRepository<ViewerSession, Guid> sessions,
+        IRepository<LinkOpen, Guid> opens,
         IViewerSecrets secrets,
         ShareLink link,
         EmailAddress email,
         bool isForward,
         Guid? deviceId,
-        DateTimeOffset now)
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
     {
         var token = secrets.NewToken();
         var session = ViewerSession.Start(secrets.HashToken(token), link.Id, email, isForward, deviceId, now);
         sessions.Add(session);
+
+        // L-7: the first session of an email on a link is its first open; it raises the alert for watched links.
+        if (await opens.FirstOrDefaultAsync(new LinkOpenSpec(link.Id, email), cancellationToken) is null)
+        {
+            opens.Add(LinkOpen.Record(link.Id, email, isForward, now));
+        }
+
         return (token, session.ExpiresAt);
     }
 
@@ -359,6 +370,7 @@ public sealed class VerifyEmailCodeCommandValidator : AbstractValidator<VerifyEm
 /// <param name="devices">The trusted devices.</param>
 /// <param name="sessions">The sessions.</param>
 /// <param name="forwards">The forwards (L-3).</param>
+/// <param name="opens">The first-open records (L-7).</param>
 /// <param name="secrets">The gate's secrets.</param>
 /// <param name="timeProvider">The clock.</param>
 /// <param name="logger">The logger.</param>
@@ -368,6 +380,7 @@ public sealed class VerifyEmailCodeCommandHandler(
     IRepository<TrustedDevice, Guid> devices,
     IRepository<ViewerSession, Guid> sessions,
     IRepository<LinkForward, Guid> forwards,
+    IRepository<LinkOpen, Guid> opens,
     IViewerSecrets secrets,
     TimeProvider timeProvider,
     ILogger<VerifyEmailCodeCommandHandler> logger) : ICommandHandler<VerifyEmailCodeCommand, EmailCodeVerification>
@@ -417,7 +430,7 @@ public sealed class VerifyEmailCodeCommandHandler(
             return new EmailCodeVerification(waiting, null, null, challenge.AttemptsLeft);
         }
 
-        var (sessionToken, sessionExpiresAt) = ViewerGateRules.StartSession(sessions, secrets, link, email, challenge.IsForward, device.Row.Id, now);
+        var (sessionToken, sessionExpiresAt) = await ViewerGateRules.StartSessionAsync(sessions, opens, secrets, link, email, challenge.IsForward, device.Row.Id, now, cancellationToken);
         var access = new ViewerAccessDto
         {
             DeviceToken = device.Token,
@@ -474,6 +487,7 @@ public sealed record OpenWithDeviceCommand(string Code, string? DeviceToken) : I
 /// <param name="devices">The trusted devices.</param>
 /// <param name="sessions">The sessions.</param>
 /// <param name="forwards">The forwards (L-3).</param>
+/// <param name="opens">The first-open records (L-7).</param>
 /// <param name="secrets">The gate's secrets.</param>
 /// <param name="timeProvider">The clock.</param>
 public sealed class OpenWithDeviceCommandHandler(
@@ -482,6 +496,7 @@ public sealed class OpenWithDeviceCommandHandler(
     IRepository<TrustedDevice, Guid> devices,
     IRepository<ViewerSession, Guid> sessions,
     IRepository<LinkForward, Guid> forwards,
+    IRepository<LinkOpen, Guid> opens,
     IViewerSecrets secrets,
     TimeProvider timeProvider) : ICommandHandler<OpenWithDeviceCommand, ViewerAccessDto>
 {
@@ -499,7 +514,7 @@ public sealed class OpenWithDeviceCommandHandler(
         if (!link.VerifyOnNewDevice)
         {
             var recipient = await recipients.GetByIdAsync(link.RecipientId, cancellationToken) ?? throw new ShareLinkUnavailableException();
-            return Access(ViewerGateRules.StartSession(sessions, secrets, link, recipient.Emails[0], isForward: false, deviceId: null, now));
+            return Access(await ViewerGateRules.StartSessionAsync(sessions, opens, secrets, link, recipient.Emails[0], isForward: false, deviceId: null, now, cancellationToken));
         }
 
         if (string.IsNullOrWhiteSpace(request.DeviceToken))
@@ -528,7 +543,7 @@ public sealed class OpenWithDeviceCommandHandler(
         }
 
         device.Seen(now);
-        return Access(ViewerGateRules.StartSession(sessions, secrets, link, device.Email, device.IsForward, device.Id, now));
+        return Access(await ViewerGateRules.StartSessionAsync(sessions, opens, secrets, link, device.Email, device.IsForward, device.Id, now, cancellationToken));
     }
 
     /// <summary>Wraps a new session's token.</summary>

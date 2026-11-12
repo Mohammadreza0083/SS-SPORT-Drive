@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Ardalis.Specification;
 using SsSport.Drive.Application.Abstractions.Messaging;
 using SsSport.Drive.Application.Abstractions.Persistence;
@@ -12,6 +13,20 @@ using SsSport.Drive.Domain.Players;
 
 namespace SsSport.Drive.Application.Links;
 
+/// <summary>The one rule for what a viewer may see of a player's files: of this kind, visible, and finished processing.</summary>
+public static class ViewerAssetConditions
+{
+    /// <summary>Builds the condition.</summary>
+    /// <param name="playerId">The player.</param>
+    /// <param name="kind">The kind of file.</param>
+    /// <returns>The condition, for a specification.</returns>
+    public static Expression<Func<Asset, bool>> Watchable(Guid playerId, AssetKind kind) =>
+        asset => asset.PlayerId == playerId
+            && asset.File.Kind == kind
+            && asset.Visibility == AssetVisibility.Visible
+            && asset.State == ProcessingState.Ready;
+}
+
 /// <summary>A player's videos a viewer can watch: ready and visible, the hero first, then the page order.</summary>
 public sealed class ViewerVideosSpec : Specification<Asset>
 {
@@ -19,24 +34,18 @@ public sealed class ViewerVideosSpec : Specification<Asset>
     /// <param name="playerId">The player.</param>
     /// <param name="heroId">The player's hero video, if any.</param>
     public ViewerVideosSpec(Guid playerId, Guid? heroId) =>
-        Query.Where(asset => asset.PlayerId == playerId
-                && asset.File.Kind == AssetKind.Video
-                && asset.Visibility == AssetVisibility.Visible
-                && asset.State == ProcessingState.Ready)
+        Query.Where(ViewerAssetConditions.Watchable(playerId, AssetKind.Video))
             .OrderByDescending(asset => heroId.HasValue && asset.Id == heroId.Value)
             .ThenBy(asset => asset.SortOrder);
 }
 
-/// <summary>A player's documents a viewer can read: ready and visible PDFs and images, in page order. DataVolley files wait for V-8.</summary>
+/// <summary>A player's documents a viewer can read: ready and visible PDFs and images, in page order. DataVolley files are listed by <see cref="ViewerScoutsSpec"/> (V-8).</summary>
 public sealed class ViewerDocumentsSpec : Specification<Asset>
 {
     /// <summary>Initializes a new instance of the <see cref="ViewerDocumentsSpec"/> class.</summary>
     /// <param name="playerId">The player.</param>
     public ViewerDocumentsSpec(Guid playerId) =>
-        Query.Where(asset => asset.PlayerId == playerId
-                && asset.File.Kind == AssetKind.Document
-                && asset.Visibility == AssetVisibility.Visible
-                && asset.State == ProcessingState.Ready)
+        Query.Where(ViewerAssetConditions.Watchable(playerId, AssetKind.Document))
             .OrderBy(asset => asset.SortOrder);
 }
 

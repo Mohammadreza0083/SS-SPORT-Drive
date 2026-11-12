@@ -9,6 +9,7 @@ import { Spotlight } from "@/components/viewer/spotlight";
 import { Ticker } from "@/components/viewer/ticker";
 import { pageCopy } from "./copy";
 import { Flag } from "./flag";
+import { ScoutsSection } from "@/components/viewer/scout/scouts-section";
 import { DocumentsSection } from "./documents-section";
 import { tickerItems } from "./format";
 import { PlayerPhoto } from "./player-photo";
@@ -157,6 +158,8 @@ export function PlayerPage({ data }: PlayerPageProps) {
       {documents.length > 0 ? (
         <DocumentsSection documents={documents} playerName={player.name} viewerEmail={data.viewerEmail} />
       ) : null}
+
+      <ScoutsSection scouts={data.scouts ?? []} playerName={player.name} viewerEmail={data.viewerEmail} />
 
       <section id="contact" className="pp-contact">
         <div className="pp-cta ss-cta ss-sr">

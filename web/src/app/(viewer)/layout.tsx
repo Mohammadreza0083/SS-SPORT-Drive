@@ -7,6 +7,7 @@ import "@/styles/player-page.css";
 import "@/styles/document-viewer.css";
 import "@/styles/gate.css";
 import "@/styles/roster.css";
+import "@/styles/scout.css";
 import "@/styles/public.css";
 
 /**

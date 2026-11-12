@@ -111,7 +111,7 @@ public static class PublicPlayerRules
 
     /// <summary>Reuses the viewer pages' mapping rules for names, positions and countries.</summary>
     /// <param name="facts">The public facts.</param>
-    /// <returns>The same facts as the link pages read them.</returns>
+    /// <returns>The same facts as the link pages read them; the public pages show no scout files, so their count is 0.</returns>
     private static LinkPlayerFacts ToLinkFacts(this PublicPlayerFacts facts) => new(
         facts.Id,
         facts.Name,
@@ -121,7 +121,8 @@ public static class PublicPlayerRules
         facts.VolleyboxUrl,
         facts.VideoCount,
         facts.VideoSeconds,
-        facts.DocumentCount);
+        facts.DocumentCount,
+        ScoutCount: 0);
 }
 
 /// <summary>Searches published players (<c>GET /public/players</c>). Public.</summary>

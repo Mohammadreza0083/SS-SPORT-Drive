@@ -543,6 +543,7 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
     - **Owner decision:** viewers must be able to **see and read** them.
     - They get an in-page, view-only DataVolley viewer: no download, the same rules as PDFs.
     - Backlog V-8 covers the viewer. What exactly it shows (raw scout lines vs. parsed stats per match and per skill) is to be designed with the owner before it is built.
+    - **V-8 decision (owner, 2026-11-12): parsed stats, no raw lines.** A "Match stats" section on the player page lists the player's scout files; opening one shows a view-only dialog with the match header (teams, date, result, each set's score) and **this player's** stats per skill: Serve, Reception, Attack, Block, Dig, Set, each with the total, perfect, errors, a success rate and an efficiency (formulas in `ScoutStatsTests`, proposed). The player is found in the file by name (case, accents, extra spaces and name order ignored); when not found, the match is shown with "not in this scout file". The file is parsed on the server from the original in R2; it never reaches the browser. The viewer's email overlay lies on the dialog, as on videos and PDFs. The player page's stats count the scout files as "matches".
 - **Junk to skip:**
   - Loose files at the bucket root (e.g. `InShot_….mp4`).
   - Zero-byte folder markers with no extension.
@@ -666,6 +667,12 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
     - Playlists are `Cache-Control: private, no-store`; segments `private, max-age=1800`.
     - The player renews the token every 20 minutes while playing, and on play after a longer pause. With hls.js the token is swapped into each following request (no interruption); with native HLS (iPhone/iPad) the source is swapped and playback resumes at the same second.
     - V-5b adds the API endpoint that issues tokens on the viewer session, wires the player to it, and routes short links on the edge.
+  - **V-5b plan (owner-approved 2026-11-12; values marked "proposed" in `.claude/plan-v5b-v8-l7.md` wait for the owner's review in the PR):**
+    - **Folders in R2** (I-3 / I-4 write there): a video's HLS is `players/{player}/videos/{video}/v{version}/hls/` with `master.m3u8`; a document's page images are `players/{player}/documents/{document}/v{version}/pages/{n}.webp` (n from 1). The version is the asset's content version, so a replaced file never mixes with old tokens or caches.
+    - **API** (public; the proof is `X-Viewer-Session`, same order of checks as V-2b): `GET /links/{code}/players/{id}/videos/{videoId}/stream` answers the signed master playlist URL and its expiry; `GET …/documents/{documentId}/pages` answers one signed URL per page, all with one token. Both `Cache-Control: no-store`. Without `Edge__HlsSigningKey` they answer 503 `media.streaming_off`.
+    - **Edge pages:** `/pages/{token}/{folder}/{n}.webp`, same token format and checks as HLS, `private, max-age=1800`. A token works only on its own kind: `/hls/` needs a folder ending in `/hls`, `/pages/` one ending in `/pages`.
+    - **Short links on the edge (owner's choice):** the Worker passes every path it does not serve itself (`/hls`, `/pages`, `/health`) on to the viewer site unchanged. A `/r/{code}` whose code cannot be a link code (six characters from the link alphabet), or whose `/p/{id}` is not a GUID, gets a bare 404 at the edge and never reaches the site.
+    - **Web:** the page carries each video's stream path and each document's pages path; the current video is signed when it is shown (and re-signed every 20 minutes by `useHlsRefresh`), a document's pages when it is opened.
 - **Watermark values (S-11, approved by the owner 2026-10-24; final check on real full-match footage in I-3):**
   - **Logo:** the white horizontal lockup (`brand/svg/logo_horizontal_white.svg`), **10 % of the frame width** (192 px at 1080p, 64 px at 360p), **45 % opacity**, a soft 35 % shadow so it reads on bright courts.
   - **Slogan:** "SS-SPORT · Fetch Your Dreams" in Barlow Condensed SemiBold, white, **text height 3.2 % of the frame height** (≈35 px at 1080p), **55 % opacity**, same shadow.
@@ -748,6 +755,14 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
     - viewer sessions 7 days after they end;
     - trusted devices 7 days after their 90 days end.
   - Forward records stay (see above).
+- **Admin bot alerts and daily digest (L-7, owner-approved 2026-11-12):**
+  - **Alert: first open only.** The first time an email opens a link (its first viewer session), a `link_opens` row is made (link, email, forward or not, when). It is never purged, so a later session never alerts again. Only links with **"notify on open"** on alert. Every active admin gets one notice ("👀 Link … for … was opened by …"), through the notice rules (T-8: throttle, quiet hours, grouping). The email is shown only in the bot, never logged. The other alert ideas (repeated wrong codes, links about to expire) were not chosen.
+  - **Daily digest at 09:00 Tehran** (Hangfire `daily-digest`, 05:30 UTC) to every active admin, sent at once, not held by the notice rules, no buttons. It covers **yesterday in Tehran**:
+    - watching: links opened, distinct viewers, plays, minutes watched, the top three players by minutes (plays, minutes and top players come from L-5/L-6);
+    - waiting on the admins: forwards to keep or block, players on the waiting list, and access requests once P-4 exists;
+    - emails that failed after every retry (from L-4's queue).
+    - **A quiet day is still sent** ("Yesterday: no activity." / "Nothing is waiting on you.").
+  - The exact wording is pinned by `DailyDigestTests`.
   - **After the gate (V-2b, SSD-125; owner approved the plan 2026-11-12, with the Roster page in the same task):**
     - `/r/{code}` with a live session opens a `Personal` link on its player's page and a `Roster` link on the canvas `Roster` artboard. Roster cards open `/r/{code}/p/{playerId}`; position chips filter the cards in the browser (a link holds at most 20 players, all on one page). The gate's "You're in" step opens the content after its loading bar (3 s).
     - **API** (public; the proof is `X-Viewer-Session`): `GET /links/{code}/content`, `/players` (paged), `/players/{id}`, `/players/{id}/videos` and `/documents` (paged in SQL), `/players/{id}/photo`. Order of checks: a link that does not open is 404 `share_link.unavailable`; no live session for this link is 401 `viewer.verification_required`; a player not on the link is 404. No storage key, checksum or Drive id is sent.

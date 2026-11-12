@@ -1,0 +1,26 @@
+{
+  "id": "s1",
+  "title": "Match vs Volley Nord",
+  "match": {
+    "date": "2026-03-12",
+    "homeTeam": "Club Aurora",
+    "awayTeam": "Volley Nord",
+    "homeSets": 3,
+    "awaySets": 1,
+    "sets": [
+      { "home": 25, "away": 21 },
+      { "home": 22, "away": 25 },
+      { "home": 25, "away": 19 },
+      { "home": 26, "away": 24 }
+    ]
+  },
+  "player": { "number": 7, "team": "Club Aurora" },
+  "skills": [
+    { "skill": "Serve", "total": 5, "perfect": 2, "positive": 1, "ok": 0, "negative": 1, "poor": 0, "error": 1, "successRate": 40, "efficiency": 20 },
+    { "skill": "Reception", "total": 6, "perfect": 2, "positive": 1, "ok": 1, "negative": 1, "poor": 0, "error": 1, "successRate": 50, "efficiency": 33 },
+    { "skill": "Attack", "total": 7, "perfect": 3, "positive": 1, "ok": 0, "negative": 1, "poor": 1, "error": 1, "successRate": 43, "efficiency": 14 },
+    { "skill": "Block", "total": 3, "perfect": 1, "positive": 1, "ok": 0, "negative": 0, "poor": 0, "error": 1, "successRate": 33, "efficiency": 0 },
+    { "skill": "Dig", "total": 3, "perfect": 0, "positive": 2, "ok": 0, "negative": 0, "poor": 0, "error": 1, "successRate": 67, "efficiency": 33 },
+    { "skill": "Set", "total": 0, "perfect": 0, "positive": 0, "ok": 0, "negative": 0, "poor": 0, "error": 0, "successRate": null, "efficiency": null }
+  ]
+}

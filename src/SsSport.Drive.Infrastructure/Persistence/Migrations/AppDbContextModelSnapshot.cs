@@ -2022,6 +2022,45 @@ namespace SsSport.Drive.Infrastructure.Persistence.Migrations
                     b.ToTable("link_forwards", (string)null);
                 });
 
+            modelBuilder.Entity("SsSport.Drive.Domain.Links.LinkOpen", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)")
+                        .HasColumnName("email");
+
+                    b.Property<DateTimeOffset>("FirstOpenedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("first_opened_at");
+
+                    b.Property<bool>("IsForward")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_forward");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<Guid>("ShareLinkId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("share_link_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_link_opens");
+
+                    b.HasIndex("ShareLinkId", "Email")
+                        .HasDatabaseName("ix_link_opens_share_link_id_email");
+
+                    b.ToTable("link_opens", (string)null);
+                });
+
             modelBuilder.Entity("SsSport.Drive.Domain.Links.Recipient", b =>
                 {
                     b.Property<Guid>("Id")

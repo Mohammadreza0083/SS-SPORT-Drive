@@ -77,6 +77,7 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | I-5 | Player card render (Barlow Condensed name, brand template) | Both | Card approved |
 | I-6 | Sync poller every 10 min: new / renamed / replaced / removed / lost access | Claude | Tests per rule |
 | I-7 | Background removal for player photos | Claude | Demo |
+| I-9 | Ingest writes HLS renditions (I-3) and document page images (I-4) to the V-5b folders: `players/{player}/videos/{video}/v{version}/hls/` and `players/{player}/documents/{document}/v{version}/pages/{n}.webp` (found while planning V-5b) | Claude | A processed video streams and a processed PDF opens on a real personal link; tests green |
 | I-8 | Player QR code: free in-house generation (QRCoder), SS-SPORT mark in the centre, PNG in R2, key on the player; opens the home search prefilled with the player's name | Claude | Every published player has a QR; tests green |
 
 ## EPIC 4 — Viewer site & media protection
@@ -88,10 +89,10 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | V-3 | Media Chrome + hls-video-element player: speed, quality, frame step, no download, no context menu | Claude | Demo |
 | V-4 | Moving viewer-email overlay (20 %, small, repositions every few seconds) | Claude | Demo |
 | V-5a | Edge Worker: HMAC HLS tokens (30 min) bound to the viewer session cookie, R2 delivery, .NET token issuer, player background refresh (split 2026-10-31) | Claude | Copying the m3u8 elsewhere fails (Worker tests) |
-| V-5b | HLS token endpoint on the viewer session + player wiring; short-link routing on the edge (after L-1/L-2) | Claude | Copying the m3u8 elsewhere fails end to end |
+| V-5b | HLS token endpoint on the viewer session + player wiring; short-link routing on the edge (after L-1/L-2) | Claude | Done (2026-11-12): signed stream and page URLs on the viewer session, edge `/pages` and short-link pass-through, player and document viewer sign on demand; the end-to-end check on a real link waits for I-9 |
 | V-6 | View-only PDF viewer (rendered pages, no file download) | Claude | Demo |
 | V-7 | Email-only contact CTA (`info@ss-sport.co`) | Claude | Done |
-| V-8 | DataVolley (`.dvw`) viewer: in-page, view-only, no download (what it shows is designed with the owner first) | Claude | Viewers can read a match's scout file; tests green |
+| V-8 | DataVolley (`.dvw`) viewer: in-page, view-only, no download (what it shows is designed with the owner first) | Claude | Done (2026-11-12): parsed match and per-skill stats in a view-only dialog (decisions §4a); design preview at `/design/scout` awaits the owner's review |
 
 ## EPIC 5 — Personal links, OTP & tracking
 | Key | Task | Assignee | Done when |
@@ -104,7 +105,7 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | L-4 | Email queue on Hangfire: Resend → Brevo failover for OTP, Google SMTP for the rest, retries, admin view | Claude | Failover test green |
 | L-5 | Tracking events + heartbeats + sessions | Claude | Tests green |
 | L-6 | Metrics: unique watched (range merge), watch time, plays, hotspots, completion | Claude | Unit test per metric |
-| L-7 | Admin bot alerts + daily digest 09:00 Tehran | Claude | Demo |
+| L-7 | Admin bot alerts + daily digest 09:00 Tehran | Claude | Part done (2026-11-12): first-open alert and the digest with sessions, forwards and the waiting list; plays, minutes, top players and failed emails (7b) wait for L-4/L-5/L-6 |
 
 ## EPIC 6 — Public search & access requests
 | Key | Task | Assignee | Done when |
