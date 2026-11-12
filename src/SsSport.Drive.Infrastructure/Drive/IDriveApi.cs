@@ -27,7 +27,17 @@ public interface IDriveApi
 /// <param name="Size">The size in bytes, or <see langword="null"/> for folders and Google Docs.</param>
 /// <param name="DriveId">The Shared Drive it lives in, or <see langword="null"/> for My Drive.</param>
 /// <param name="Trashed">Whether it is in the trash.</param>
-public sealed record DriveItem(string Id, string Name, string MimeType, long? Size, string? DriveId, bool Trashed = false)
+/// <param name="Md5Checksum">The md5 checksum of a binary file, or <see langword="null"/> for folders and Google Docs.</param>
+/// <param name="ModifiedTime">When the item last changed, if Drive says.</param>
+public sealed record DriveItem(
+    string Id,
+    string Name,
+    string MimeType,
+    long? Size,
+    string? DriveId,
+    bool Trashed = false,
+    string? Md5Checksum = null,
+    DateTimeOffset? ModifiedTime = null)
 {
     /// <summary>Drive's MIME type for folders.</summary>
     public const string FolderMimeType = "application/vnd.google-apps.folder";

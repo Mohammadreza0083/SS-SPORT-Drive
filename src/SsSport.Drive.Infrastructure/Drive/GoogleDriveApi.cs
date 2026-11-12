@@ -16,7 +16,7 @@ namespace SsSport.Drive.Infrastructure.Drive;
 public sealed class GoogleDriveApi : IDriveApi, IDisposable
 {
     /// <summary>The fields read for every item.</summary>
-    private const string ItemFields = "id,name,mimeType,size,driveId,trashed";
+    private const string ItemFields = "id,name,mimeType,size,driveId,trashed,md5Checksum,modifiedTime";
 
     /// <summary>The settings.</summary>
     private readonly GoogleDriveOptions _options;
@@ -78,7 +78,15 @@ public sealed class GoogleDriveApi : IDriveApi, IDisposable
     /// <param name="file">The file.</param>
     /// <returns>The item.</returns>
     private static DriveItem ToItem(Google.Apis.Drive.v3.Data.File file) =>
-        new(file.Id, file.Name ?? string.Empty, file.MimeType ?? string.Empty, file.Size, file.DriveId, file.Trashed ?? false);
+        new(
+            file.Id,
+            file.Name ?? string.Empty,
+            file.MimeType ?? string.Empty,
+            file.Size,
+            file.DriveId,
+            file.Trashed ?? false,
+            file.Md5Checksum,
+            file.ModifiedTimeDateTimeOffset);
 
     /// <summary>Builds the Drive client from the service account key, read-only, through the proxy when set.</summary>
     /// <returns>The client.</returns>
