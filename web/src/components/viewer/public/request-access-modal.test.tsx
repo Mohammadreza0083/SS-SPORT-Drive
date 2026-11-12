@@ -28,7 +28,7 @@ function fakeClient(overrides: Partial<RequestAccessClient> = {}): RequestAccess
  * @param about - What goes in the About you box.
  */
 function fillForm(email: string, about: string) {
-  fireEvent.change(screen.getByLabelText("Work email"), { target: { value: email } });
+  fireEvent.change(screen.getByLabelText("Email"), { target: { value: email } });
   fireEvent.change(screen.getByLabelText("About you"), { target: { value: about } });
   fireEvent.click(screen.getByRole("button", { name: "Send verification code" }));
 }
@@ -154,7 +154,7 @@ describe("RequestAccessModal (P-3 UI, canvas Locked modal), signed out", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Wrong email?" }));
 
-    expect((screen.getByLabelText("Work email") as HTMLInputElement).value).toBe("scout@club.com");
+    expect((screen.getByLabelText("Email") as HTMLInputElement).value).toBe("scout@club.com");
   });
 
   it("calls onClose from the Close button", () => {
@@ -179,13 +179,26 @@ describe("RequestAccessModal (P-3 UI, canvas Locked modal), signed out", () => {
   });
 });
 
+describe("RequestAccessModal, any ordinary email", () => {
+  it("labels the box Email, not Work email, and accepts a personal address", async () => {
+    const client = fakeClient();
+    render(<RequestAccessModal player={player} viewer={null} client={client} onClose={() => {}} />);
+    expect(screen.queryByLabelText("Work email")).toBeNull();
+
+    fillForm("someone.private@gmail.com", "Independent agent looking for an outside hitter");
+
+    expect(await screen.findByRole("heading", { name: "Check your inbox" })).toBeTruthy();
+    expect(client.requestCode).toHaveBeenCalledWith("someone.private@gmail.com");
+  });
+});
+
 describe("RequestAccessModal, signed in (P-7)", () => {
   const viewer = { email: "j.demir@aurora-volley.example" };
 
   it("asks for no email and no code", () => {
     render(<RequestAccessModal player={player} viewer={viewer} client={fakeClient()} onClose={() => {}} />);
 
-    expect(screen.queryByLabelText("Work email")).toBeNull();
+    expect(screen.queryByLabelText("Email")).toBeNull();
     expect(screen.getByText("j.demir@aurora-volley.example")).toBeTruthy();
     expect(screen.getByText(/signed in, no code needed/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "Send request" })).toBeTruthy();
