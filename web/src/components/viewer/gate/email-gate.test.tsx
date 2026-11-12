@@ -49,7 +49,7 @@ const sent = () => Response.json({ email: "m***@lube.it", resendAfterSeconds: 60
  * @param email - The email.
  */
 async function sendEmail(email = "marco@lube.it") {
-  fireEvent.change(await screen.findByLabelText("Work email"), {
+  fireEvent.change(await screen.findByLabelText("Email"), {
     target: { value: email },
   });
   fireEvent.click(screen.getByRole("button", { name: "Send code" }));

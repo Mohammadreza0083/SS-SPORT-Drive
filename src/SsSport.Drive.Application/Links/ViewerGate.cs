@@ -1,12 +1,12 @@
 using Ardalis.Specification;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
-using SsSport.Drive.Application.Abstractions.Email;
-using SsSport.Drive.Application.Abstractions.Events;
 using SsSport.Drive.Application.Abstractions.Messaging;
 using SsSport.Drive.Application.Abstractions.Persistence;
 using SsSport.Drive.Application.Abstractions.Security;
+using SsSport.Drive.Application.Emails;
 using SsSport.Drive.Application.Exceptions;
+using SsSport.Drive.Domain.Emails;
 using SsSport.Drive.Domain.Links;
 using SsSport.Drive.Domain.Primitives;
 
@@ -237,6 +237,7 @@ public sealed class RequestEmailCodeCommandValidator : AbstractValidator<Request
 /// <param name="recipients">The recipients.</param>
 /// <param name="challenges">The codes.</param>
 /// <param name="forwards">The forwards, to refuse blocked ones (L-3).</param>
+/// <param name="emails">The email queue; the code is drawn and mailed by the job that sends the queued email (L-4).</param>
 /// <param name="timeProvider">The clock.</param>
 /// <param name="logger">The logger.</param>
 public sealed class RequestEmailCodeCommandHandler(
@@ -244,6 +245,7 @@ public sealed class RequestEmailCodeCommandHandler(
     IRepository<Recipient, Guid> recipients,
     IRepository<EmailChallenge, Guid> challenges,
     IRepository<LinkForward, Guid> forwards,
+    IRepository<OutgoingEmail, Guid> emails,
     TimeProvider timeProvider,
     ILogger<RequestEmailCodeCommandHandler> logger) : ICommandHandler<RequestEmailCodeCommand, EmailCodeSentDto>
 {
@@ -271,7 +273,10 @@ public sealed class RequestEmailCodeCommandHandler(
         }
 
         await EnsureNotTooOftenAsync(link.Id, email, now, cancellationToken);
-        challenges.Add(EmailChallenge.Request(link.Id, email, admission == EmailAdmission.Forward, now));
+        var challenge = EmailChallenge.Request(link.Id, email, admission == EmailAdmission.Forward, now);
+        challenges.Add(challenge);
+        var emailData = $$"""{"challengeId":"{{challenge.Id:D}}"}""";
+        emails.Add(OutgoingEmail.Queue(EmailKind.Code, EmailTemplates.GateCode, email, emailData, now));
         return new EmailCodeSentDto
         {
             Email = email.ToString(),
@@ -322,42 +327,6 @@ public sealed class RequestEmailCodeCommandHandler(
         var seconds = Math.Max(1, (int)Math.Ceiling(wait.TotalSeconds));
         ViewerGateRules.LogTooMany(logger, shareLinkId, seconds);
         throw new TooManyRequestsException(ViewerGateRules.TooManyCode, message, TimeSpan.FromSeconds(seconds));
-    }
-}
-
-/// <summary>
-/// Draws the code for a request, stores its hash and mails it (L-2). Runs in a background job, so the code never
-/// passes through the request or the job's arguments. A retried job draws a new code, which replaces the one before.
-/// </summary>
-/// <param name="challenges">The codes.</param>
-/// <param name="unitOfWork">Saves the hash before the mail goes out.</param>
-/// <param name="secrets">The gate's secrets.</param>
-/// <param name="sender">Mails the code.</param>
-/// <param name="timeProvider">The clock.</param>
-public sealed class SendEmailCode(
-    IRepository<EmailChallenge, Guid> challenges,
-    IUnitOfWork unitOfWork,
-    IViewerSecrets secrets,
-    IEmailCodeSender sender,
-    TimeProvider timeProvider) : IBackgroundEventHandler<EmailCodeRequested>
-{
-    /// <summary>Issues and mails the code, unless the request was used or is too old.</summary>
-    /// <param name="domainEvent">The event.</param>
-    /// <param name="context">Who caused it (nobody: the gate is public).</param>
-    /// <param name="cancellationToken">Cancels the work.</param>
-    /// <returns>A task that completes when the mail was accepted, or nothing needed sending.</returns>
-    public async Task HandleAsync(EmailCodeRequested domainEvent, EventContext context, CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(domainEvent);
-        var challenge = await challenges.GetByIdAsync(domainEvent.ChallengeId, cancellationToken);
-        var code = secrets.NewCode();
-        if (challenge is null || !challenge.IssueCode(secrets.HashCode(code), timeProvider.GetUtcNow()))
-        {
-            return;
-        }
-
-        await unitOfWork.SaveChangesAsync(cancellationToken);
-        await sender.SendAsync(challenge.Email, code, cancellationToken);
     }
 }
 

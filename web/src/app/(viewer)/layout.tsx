@@ -8,6 +8,7 @@ import "@/styles/document-viewer.css";
 import "@/styles/gate.css";
 import "@/styles/roster.css";
 import "@/styles/scout.css";
+import "@/styles/public.css";
 
 /**
  * Layout of every viewer-facing page (player pages, search, email gate, roster, sign-in): the dark brand

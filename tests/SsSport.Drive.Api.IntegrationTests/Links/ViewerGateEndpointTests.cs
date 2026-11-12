@@ -30,7 +30,7 @@ namespace SsSport.Drive.Api.IntegrationTests.Links;
 /// capped per hour. Tokens are stored only as hashes. Forwards (L-3) wait for an admin's Keep in the bot before they open;
 /// Block shuts the email out of the link.
 /// </summary>
-public sealed class ViewerGateEndpointTests : IAsyncLifetime
+public sealed partial class ViewerGateEndpointTests : IAsyncLifetime
 {
     /// <summary>The bot token the API checks Mini App signatures with.</summary>
     private const string BotToken = "123456:viewer-gate-test-token";
@@ -90,7 +90,8 @@ public sealed class ViewerGateEndpointTests : IAsyncLifetime
             builder.ConfigureTestServices(services =>
             {
                 services.Replace(ServiceDescriptor.Singleton<ITelegramMessenger>(_bot));
-                services.Replace(ServiceDescriptor.Singleton<IEmailCodeSender>(_mail));
+                services.RemoveAll<IEmailTransport>();
+                services.AddSingleton<IEmailTransport>(_mail);
                 services.Replace(ServiceDescriptor.Singleton<TimeProvider>(_clock));
                 services.UseInlineBotNotices();
             });
@@ -825,8 +826,11 @@ public sealed class ViewerGateEndpointTests : IAsyncLifetime
     /// <param name="SessionExpiresAt">When the session ends.</param>
     private sealed record Access(string DeviceToken, DateTimeOffset DeviceExpiresAt, string SessionToken, DateTimeOffset SessionExpiresAt);
 
-    /// <summary>Records the codes instead of mailing them.</summary>
-    private sealed class RecordingEmailCodeSender : IEmailCodeSender
+    /// <summary>
+    /// Stands in for Resend (L-4): records each gate-code email and reads the 6-digit code out of its text, so the
+    /// tests see what a viewer would get.
+    /// </summary>
+    private sealed partial class RecordingEmailCodeSender : IEmailTransport
     {
         /// <summary>The mails, in order.</summary>
         private readonly ConcurrentQueue<(EmailAddress To, string Code)> _sent = new();
@@ -835,11 +839,22 @@ public sealed class ViewerGateEndpointTests : IAsyncLifetime
         public IReadOnlyList<(EmailAddress To, string Code)> Sent => [.. _sent];
 
         /// <inheritdoc />
-        public Task SendAsync(EmailAddress to, string code, CancellationToken cancellationToken)
+        public string Name => "Resend";
+
+        /// <inheritdoc />
+        public bool IsConfigured => true;
+
+        /// <inheritdoc />
+        public Task SendAsync(EmailMessage message, CancellationToken cancellationToken)
         {
-            _sent.Enqueue((to, code));
+            _sent.Enqueue((message.To, CodePattern().Match(message.Text).Value));
             return Task.CompletedTask;
         }
+
+        /// <summary>Six digits on their own.</summary>
+        /// <returns>The pattern.</returns>
+        [System.Text.RegularExpressions.GeneratedRegex(@"\b\d{6}\b")]
+        private static partial System.Text.RegularExpressions.Regex CodePattern();
     }
 
     /// <summary>A clock that starts at a whole second now and moves only when told.</summary>

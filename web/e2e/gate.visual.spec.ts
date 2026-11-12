@@ -24,7 +24,7 @@ for (const viewport of viewports) {
   test(`gate email step matches the canvas on ${viewport.name} (${viewport.width}px)`, async ({ page }) => {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await openGate(page);
-    await page.getByLabel("Work email").fill("a.yilmaz@aurora-volley.example");
+    await page.getByLabel("Email").fill("a.yilmaz@aurora-volley.example");
 
     await expect(page).toHaveScreenshot(`gate-email-${viewport.name}.png`, { mask: [page.locator("nextjs-portal")] });
   });
@@ -33,7 +33,7 @@ for (const viewport of viewports) {
 test("gate code step with a short code matches the canvas (390px)", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openGate(page);
-  await page.getByLabel("Work email").fill("a.yilmaz@aurora-volley.example");
+  await page.getByLabel("Email").fill("a.yilmaz@aurora-volley.example");
   await page.getByRole("button", { name: "Send code" }).click();
   await expect(page.getByRole("heading", { name: "Check your inbox" })).toBeVisible();
   await page.getByLabel("6-digit code").fill("042");
@@ -47,7 +47,7 @@ test("gate code step with a short code matches the canvas (390px)", async ({ pag
 test("gate You're in step matches the canvas (390px)", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openGate(page);
-  await page.getByLabel("Work email").fill("a.yilmaz@aurora-volley.example");
+  await page.getByLabel("Email").fill("a.yilmaz@aurora-volley.example");
   await page.getByRole("button", { name: "Send code" }).click();
   await page.getByLabel("6-digit code").fill("042917");
   await page.getByRole("button", { name: "Watch" }).click();
