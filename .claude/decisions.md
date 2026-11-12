@@ -496,6 +496,21 @@ Standing rules for every feature. Each control gets tests, and nothing is commit
   - An `Asset` keeps the R2 key of its original. `Source = Archive` means it came from this backup.
   - The app treats the backup bucket as **read-only** and never writes into it.
 
+- **Drive reader for ingest (I-1, owner-approved 2026-11-12):**
+  - **Scope:** I-1 lists the files **inside one linked player folder**. Finding every player folder in the Shared Drive (under `Men Volleyball/` / `Women Volleyball/`) and parsing folder names belong to M-1/M-2.
+  - **Port:** `IDriveFolderLister.ListAsync(folderId)` (Application) returns the folder status and name, plus one `DriveFileEntry` per usable file:
+    - Drive file id, name and kind (`AssetFile` rules);
+    - size and the md5 Drive reports (lower-case), for I-2's reuse by md5;
+    - Drive's change time, for I-6;
+    - **the subfolder names from the player folder down to the file**, which go straight into `AssetTagger`.
+  - **Skipped and counted:** unsupported types, Google Docs, empty files and extension-less markers.
+  - **Same folder rules as T-4c:** only non-trashed folders in the Shared Drive. An outage, even in the middle of the walk, is `drive.unavailable` and never a partial listing.
+  - **Limits:** the same 2000 files / 6 levels. **A listing that hits the file limit is marked `IsTruncated` and logs a warning** (owner, 2026-11-12), so ingest never mistakes it for the whole folder.
+  - **One walk:** `GoogleDriveFolderReader` implements both ports. The T-4c count and the I-1 listing share the same breadth-first walker; T-4c behaviour is unchanged.
+  - **Tests:**
+    - Archive-shaped fixtures: messy subfolder names, nested match folders, files at the top, junk, paging, limits and an outage mid-walk.
+    - The opt-in live test now lists a real folder too. It ran green on 2026-11-12 through the VPN proxy.
+
 ## 4a. Real archive layout (read from the R2 backup, 2026-10-23)
 
 About 200 files in total. Ingest (EPIC 3) must handle all of the following.

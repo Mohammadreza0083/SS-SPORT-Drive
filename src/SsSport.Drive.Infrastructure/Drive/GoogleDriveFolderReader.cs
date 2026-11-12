@@ -10,13 +10,14 @@ using SsSport.Drive.Domain.Assets;
 namespace SsSport.Drive.Infrastructure.Drive;
 
 /// <summary>
-/// The live Drive folder check (T-4c): the folder must be a non-trashed folder inside the agency's Shared Drive; its
-/// tree is walked breadth-first and every file counted by kind with the same rules as ingest (<see cref="AssetFile"/>).
-/// Large trees stop at <see cref="MaxItems"/> files or <see cref="MaxDepth"/> levels and say so.
+/// Reads player folders in the agency's Shared Drive. The live folder check (T-4c) counts files by kind; the ingest
+/// listing (I-1) returns every usable file with its subfolder path, size, md5 and change time. Both check the folder
+/// the same way (a non-trashed folder inside the Shared Drive) and share one breadth-first walk, which stops at
+/// <see cref="MaxItems"/> files or <see cref="MaxDepth"/> levels and says so.
 /// </summary>
-public sealed partial class GoogleDriveFolderReader : IDriveFolderReader
+public sealed partial class GoogleDriveFolderReader : IDriveFolderReader, IDriveFolderLister
 {
-    /// <summary>The most files counted before the check stops (a player folder holds a few dozen).</summary>
+    /// <summary>The most files read before the walk stops (a player folder holds a few dozen).</summary>
     public const int MaxItems = 2000;
 
     /// <summary>The deepest subfolder level walked (archive folders nest two levels at most).</summary>
@@ -44,7 +45,28 @@ public sealed partial class GoogleDriveFolderReader : IDriveFolderReader
     }
 
     /// <inheritdoc/>
-    public async Task<DriveFolderSummary> ReadAsync(string folderId, CancellationToken cancellationToken = default)
+    public Task<DriveFolderSummary> ReadAsync(string folderId, CancellationToken cancellationToken = default) =>
+        WithFolderAsync(folderId, DriveFolderSummary.Missing, CountAsync, cancellationToken);
+
+    /// <inheritdoc/>
+    public Task<DriveFolderListing> ListAsync(string folderId, CancellationToken cancellationToken = default) =>
+        WithFolderAsync(folderId, DriveFolderListing.Missing, CollectAsync, cancellationToken);
+
+    /// <summary>
+    /// Checks that the id is a non-trashed folder in the agency's Shared Drive and, if so, reads it. Any Drive outage on
+    /// the way becomes <c>drive.unavailable</c>, so a partial read is never returned as a whole one.
+    /// </summary>
+    /// <typeparam name="TResult">What is read.</typeparam>
+    /// <param name="folderId">The Drive folder id.</param>
+    /// <param name="missing">Builds the result for a folder that cannot be used.</param>
+    /// <param name="read">Reads a usable folder.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <returns>The result.</returns>
+    private async Task<TResult> WithFolderAsync<TResult>(
+        string folderId,
+        Func<DriveFolderStatus, TResult> missing,
+        Func<DriveItem, CancellationToken, Task<TResult>> read,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(_options.SharedDriveId))
         {
@@ -57,20 +79,20 @@ public sealed partial class GoogleDriveFolderReader : IDriveFolderReader
             var folder = await _api.GetAsync(folderId, cancellationToken);
             if (folder is null || folder.Trashed)
             {
-                return DriveFolderSummary.Missing(DriveFolderStatus.NotFound);
+                return missing(DriveFolderStatus.NotFound);
             }
 
             if (!folder.IsFolder)
             {
-                return DriveFolderSummary.Missing(DriveFolderStatus.NotAFolder);
+                return missing(DriveFolderStatus.NotAFolder);
             }
 
             if (!string.Equals(folder.DriveId, _options.SharedDriveId, StringComparison.Ordinal))
             {
-                return DriveFolderSummary.Missing(DriveFolderStatus.OutsideSharedDrive);
+                return missing(DriveFolderStatus.OutsideSharedDrive);
             }
 
-            return await CountAsync(folder, cancellationToken);
+            return await read(folder, cancellationToken);
         }
         catch (Exception exception) when (IsOutage(exception, cancellationToken))
         {
@@ -79,7 +101,7 @@ public sealed partial class GoogleDriveFolderReader : IDriveFolderReader
         }
     }
 
-    /// <summary>Walks the folder tree breadth-first and counts its files by kind.</summary>
+    /// <summary>Counts the files of a folder tree by kind (T-4c).</summary>
     /// <param name="root">The player folder.</param>
     /// <param name="cancellationToken">Cancels the walk.</param>
     /// <returns>The summary.</returns>
@@ -87,11 +109,78 @@ public sealed partial class GoogleDriveFolderReader : IDriveFolderReader
     {
         int videos = 0, documents = 0, scouts = 0, others = 0;
         long bytes = 0;
-        var truncated = false;
-        var pending = new Queue<(string Id, int Depth)>([(root.Id, 0)]);
-        while (pending.Count > 0 && !truncated)
+        var truncated = await WalkAsync(
+            root,
+            (item, _) =>
+            {
+                bytes += item.Size ?? 0;
+                switch (AssetFile.TryDetectKind(item.Name, out var kind) ? kind : (AssetKind?)null)
+                {
+                    case AssetKind.Video: videos++; break;
+                    case AssetKind.Document: documents++; break;
+                    case AssetKind.Scout: scouts++; break;
+                    default: others++; break;
+                }
+            },
+            cancellationToken);
+
+        return new DriveFolderSummary(DriveFolderStatus.Found, root.Name, videos, documents, scouts, others, bytes, truncated);
+    }
+
+    /// <summary>Lists the ingestible files of a folder tree with their subfolder path (I-1).</summary>
+    /// <param name="root">The player folder.</param>
+    /// <param name="cancellationToken">Cancels the walk.</param>
+    /// <returns>The listing.</returns>
+    private async Task<DriveFolderListing> CollectAsync(DriveItem root, CancellationToken cancellationToken)
+    {
+        var files = new List<DriveFileEntry>();
+        var skipped = 0;
+        var truncated = await WalkAsync(
+            root,
+            (item, subfolders) =>
+            {
+                if (item.Size is not > 0 || !AssetFile.TryDetectKind(item.Name, out var kind))
+                {
+                    skipped++;
+                    return;
+                }
+
+                files.Add(new DriveFileEntry(
+                    item.Id,
+                    item.Name,
+                    kind,
+                    item.Size.Value,
+                    string.IsNullOrWhiteSpace(item.Md5Checksum) ? null : item.Md5Checksum.Trim().ToLowerInvariant(),
+                    item.ModifiedTime,
+                    subfolders));
+            },
+            cancellationToken);
+
+        if (truncated)
         {
-            var (folderId, depth) = pending.Dequeue();
+            LogListingTruncated(_logger, root.Id, MaxItems);
+        }
+
+        return new DriveFolderListing(DriveFolderStatus.Found, root.Name, files, skipped, truncated);
+    }
+
+    /// <summary>
+    /// Walks a folder tree breadth-first, every page of every subfolder, and hands each file to
+    /// <paramref name="onFile"/> with the subfolder names from the root down to it. Stops after
+    /// <see cref="MaxItems"/> files and does not go below <see cref="MaxDepth"/> levels.
+    /// </summary>
+    /// <param name="root">The folder to walk.</param>
+    /// <param name="onFile">Called for each file with its subfolder path.</param>
+    /// <param name="cancellationToken">Cancels the walk.</param>
+    /// <returns><see langword="true"/> when the walk stopped at the file limit.</returns>
+    private async Task<bool> WalkAsync(DriveItem root, Action<DriveItem, IReadOnlyList<string>> onFile, CancellationToken cancellationToken)
+    {
+        var seen = 0;
+        var pending = new Queue<(string Id, IReadOnlyList<string> Path)>();
+        pending.Enqueue((root.Id, []));
+        while (pending.Count > 0)
+        {
+            var (folderId, path) = pending.Dequeue();
             string? pageToken = null;
             do
             {
@@ -100,36 +189,29 @@ public sealed partial class GoogleDriveFolderReader : IDriveFolderReader
                 {
                     if (item.IsFolder)
                     {
-                        if (depth + 1 < MaxDepth)
+                        if (path.Count + 1 < MaxDepth)
                         {
-                            pending.Enqueue((item.Id, depth + 1));
+                            pending.Enqueue((item.Id, [.. path, item.Name]));
                         }
 
                         continue;
                     }
 
-                    if (videos + documents + scouts + others >= MaxItems)
+                    if (seen >= MaxItems)
                     {
-                        truncated = true;
-                        break;
+                        return true;
                     }
 
-                    bytes += item.Size ?? 0;
-                    switch (AssetFile.TryDetectKind(item.Name, out var kind) ? kind : (AssetKind?)null)
-                    {
-                        case AssetKind.Video: videos++; break;
-                        case AssetKind.Document: documents++; break;
-                        case AssetKind.Scout: scouts++; break;
-                        default: others++; break;
-                    }
+                    seen++;
+                    onFile(item, path);
                 }
 
-                pageToken = truncated ? null : page.NextPageToken;
+                pageToken = page.NextPageToken;
             }
             while (pageToken is not null);
         }
 
-        return new DriveFolderSummary(DriveFolderStatus.Found, root.Name, videos, documents, scouts, others, bytes, truncated);
+        return false;
     }
 
     /// <summary>Tells a Drive outage (network, timeout, Google error, bad credentials) from a bug or a cancellation.</summary>
@@ -152,6 +234,13 @@ public sealed partial class GoogleDriveFolderReader : IDriveFolderReader
     /// <param name="logger">The logger.</param>
     [LoggerMessage(Level = LogLevel.Error, Message = "Google Drive is not configured: set GoogleDrive__SharedDriveId and GoogleDrive__ServiceAccountKeyPath")]
     private static partial void LogNotConfigured(ILogger logger);
+
+    /// <summary>Logs a listing that stopped at the file limit, so files may be missing from ingest.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="FolderId">The Drive folder id.</param>
+    /// <param name="Limit">The file limit.</param>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Drive folder {FolderId} holds more than {Limit} files; the listing is incomplete")]
+    private static partial void LogListingTruncated(ILogger logger, string FolderId, int Limit);
 
     /// <summary>Logs an outage (the kind of failure only; no ids, names or credentials).</summary>
     /// <param name="logger">The logger.</param>

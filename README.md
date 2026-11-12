@@ -238,7 +238,7 @@ SS-SPORT Drive/
 | 0 | Setup & accounts | 🚧 In progress |
 | 1 | Core domain & persistence | ✅ Done |
 | 2 | Telegram bot & Mini App | 🚧 In progress |
-| 3 | Ingest, transcode & sync | ⏳ Planned |
+| 3 | Ingest, transcode & sync | 🚧 In progress (I-1 Drive reader done) |
 | 4 | Viewer site & media protection | 🚧 In progress (V-1–V-4, V-5a, V-6 PDF viewer done) |
 | 5 | Personal links, OTP & tracking | 🚧 In progress (L-1 share links, L-2 email gate done) |
 | 6 | Public search & access requests | ⏳ Planned |
