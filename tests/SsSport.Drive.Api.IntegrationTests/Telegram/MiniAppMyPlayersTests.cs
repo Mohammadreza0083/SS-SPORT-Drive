@@ -228,7 +228,10 @@ public sealed class MiniAppMyPlayersTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
-    /// <summary>The My players button and /players send a button that opens the screen in the Mini App.</summary>
+    /// <summary>
+    /// The My players button and /players list the players in the chat (T-10b) and still offer a button that opens the
+    /// screen in the Mini App.
+    /// </summary>
     /// <param name="viaCommand">Whether the analyst typed /players instead of pressing the button.</param>
     [Theory]
     [InlineData(false)]
@@ -245,8 +248,7 @@ public sealed class MiniAppMyPlayersTests : IAsyncLifetime
         }
 
         var sent = _bot.ToChat(OwnerTelegramId).Should().ContainSingle(call => call.Kind == "Send").Which;
-        var button = sent.Keyboard!.Rows.Should().ContainSingle().Which.Should().ContainSingle().Which;
-        button.WebAppUrl.Should().Be(MiniAppUrl + "/players");
+        sent.Keyboard!.Rows.SelectMany(row => row).Should().Contain(button => button.WebAppUrl == MiniAppUrl + "/players");
     }
 
     /// <summary>

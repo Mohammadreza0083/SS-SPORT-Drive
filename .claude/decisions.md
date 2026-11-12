@@ -470,6 +470,15 @@ Standing rules for every feature. Each control gets tests, and nothing is commit
   - **Free text:** the bot reads a message's text only while a conversation waits for typed input, at most 500 characters. It is validated on the server and never logged.
   - **Only active team members** (analysts and admins) can use the flows.
   - **Not in the chat for now:** editing player details and the edit-video sheet stay in the Mini App.
+  - **My players in the chat (T-10b, owner-approved 2026-11-12):**
+    - **Entry:** the My players button and `/players` send the list as a new message; every other press edits that message in place. The Mini App stays optional through an **Open My players** button under the list.
+    - **Who sees what:** the same as the Mini App. The list reads through the same `IPlayerListReader`, so an analyst sees only their own players and an admin everyone's. Cards and files are readable by every active team member.
+    - **List:** 8 players per page, paged in SQL, one button each (`status icon · name · country · positions · files`). Status icons: ⚠️ needs attention, ⏳ processing, 🟢 live, ⚪ waiting. Rows below: `◀ n/N ▶`, the chips All / Live / Processing / Needs attention (the one in use marked with a dot), **Search** (with **Clear search** while one is active) and **Open My players**.
+    - **Search:** **Search** asks for text; the next message (at most 100 characters) is the search, on the name or the Volleybox id, shown from the first page of **All**. The question is the `bot_conversations` row at step `PlayersSearch`, so it needs no new table. It never replaces an unfinished new player: the press only gets a note. A search is cut to 24 bytes, because it travels in the button data.
+    - **Card:** name, category, country, positions, status, file count (with how many are processing or failed), the Volleybox link, up to 3 Drive folders and what needs attention. Buttons: **Files**, **Edit in Mini App** and **Back to list** (same chip, page and search).
+    - **Files:** 8 per page in page order, with the tag, the state, a ★ on the hero and "hidden" where it applies. **Back** returns to the card.
+    - **Buttons:** `mp:{action}:...`, always under 64 bytes (a player id is 22 URL-safe base64 characters). A malformed or old button gets "This button is no longer active", an unknown player gets "Player not found".
+    - **Not built (on purpose):** the player photo is not sent with the card (the bot messenger cannot send photos yet), and Add/Change photo stays the photo picker of T-4d. Adding a Drive folder stays in the Mini App and in New player.
 - **Mini App UI (T-9, owner-approved 2026-10-31):**
   - **Design first:** the Mini App had no styling. Five artboards were added to the design canvas (`MiniHome`, `MiniNewPlayer`, `MiniPhoto`, `MiniPlayers`, `MiniPlayer` with the edit-video sheet) and the owner approved them before any code.
   - **Telegram theme, SS-SPORT accents:** colours come from Telegram's `--tg-theme-*` variables, with the canvas's dark palette as the fallback; SS-SPORT red `#CC0000` stays the action colour in every theme.

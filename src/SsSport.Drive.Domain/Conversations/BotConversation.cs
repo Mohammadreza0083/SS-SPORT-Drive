@@ -2,7 +2,7 @@ using SsSport.Drive.Domain.Primitives;
 
 namespace SsSport.Drive.Domain.Conversations;
 
-/// <summary>The question a new-player chat (T-10a) waits at.</summary>
+/// <summary>The question a chat flow waits at: a new-player question (T-10a), or the My players search text (T-10b).</summary>
 public enum NewPlayerStep
 {
     /// <summary>Men or Women.</summary>
@@ -34,6 +34,9 @@ public enum NewPlayerStep
 
     /// <summary>Which field to change from the summary.</summary>
     EditField,
+
+    /// <summary>The text to search My players for (T-10b); the draft stays empty.</summary>
+    PlayersSearch,
 }
 
 /// <summary>
@@ -156,6 +159,13 @@ public sealed class BotConversation : AggregateRoot<Guid>
     /// <returns>The conversation.</returns>
     public static BotConversation StartNewPlayer(long telegramUserId, DateTimeOffset now) =>
         new(Guid.CreateVersion7(now), telegramUserId, NewPlayerStep.Category, new NewPlayerDraft(), now);
+
+    /// <summary>Starts a My players search that waits for the typed text (T-10b).</summary>
+    /// <param name="telegramUserId">The user's Telegram id.</param>
+    /// <param name="now">The current time (UTC); also seeds the time-ordered id.</param>
+    /// <returns>The conversation.</returns>
+    public static BotConversation StartPlayersSearch(long telegramUserId, DateTimeOffset now) =>
+        new(Guid.CreateVersion7(now), telegramUserId, NewPlayerStep.PlayersSearch, new NewPlayerDraft(), now);
 
     /// <summary>Moves to a question with the answers so far, and keeps the draft another 24 hours.</summary>
     /// <param name="step">The question.</param>
