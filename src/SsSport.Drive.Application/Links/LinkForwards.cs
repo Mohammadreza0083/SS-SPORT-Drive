@@ -2,8 +2,10 @@ using System.Globalization;
 using Ardalis.Specification;
 using SsSport.Drive.Application.Abstractions.Messaging;
 using SsSport.Drive.Application.Abstractions.Persistence;
+using SsSport.Drive.Application.Emails;
 using SsSport.Drive.Application.Users;
 using SsSport.Drive.Domain.Audit;
+using SsSport.Drive.Domain.Emails;
 using SsSport.Drive.Domain.Links;
 using SsSport.Drive.Domain.Primitives;
 using SsSport.Drive.Domain.Users;
@@ -80,6 +82,7 @@ public sealed record DecideForwardCommand(long AdminTelegramId, Guid ForwardId, 
 /// <param name="devices">The trusted devices.</param>
 /// <param name="sessions">The viewer sessions.</param>
 /// <param name="audit">The audit log.</param>
+/// <param name="emails">The email queue: a kept forward is told that the link is open (L-3b).</param>
 /// <param name="timeProvider">The clock.</param>
 public sealed class DecideForwardCommandHandler(
     IRepository<User, Guid> users,
@@ -88,6 +91,7 @@ public sealed class DecideForwardCommandHandler(
     IRepository<TrustedDevice, Guid> devices,
     IRepository<ViewerSession, Guid> sessions,
     IRepository<AuditEntry, Guid> audit,
+    IRepository<OutgoingEmail, Guid> emails,
     TimeProvider timeProvider) : ICommandHandler<DecideForwardCommand, ForwardDecisionResult>
 {
     /// <summary>The audit action of a keep.</summary>
@@ -125,6 +129,12 @@ public sealed class DecideForwardCommandHandler(
         if (!request.Keep)
         {
             await ShutOutAsync(forward, cancellationToken);
+        }
+        else
+        {
+            // Block sends nothing, so the blocked person cannot tell; Keep tells the viewer the link is open (L-3b).
+            var emailData = string.Create(CultureInfo.InvariantCulture, $$"""{"shareLinkId":"{{link.Id:D}}"}""");
+            emails.Add(OutgoingEmail.Queue(EmailKind.General, EmailTemplates.ForwardKept, forward.Email, emailData, forward.DecidedAt!.Value));
         }
 
         var data = string.Create(CultureInfo.InvariantCulture, $$"""{"shareLinkId":"{{link.Id:D}}"}""");

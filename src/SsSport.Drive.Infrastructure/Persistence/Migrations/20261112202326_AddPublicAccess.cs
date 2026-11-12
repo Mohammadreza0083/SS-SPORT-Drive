@@ -47,23 +47,6 @@ namespace SsSport.Drive.Infrastructure.Persistence.Migrations
                     table.PrimaryKey("pk_access_requests", x => x.id);
                 });
 
-            migrationBuilder.CreateTable(
-                name: "viewer_account_sessions",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    token_hash = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
-                    email = table.Column<string>(type: "character varying(254)", maxLength: 254, nullable: false),
-                    started_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    expires_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    signed_out_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
-                    xmin = table.Column<uint>(type: "xid", rowVersion: true, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("pk_viewer_account_sessions", x => x.id);
-                });
-
             migrationBuilder.CreateIndex(
                 name: "ix_access_code_challenges_email_requested_at",
                 table: "access_code_challenges",
@@ -88,17 +71,6 @@ namespace SsSport.Drive.Infrastructure.Persistence.Migrations
                 name: "ix_access_requests_player_id_created_at",
                 table: "access_requests",
                 columns: new[] { "player_id", "created_at" });
-
-            migrationBuilder.CreateIndex(
-                name: "ix_viewer_account_sessions_expires_at",
-                table: "viewer_account_sessions",
-                column: "expires_at");
-
-            migrationBuilder.CreateIndex(
-                name: "ix_viewer_account_sessions_token_hash",
-                table: "viewer_account_sessions",
-                column: "token_hash",
-                unique: true);
         }
 
         /// <inheritdoc />
@@ -109,9 +81,6 @@ namespace SsSport.Drive.Infrastructure.Persistence.Migrations
 
             migrationBuilder.DropTable(
                 name: "access_requests");
-
-            migrationBuilder.DropTable(
-                name: "viewer_account_sessions");
         }
     }
 }

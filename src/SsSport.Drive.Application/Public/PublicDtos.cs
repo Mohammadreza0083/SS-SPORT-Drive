@@ -137,13 +137,3 @@ public sealed record AccessRequestSentDto
     /// <summary>Gets the status, always <c>pending</c> today.</summary>
     public string Status { get; init; } = "pending";
 }
-
-/// <summary>Who is signed in on the public site.</summary>
-public sealed record PublicViewerDto
-{
-    /// <summary>Gets the viewer's email.</summary>
-    public string Email { get; init; } = string.Empty;
-
-    /// <summary>Gets when the session ends.</summary>
-    public DateTimeOffset ExpiresAt { get; init; }
-}

@@ -2,8 +2,8 @@ using Ardalis.Specification;
 using SsSport.Drive.Application.Abstractions.Messaging;
 using SsSport.Drive.Application.Abstractions.Persistence;
 using SsSport.Drive.Domain.AccessRequests;
+using SsSport.Drive.Domain.Accounts;
 using SsSport.Drive.Domain.Links;
-using SsSport.Drive.Domain.Viewers;
 
 namespace SsSport.Drive.Application.Links;
 
@@ -62,12 +62,12 @@ public sealed class AccessCodesRequestedBeforeSpec : Specification<AccessCodeCha
         Query.Where(challenge => challenge.RequestedAt < cutoff).Take(GateRetention.BatchSize);
 }
 
-/// <summary>One batch of signed-in viewer sessions (P-8) that ended before a moment.</summary>
-public sealed class ViewerAccountSessionsEndedBeforeSpec : Specification<ViewerAccountSession>
+/// <summary>One batch of sign-in sessions (P-5, P-8) that ended before a moment.</summary>
+public sealed class AccountSessionsEndedBeforeSpec : Specification<AccountSession>
 {
     /// <summary>Builds the specification.</summary>
     /// <param name="cutoff">Sessions that ended before this moment (UTC) are selected.</param>
-    public ViewerAccountSessionsEndedBeforeSpec(DateTimeOffset cutoff) =>
+    public AccountSessionsEndedBeforeSpec(DateTimeOffset cutoff) =>
         Query.Where(session => session.ExpiresAt < cutoff).Take(GateRetention.BatchSize);
 }
 
@@ -97,7 +97,7 @@ public sealed class PurgeGateRowsCommandHandler(
     IRepository<ViewerSession, Guid> sessions,
     IRepository<TrustedDevice, Guid> devices,
     IRepository<AccessCodeChallenge, Guid> visitorCodes,
-    IRepository<ViewerAccountSession, Guid> accountSessions) : ICommandHandler<PurgeGateRowsCommand, GatePurgeResult>
+    IRepository<AccountSession, Guid> accountSessions) : ICommandHandler<PurgeGateRowsCommand, GatePurgeResult>
 {
     /// <summary>Deletes each table's expired rows, batch by batch.</summary>
     /// <param name="request">The command.</param>
@@ -111,7 +111,7 @@ public sealed class PurgeGateRowsCommandHandler(
         var expiredSessions = await DeleteInBatchesAsync(sessions, new ViewerSessionsEndedBeforeSpec(request.Now - GateRetention.Sessions), cancellationToken);
         var expiredDevices = await DeleteInBatchesAsync(devices, new TrustedDevicesEndedBeforeSpec(request.Now - GateRetention.Devices), cancellationToken);
         var expiredVisitorCodes = await DeleteInBatchesAsync(visitorCodes, new AccessCodesRequestedBeforeSpec(codeCutoff), cancellationToken);
-        var endedAccountSessions = await DeleteInBatchesAsync(accountSessions, new ViewerAccountSessionsEndedBeforeSpec(request.Now - GateRetention.Sessions), cancellationToken);
+        var endedAccountSessions = await DeleteInBatchesAsync(accountSessions, new AccountSessionsEndedBeforeSpec(request.Now - GateRetention.Sessions), cancellationToken);
         return new GatePurgeResult(emailCodes, expiredSessions, expiredDevices, expiredVisitorCodes, endedAccountSessions);
     }
 

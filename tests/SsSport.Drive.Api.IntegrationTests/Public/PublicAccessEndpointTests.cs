@@ -14,11 +14,12 @@ using SsSport.Drive.Api.IntegrationTests.Telegram;
 using SsSport.Drive.Application.Abstractions.Email;
 using SsSport.Drive.Application.Abstractions.Persistence;
 using SsSport.Drive.Application.Abstractions.Security;
+using SsSport.Drive.Application.Accounts;
 using SsSport.Drive.Application.Telegram;
 using SsSport.Drive.Domain.AccessRequests;
+using SsSport.Drive.Domain.Accounts;
 using SsSport.Drive.Domain.Players;
 using SsSport.Drive.Domain.Primitives;
-using SsSport.Drive.Domain.Viewers;
 using SsSport.Drive.Infrastructure.IntegrationTests.Telegram;
 using SsSport.Drive.Infrastructure.Persistence;
 using Testcontainers.PostgreSql;
@@ -30,13 +31,12 @@ namespace SsSport.Drive.Api.IntegrationTests.Public;
 /// <list type="bullet">
 /// <item>a signed-out visitor proves their email with a 6-digit code (the gate's rules: 10 minutes, 5 tries, 60 s
 /// before another, 5 per hour) and passes Cloudflare Turnstile; any ordinary email works (owner, 2026-11-12);</item>
-/// <item>a signed-in viewer (<c>X-Viewer-Account</c>) asks in one click, with no code and no Turnstile;</item>
+/// <item>a signed-in viewer (<c>X-Viewer-Account</c>, a P-5 account session) asks in one click, with no code and no Turnstile;</item>
 /// <item>limits apply per email (5 requests a day) and per player (20 an hour); asking again for the same player while
 /// a request is pending stores nothing new;</item>
-/// <item>a viewer can read who is signed in and sign out.</item>
 /// </list>
 /// </summary>
-public sealed class PublicAccessEndpointTests : IAsyncLifetime
+public sealed partial class PublicAccessEndpointTests : IAsyncLifetime
 {
     /// <summary>The header the API reads a signed-in viewer's session token from.</summary>
     private const string AccountHeader = "X-Viewer-Account";
@@ -60,7 +60,7 @@ public sealed class PublicAccessEndpointTests : IAsyncLifetime
     private readonly ShiftableClock _clock = new();
 
     /// <summary>Catches the codes the API sends.</summary>
-    private readonly RecordingEmailCodeSender _mail = new();
+    private readonly RecordingEmailTransport _mail = new();
 
     /// <summary>Accepts <see cref="GoodTurnstile"/> only, and records what it was asked.</summary>
     private readonly FakeTurnstile _turnstile = new();
@@ -91,7 +91,8 @@ public sealed class PublicAccessEndpointTests : IAsyncLifetime
             builder.ConfigureTestServices(services =>
             {
                 services.Replace(ServiceDescriptor.Singleton<ITelegramMessenger>(new RecordingMessenger()));
-                services.Replace(ServiceDescriptor.Singleton<IEmailCodeSender>(_mail));
+                services.RemoveAll<IEmailTransport>();
+                services.AddSingleton<IEmailTransport>(_mail);
                 services.Replace(ServiceDescriptor.Singleton<ITurnstileVerifier>(_turnstile));
                 services.Replace(ServiceDescriptor.Singleton<TimeProvider>(_clock));
                 services.AddTransient<IStartupFilter, TestClientAddress>();
@@ -340,24 +341,21 @@ public sealed class PublicAccessEndpointTests : IAsyncLifetime
         request.Email.Value.Should().Be("scout@aurora-volley.example");
     }
 
-    /// <summary>An ended, signed-out or unknown account session is 401 <c>viewer.sign_in_required</c>: the page falls back to the code flow.</summary>
+    /// <summary>An ended, signed-out or unknown account session is 401 <c>sign_in.required</c>: the page falls back to the code flow.</summary>
     [Fact]
     public async Task A_dead_account_session_is_refused()
     {
         var ended = await SignInAsync("scout@aurora-volley.example");
         _clock.Advance(TimeSpan.FromDays(1).Add(TimeSpan.FromSeconds(1)));
         var signedOut = await SignInAsync("other@aurora-volley.example");
-        using (var signOut = await PostAsync("/public/viewer/sign-out", null, signedOut))
-        {
-            signOut.StatusCode.Should().Be(HttpStatusCode.NoContent);
-        }
+        await EndSessionAsync(signedOut);
 
         foreach (var token in new[] { ended, signedOut, "not-a-session-token-at-all-aaaaaaaaaaaaaaaa" })
         {
             using var response = await PostAsync("/public/access-requests", new { playerSlug = "arash-tehrani", about = About }, token);
             response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
             using var body = await ReadJsonAsync(response);
-            body.RootElement.GetProperty("code").GetString().Should().Be("viewer.sign_in_required");
+            body.RootElement.GetProperty("code").GetString().Should().Be("sign_in.required");
         }
 
         (await CountRequestsAsync()).Should().Be(0);
@@ -411,41 +409,6 @@ public sealed class PublicAccessEndpointTests : IAsyncLifetime
         body.RootElement.GetProperty("code").GetString().Should().Be("access_request.too_many");
     }
 
-    /// <summary>The site asks who is signed in: the email and when the session ends, or 401 without a live session.</summary>
-    [Fact]
-    public async Task The_site_reads_who_is_signed_in()
-    {
-        var token = await SignInAsync("scout@aurora-volley.example");
-
-        using var signedIn = await GetAsync("/public/viewer", token);
-        using var nobody = await GetAsync("/public/viewer", null);
-
-        signedIn.StatusCode.Should().Be(HttpStatusCode.OK);
-        using var body = await ReadJsonAsync(signedIn);
-        body.RootElement.GetProperty("email").GetString().Should().Be("scout@aurora-volley.example");
-        body.RootElement.GetProperty("expiresAt").GetDateTimeOffset().Should().Be(_clock.GetUtcNow().AddDays(1));
-        nobody.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-    }
-
-    /// <summary>Signing out ends the session at once; signing out with no or an unknown token is still 204.</summary>
-    [Fact]
-    public async Task Signing_out_ends_the_session()
-    {
-        var token = await SignInAsync("scout@aurora-volley.example");
-
-        using var signOut = await PostAsync("/public/viewer/sign-out", null, token);
-        using var after = await GetAsync("/public/viewer", token);
-        using var unknown = await PostAsync("/public/viewer/sign-out", null, "not-a-session-token-at-all-aaaaaaaaaaaaaaaa");
-        using var none = await PostAsync("/public/viewer/sign-out", null);
-
-        signOut.StatusCode.Should().Be(HttpStatusCode.NoContent);
-        after.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        unknown.StatusCode.Should().Be(HttpStatusCode.NoContent);
-        none.StatusCode.Should().Be(HttpStatusCode.NoContent);
-        var signedOutAt = await QueryAsync(db => db.Set<ViewerAccountSession>().Select(session => session.SignedOutAt).SingleAsync(TestContext.Current.CancellationToken));
-        signedOutAt.Should().Be(_clock.GetUtcNow());
-    }
-
     /// <summary>Asks for a code for <see cref="VisitorEmail"/> and returns the mailed code.</summary>
     /// <returns>The code.</returns>
     private async Task<string> RequestCodeAsync()
@@ -473,10 +436,23 @@ public sealed class PublicAccessEndpointTests : IAsyncLifetime
         using var scope = _api.Services.CreateScope();
         var secrets = scope.ServiceProvider.GetRequiredService<IViewerSecrets>();
         var token = secrets.NewToken();
-        scope.ServiceProvider.GetRequiredService<IRepository<ViewerAccountSession, Guid>>()
-            .Add(ViewerAccountSession.Start(secrets.HashToken(token), EmailAddress.Create(email), _clock.GetUtcNow()));
+        scope.ServiceProvider.GetRequiredService<IRepository<AccountSession, Guid>>()
+            .Add(AccountSession.Start(SignInAudience.Viewer, Guid.CreateVersion7(), EmailAddress.Create(email), secrets.HashToken(token), _clock.GetUtcNow()));
         await scope.ServiceProvider.GetRequiredService<IUnitOfWork>().SaveChangesAsync(TestContext.Current.CancellationToken);
         return token;
+    }
+
+    /// <summary>Ends a signed-in session, as signing out does.</summary>
+    /// <param name="token">The session token.</param>
+    /// <returns>A task that completes when the session is ended.</returns>
+    private async Task EndSessionAsync(string token)
+    {
+        using var scope = _api.Services.CreateScope();
+        var secrets = scope.ServiceProvider.GetRequiredService<IViewerSecrets>();
+        var session = await scope.ServiceProvider.GetRequiredService<IRepository<AccountSession, Guid>>()
+            .FirstOrDefaultAsync(new AccountSessionByTokenSpec(secrets.HashToken(token)), TestContext.Current.CancellationToken);
+        session!.End(_clock.GetUtcNow());
+        await scope.ServiceProvider.GetRequiredService<IUnitOfWork>().SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
     /// <summary>Stores a complete player, published unless told otherwise; the slug comes from the name.</summary>
@@ -541,30 +517,14 @@ public sealed class PublicAccessEndpointTests : IAsyncLifetime
         return await client.SendAsync(request, TestContext.Current.CancellationToken);
     }
 
-    /// <summary>Reads an endpoint, with the account header when given.</summary>
-    /// <param name="path">The path.</param>
-    /// <param name="accountToken">The signed-in viewer's token, or <see langword="null"/>.</param>
-    /// <returns>The response.</returns>
-    private async Task<HttpResponseMessage> GetAsync(string path, string? accountToken)
-    {
-        using var client = _api.CreateClient();
-        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri(path, UriKind.Relative));
-        if (accountToken is not null)
-        {
-            request.Headers.Add(AccountHeader, accountToken);
-        }
-
-        return await client.SendAsync(request, TestContext.Current.CancellationToken);
-    }
-
     /// <summary>Parses a response body.</summary>
     /// <param name="response">The response.</param>
     /// <returns>The JSON document.</returns>
     private static async Task<JsonDocument> ReadJsonAsync(HttpResponseMessage response) =>
         JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
 
-    /// <summary>Records the codes instead of mailing them.</summary>
-    private sealed class RecordingEmailCodeSender : IEmailCodeSender
+    /// <summary>Stands in for Resend (L-4): records each code email and reads the 6-digit code out of its text.</summary>
+    private sealed partial class RecordingEmailTransport : IEmailTransport
     {
         /// <summary>The mails, in order.</summary>
         private readonly ConcurrentQueue<(EmailAddress To, string Code)> _sent = new();
@@ -573,11 +533,22 @@ public sealed class PublicAccessEndpointTests : IAsyncLifetime
         public IReadOnlyList<(EmailAddress To, string Code)> Sent => [.. _sent];
 
         /// <inheritdoc />
-        public Task SendAsync(EmailAddress to, string code, CancellationToken cancellationToken)
+        public string Name => "Resend";
+
+        /// <inheritdoc />
+        public bool IsConfigured => true;
+
+        /// <inheritdoc />
+        public Task SendAsync(EmailMessage message, CancellationToken cancellationToken)
         {
-            _sent.Enqueue((to, code));
+            _sent.Enqueue((message.To, CodePattern().Match(message.Text).Value));
             return Task.CompletedTask;
         }
+
+        /// <summary>Six digits on their own.</summary>
+        /// <returns>The pattern.</returns>
+        [System.Text.RegularExpressions.GeneratedRegex(@"\b\d{6}\b")]
+        private static partial System.Text.RegularExpressions.Regex CodePattern();
     }
 
     /// <summary>A Turnstile that accepts <see cref="GoodTurnstile"/> only and records each call.</summary>

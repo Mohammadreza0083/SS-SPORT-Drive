@@ -60,10 +60,12 @@ public sealed class NotFoundException : Exception
 {
     /// <summary>Initializes the exception.</summary>
     /// <param name="what">What was not found, e.g. <c>Player</c>.</param>
-    public NotFoundException(string what)
-        : base($"{what} was not found.")
-    {
-    }
+    /// <param name="code">A stable code for clients, such as <c>tracking.unknown_watch</c>, or <see langword="null"/>.</param>
+    public NotFoundException(string what, string? code = null)
+        : base($"{what} was not found.") => Code = code;
+
+    /// <summary>Gets the stable code, or <see langword="null"/> when the 404 has none.</summary>
+    public string? Code { get; }
 }
 
 /// <summary>
@@ -145,17 +147,27 @@ public sealed class ForbiddenAccessException : Exception
     }
 }
 
-/// <summary>
-/// A signed-in viewer's session is missing, unknown, ended or signed out (P-8). Clients answer by asking the visitor
-/// for an email code instead (401 <c>viewer.sign_in_required</c>).
-/// </summary>
-public sealed class ViewerSignInRequiredException : Exception
+/// <summary>A sign-in token (A-1, P-5) is unknown, used, expired or for another audience; answered as 401 <c>sign_in.invalid</c>.</summary>
+public sealed class SignInInvalidException : Exception
 {
-    /// <summary>The code clients see.</summary>
-    public const string Code = "viewer.sign_in_required";
+    /// <summary>The machine-readable error code.</summary>
+    public const string Code = "sign_in.invalid";
 
     /// <summary>Initializes the exception.</summary>
-    public ViewerSignInRequiredException()
+    public SignInInvalidException()
+        : base("This sign-in link does not work any more. Ask for a new one.")
+    {
+    }
+}
+
+/// <summary>A request needs a live admin or viewer session and has none; answered as 401 <c>sign_in.required</c>.</summary>
+public sealed class SignInRequiredException : Exception
+{
+    /// <summary>The machine-readable error code.</summary>
+    public const string Code = "sign_in.required";
+
+    /// <summary>Initializes the exception.</summary>
+    public SignInRequiredException()
         : base("Sign in to continue.")
     {
     }

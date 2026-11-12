@@ -140,20 +140,20 @@ describe("loadHome (P-1 on real data)", () => {
   it("reads the signed-in viewer with the account cookie's token", async () => {
     const fetchMock = routed({
       "/public/players": () => Response.json({ items: [], page: 1, pageSize: HOME_PAGE_SIZE, totalCount: 0, totalPages: 0 }),
-      "/public/viewer": () => Response.json({ email: "scout@aurora-volley.example", expiresAt: "2026-11-13T09:00:00+00:00" }),
+      "/auth/viewer/me": () => Response.json({ email: "scout@aurora-volley.example", expiresAt: "2026-11-13T09:00:00+00:00" }),
     });
 
     const data = await loadHome(API, {}, TOKEN, fetchMock);
 
     expect(data.viewer).toEqual({ email: "scout@aurora-volley.example" });
-    expect(headersFor(fetchMock, "/public/viewer").get("X-Viewer-Account")).toBe(TOKEN);
+    expect(headersFor(fetchMock, "/auth/viewer/me").get("X-Viewer-Account")).toBe(TOKEN);
     expect(headersFor(fetchMock, "/public/players").get("X-Viewer-Account")).toBeNull();
   });
 
   it("treats an ended session as signed out", async () => {
     const fetchMock = routed({
       "/public/players": () => Response.json({ items: [], page: 1, pageSize: HOME_PAGE_SIZE, totalCount: 0, totalPages: 0 }),
-      "/public/viewer": () => Response.json({ status: 401, code: "viewer.sign_in_required" }, { status: 401 }),
+      "/auth/viewer/me": () => Response.json({ status: 401, code: "sign_in.required" }, { status: 401 }),
     });
 
     expect((await loadHome(API, {}, TOKEN, fetchMock)).viewer).toBeNull();
@@ -308,7 +308,7 @@ describe("signOut (POST /api/viewer/sign-out)", () => {
 
     const response = await signOut(browserRequest("/api/viewer/sign-out", { contentType: "application/x-www-form-urlencoded", body: "", cookie: `${ACCOUNT_COOKIE}=${TOKEN}` }), API, fetchMock);
 
-    expect(fetchMock.mock.calls[0][0]).toBe("http://api:8080/public/viewer/sign-out");
+    expect(fetchMock.mock.calls[0][0]).toBe("http://api:8080/auth/viewer/sign-out");
     expect(new Headers((fetchMock.mock.calls[0][1] as RequestInit).headers).get("X-Viewer-Account")).toBe(TOKEN);
     expect(response.status).toBe(303);
     expect(response.headers.get("Location")).toBe("/");

@@ -6,7 +6,7 @@ import { clientAddress, isSameOrigin, problem, readCookie } from "./gate-server"
 /**
  * The server side of the public pages (backlog P-8): the home page and `/players/{slug}` read the API's `/public/…`
  * endpoints from here, the same-origin `/api/public/…` routes forward the request-access flow, and
- * `/api/viewer/sign-out` ends a signed-in viewer's session. The viewer's token lives only in the `HttpOnly` cookie
+ * `/api/viewer/sign-out` ends a signed-in viewer's session through the API's `/auth/viewer/*` endpoints (P-5). The viewer's token lives only in the `HttpOnly` cookie
  * {@link ACCOUNT_COOKIE} and travels to the API as `X-Viewer-Account`.
  */
 
@@ -167,7 +167,7 @@ async function readViewer(apiBaseUrl: string, accountToken: string | undefined, 
 
   try {
     const headers = new Headers({ [ACCOUNT_HEADER]: accountToken });
-    const viewer = await getJson<{ email: string }>(fetchImpl, apiUrl(apiBaseUrl, "/public/viewer"), headers);
+    const viewer = await getJson<{ email: string }>(fetchImpl, apiUrl(apiBaseUrl, "/auth/viewer/me"), headers);
     return { email: viewer.email };
   } catch {
     return null;
@@ -342,14 +342,15 @@ export async function signOut(request: Request, apiBaseUrl: string, fetchImpl: t
 
   const account = readCookie(request.headers.get("Cookie"), ACCOUNT_COOKIE);
   if (account) {
-    const headers = new Headers({ [ACCOUNT_HEADER]: account });
+    // The API's sign-in endpoints take JSON only (that is their CSRF check), so send an empty JSON body.
+    const headers = new Headers({ [ACCOUNT_HEADER]: account, "Content-Type": "application/json" });
     const clientIp = clientAddress(request.headers);
     if (clientIp) {
       headers.set("X-Forwarded-For", clientIp);
     }
 
     try {
-      await fetchImpl(apiUrl(apiBaseUrl, "/public/viewer/sign-out"), { method: "POST", headers, cache: "no-store" });
+      await fetchImpl(apiUrl(apiBaseUrl, "/auth/viewer/sign-out"), { method: "POST", headers, body: "{}", cache: "no-store" });
     } catch {
       // The cookie is cleared below either way; the session also ends by itself within a day.
     }

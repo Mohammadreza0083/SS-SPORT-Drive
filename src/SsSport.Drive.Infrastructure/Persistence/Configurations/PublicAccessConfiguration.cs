@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SsSport.Drive.Domain.AccessRequests;
-using SsSport.Drive.Domain.Viewers;
 
 namespace SsSport.Drive.Infrastructure.Persistence.Configurations;
 
@@ -51,26 +50,5 @@ internal sealed class AccessRequestConfiguration : IEntityTypeConfiguration<Acce
         builder.HasIndex(request => new { request.Email, request.CreatedAt });
         builder.HasIndex(request => new { request.PlayerId, request.CreatedAt });
         builder.HasIndex(request => new { request.Email, request.PlayerId, request.Status });
-    }
-}
-
-/// <summary>Maps <see cref="ViewerAccountSession"/> to <c>viewer_account_sessions</c>, looked up by token hash.</summary>
-internal sealed class ViewerAccountSessionConfiguration : IEntityTypeConfiguration<ViewerAccountSession>
-{
-    /// <summary>Configures the signed-in viewer session table.</summary>
-    /// <param name="builder">The entity builder.</param>
-    public void Configure(EntityTypeBuilder<ViewerAccountSession> builder)
-    {
-        builder.ToTable("viewer_account_sessions");
-        builder.HasKey(session => session.Id);
-
-        // Get-only properties are mapped explicitly; EF Core skips them by convention.
-        builder.Property(session => session.TokenHash).HasMaxLength(64);
-        builder.Property(session => session.Email).HasConversion(ValueConverters.RequiredEmail).HasMaxLength(254);
-        builder.Property(session => session.StartedAt);
-        builder.Property(session => session.ExpiresAt);
-
-        builder.HasIndex(session => session.TokenHash).IsUnique();
-        builder.HasIndex(session => session.ExpiresAt);
     }
 }

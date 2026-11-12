@@ -133,6 +133,155 @@ namespace SsSport.Drive.Infrastructure.Persistence.Migrations
                     b.ToTable("access_requests", (string)null);
                 });
 
+            modelBuilder.Entity("SsSport.Drive.Domain.Accounts.AccountSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Audience")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("audience");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)")
+                        .HasColumnName("email");
+
+                    b.Property<DateTimeOffset?>("EndedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ended_at");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<Guid>("SubjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("subject_id");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("token_hash");
+
+                    b.HasKey("Id")
+                        .HasName("pk_account_sessions");
+
+                    b.HasIndex("ExpiresAt")
+                        .HasDatabaseName("ix_account_sessions_expires_at");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_account_sessions_token_hash");
+
+                    b.ToTable("account_sessions", (string)null);
+                });
+
+            modelBuilder.Entity("SsSport.Drive.Domain.Accounts.SignInLink", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Audience")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("audience");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)")
+                        .HasColumnName("email");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<string>("TokenHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("token_hash");
+
+                    b.Property<DateTimeOffset?>("UsedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("used_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sign_in_links");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_sign_in_links_token_hash");
+
+                    b.HasIndex("Email", "Audience", "CreatedAt")
+                        .HasDatabaseName("ix_sign_in_links_email_audience_created_at");
+
+                    b.ToTable("sign_in_links", (string)null);
+                });
+
+            modelBuilder.Entity("SsSport.Drive.Domain.Accounts.ViewerAccount", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)")
+                        .HasColumnName("email");
+
+                    b.Property<DateTimeOffset>("LastSignedInAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_signed_in_at");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_viewer_accounts");
+
+                    b.HasIndex("Email")
+                        .IsUnique()
+                        .HasDatabaseName("ix_viewer_accounts_email");
+
+                    b.ToTable("viewer_accounts", (string)null);
+                });
+
             modelBuilder.Entity("SsSport.Drive.Domain.Assets.Asset", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1685,6 +1834,85 @@ namespace SsSport.Drive.Infrastructure.Persistence.Migrations
                     b.ToTable("drive_folders", (string)null);
                 });
 
+            modelBuilder.Entity("SsSport.Drive.Domain.Emails.OutgoingEmail", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer")
+                        .HasColumnName("attempts");
+
+                    b.Property<string>("Data")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("data");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("kind");
+
+                    b.Property<DateTimeOffset?>("LastAttemptAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_attempt_at");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("last_error");
+
+                    b.Property<string>("Provider")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("provider");
+
+                    b.Property<DateTimeOffset>("QueuedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("queued_at");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<DateTimeOffset?>("SentAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("sent_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Template")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("template");
+
+                    b.Property<string>("To")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)")
+                        .HasColumnName("to_address");
+
+                    b.HasKey("Id")
+                        .HasName("pk_outgoing_emails");
+
+                    b.HasIndex("QueuedAt", "Id")
+                        .IsDescending()
+                        .HasDatabaseName("ix_outgoing_emails_queued_at_id");
+
+                    b.HasIndex("Status", "QueuedAt")
+                        .HasDatabaseName("ix_outgoing_emails_status_queued_at");
+
+                    b.ToTable("outgoing_emails", (string)null);
+                });
+
             modelBuilder.Entity("SsSport.Drive.Domain.Links.EmailChallenge", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2265,6 +2493,117 @@ namespace SsSport.Drive.Infrastructure.Persistence.Migrations
                     b.ToTable("players", (string)null);
                 });
 
+            modelBuilder.Entity("SsSport.Drive.Domain.Tracking.TrackingEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("occurred_at");
+
+                    b.Property<double>("PositionSeconds")
+                        .HasColumnType("double precision")
+                        .HasColumnName("position_seconds");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("type");
+
+                    b.Property<Guid>("WatchSessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("watch_session_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_tracking_events");
+
+                    b.HasIndex("WatchSessionId", "Id")
+                        .HasDatabaseName("ix_tracking_events_watch_session_id_id");
+
+                    b.ToTable("tracking_events", (string)null);
+                });
+
+            modelBuilder.Entity("SsSport.Drive.Domain.Tracking.WatchSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AssetId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("asset_id");
+
+                    b.Property<double>("DurationSeconds")
+                        .HasColumnType("double precision")
+                        .HasColumnName("duration_seconds");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)")
+                        .HasColumnName("email");
+
+                    b.Property<string>("LastEventType")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("last_event_type");
+
+                    b.Property<DateTimeOffset>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_seen_at");
+
+                    b.Property<Guid>("PlayerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("player_id");
+
+                    b.Property<int>("Plays")
+                        .HasColumnType("integer")
+                        .HasColumnName("plays");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<Guid>("ShareLinkId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("share_link_id");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<Guid>("ViewerSessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("viewer_session_id");
+
+                    b.Property<string>("_ranges")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("ranges");
+
+                    b.HasKey("Id")
+                        .HasName("pk_watch_sessions");
+
+                    b.HasIndex("ViewerSessionId")
+                        .HasDatabaseName("ix_watch_sessions_viewer_session_id");
+
+                    b.HasIndex("ShareLinkId", "Email", "AssetId")
+                        .HasDatabaseName("ix_watch_sessions_share_link_id_email_asset_id");
+
+                    b.ToTable("watch_sessions", (string)null);
+                });
+
             modelBuilder.Entity("SsSport.Drive.Domain.Users.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2336,55 +2675,6 @@ namespace SsSport.Drive.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_users_telegram_id");
 
                     b.ToTable("users", (string)null);
-                });
-
-            modelBuilder.Entity("SsSport.Drive.Domain.Viewers.ViewerAccountSession", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasMaxLength(254)
-                        .HasColumnType("character varying(254)")
-                        .HasColumnName("email");
-
-                    b.Property<DateTimeOffset>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("expires_at");
-
-                    b.Property<uint>("RowVersion")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("xid")
-                        .HasColumnName("xmin");
-
-                    b.Property<DateTimeOffset?>("SignedOutAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("signed_out_at");
-
-                    b.Property<DateTimeOffset>("StartedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("started_at");
-
-                    b.Property<string>("TokenHash")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("token_hash");
-
-                    b.HasKey("Id")
-                        .HasName("pk_viewer_account_sessions");
-
-                    b.HasIndex("ExpiresAt")
-                        .HasDatabaseName("ix_viewer_account_sessions_expires_at");
-
-                    b.HasIndex("TokenHash")
-                        .IsUnique()
-                        .HasDatabaseName("ix_viewer_account_sessions_token_hash");
-
-                    b.ToTable("viewer_account_sessions", (string)null);
                 });
 
             modelBuilder.Entity("SsSport.Drive.Infrastructure.Telegram.TelegramUpdateRecord", b =>

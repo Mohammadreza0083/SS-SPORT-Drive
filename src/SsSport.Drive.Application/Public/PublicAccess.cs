@@ -2,17 +2,19 @@ using Ardalis.Specification;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
 using SsSport.Drive.Application.Abstractions.Email;
-using SsSport.Drive.Application.Abstractions.Events;
 using SsSport.Drive.Application.Abstractions.Messaging;
 using SsSport.Drive.Application.Abstractions.Persistence;
 using SsSport.Drive.Application.Abstractions.Security;
+using SsSport.Drive.Application.Accounts;
+using SsSport.Drive.Application.Emails;
 using SsSport.Drive.Application.Exceptions;
 using SsSport.Drive.Application.Links;
 using SsSport.Drive.Domain.AccessRequests;
+using SsSport.Drive.Domain.Accounts;
+using SsSport.Drive.Domain.Emails;
 using SsSport.Drive.Domain.Links;
 using SsSport.Drive.Domain.Players;
 using SsSport.Drive.Domain.Primitives;
-using SsSport.Drive.Domain.Viewers;
 
 namespace SsSport.Drive.Application.Public;
 
@@ -65,14 +67,6 @@ public sealed class PendingAccessRequestSpec : Specification<AccessRequest>
         Query.Where(request => request.Email == email && request.PlayerId == playerId && request.Status == AccessRequestStatus.Pending).AsNoTracking();
 }
 
-/// <summary>The signed-in viewer's session behind a token.</summary>
-public sealed class ViewerAccountSessionByTokenSpec : Specification<ViewerAccountSession>, ISingleResultSpecification<ViewerAccountSession>
-{
-    /// <summary>Initializes a new instance of the <see cref="ViewerAccountSessionByTokenSpec"/> class.</summary>
-    /// <param name="tokenHash">The keyed hash of the token.</param>
-    public ViewerAccountSessionByTokenSpec(string tokenHash) => Query.Where(session => session.TokenHash == tokenHash);
-}
-
 /// <summary>The limits of the request-access flow (P-8, decisions §6 "Anti-spam") and what they log.</summary>
 public static partial class PublicAccessRules
 {
@@ -88,37 +82,11 @@ public static partial class PublicAccessRules
     /// <summary>The window <see cref="MaxRequestsPerPlayer"/> counts in.</summary>
     public static readonly TimeSpan PlayerWindow = TimeSpan.FromHours(1);
 
-    /// <summary>The longest session token accepted; real ones are 43 characters.</summary>
-    public const int MaxTokenLength = 128;
-
     /// <summary>The code clients see when a limit is reached.</summary>
     public const string TooManyRequestsCode = "access_request.too_many";
 
     /// <summary>The code clients see when the Turnstile check fails.</summary>
     public const string TurnstileFailedCode = "turnstile.failed";
-
-    /// <summary>Finds the live signed-in session behind a token.</summary>
-    /// <param name="sessions">The sessions.</param>
-    /// <param name="secrets">Hashes the token.</param>
-    /// <param name="token">The token from the header, or <see langword="null"/>.</param>
-    /// <param name="now">The current time (UTC).</param>
-    /// <param name="cancellationToken">Cancels the query.</param>
-    /// <returns>The session, or <see langword="null"/> for a missing, unknown, ended or signed-out one.</returns>
-    public static async Task<ViewerAccountSession?> FindLiveAsync(
-        this IRepository<ViewerAccountSession, Guid> sessions,
-        IViewerSecrets secrets,
-        string? token,
-        DateTimeOffset now,
-        CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(token) || token.Length > MaxTokenLength)
-        {
-            return null;
-        }
-
-        var session = await sessions.FirstOrDefaultAsync(new ViewerAccountSessionByTokenSpec(secrets.HashToken(token)), cancellationToken);
-        return session is not null && session.IsLiveAt(now) ? session : null;
-    }
 
     /// <summary>Logs a code that was refused: asked too often.</summary>
     /// <param name="logger">The logger.</param>
@@ -171,14 +139,16 @@ public sealed class RequestAccessCodeCommandValidator : AbstractValidator<Reques
 
 /// <summary>Handles <see cref="RequestAccessCodeCommand"/>.</summary>
 /// <param name="challenges">The codes.</param>
+/// <param name="emails">The email queue (L-4).</param>
 /// <param name="timeProvider">The clock.</param>
 /// <param name="logger">The logger.</param>
 public sealed class RequestAccessCodeCommandHandler(
     IRepository<AccessCodeChallenge, Guid> challenges,
+    IRepository<OutgoingEmail, Guid> emails,
     TimeProvider timeProvider,
     ILogger<RequestAccessCodeCommandHandler> logger) : ICommandHandler<RequestAccessCodeCommand, EmailCodeSentDto>
 {
-    /// <summary>Applies the 60-second wait and the hourly cap, then records the request; the job mails the code.</summary>
+    /// <summary>Applies the 60-second wait and the hourly cap, then records the request; the queue mails the code.</summary>
     /// <param name="request">The command.</param>
     /// <param name="cancellationToken">Cancels the work.</param>
     /// <returns>What the dialog shows next.</returns>
@@ -189,7 +159,10 @@ public sealed class RequestAccessCodeCommandHandler(
         var now = timeProvider.GetUtcNow();
         var email = EmailAddress.Create(request.Email);
         await EnsureNotTooOftenAsync(email, now, cancellationToken);
-        challenges.Add(AccessCodeChallenge.Request(email, now));
+        var challenge = AccessCodeChallenge.Request(email, now);
+        challenges.Add(challenge);
+        var emailData = $$"""{"challengeId":"{{challenge.Id:D}}"}""";
+        emails.Add(OutgoingEmail.Queue(EmailKind.Code, EmailTemplates.AccessCode, email, emailData, now));
         return new EmailCodeSentDto
         {
             Email = email.ToString(),
@@ -232,38 +205,37 @@ public sealed class RequestAccessCodeCommandHandler(
 }
 
 /// <summary>
-/// Draws the code for a request, stores its hash and mails it (P-8). Runs in a background job, so the code never passes
-/// through the request or the job's arguments.
+/// Composes the visitor code email (P-8): draws the code in the job, stores its salted hash, then returns the mail, so the
+/// code never passes through the request or the queue. A request that was already used or is too old has nothing to send.
+/// A retried job draws a new code, which replaces the one before.
 /// </summary>
 /// <param name="challenges">The codes.</param>
 /// <param name="unitOfWork">Saves the hash before the mail goes out.</param>
 /// <param name="secrets">The secrets.</param>
-/// <param name="sender">Mails the code.</param>
 /// <param name="timeProvider">The clock.</param>
-public sealed class SendAccessCode(
+public sealed class AccessCodeComposer(
     IRepository<AccessCodeChallenge, Guid> challenges,
     IUnitOfWork unitOfWork,
     IViewerSecrets secrets,
-    IEmailCodeSender sender,
-    TimeProvider timeProvider) : IBackgroundEventHandler<AccessCodeRequested>
+    TimeProvider timeProvider) : IEmailComposer
 {
-    /// <summary>Issues and mails the code, unless the request was used or is too old.</summary>
-    /// <param name="domainEvent">The event.</param>
-    /// <param name="context">Who caused it (nobody: the dialog is public).</param>
-    /// <param name="cancellationToken">Cancels the work.</param>
-    /// <returns>A task that completes when the mail was accepted, or nothing needed sending.</returns>
-    public async Task HandleAsync(AccessCodeRequested domainEvent, EventContext context, CancellationToken cancellationToken)
+    /// <inheritdoc />
+    public string Template => EmailTemplates.AccessCode;
+
+    /// <inheritdoc />
+    public async Task<EmailMessage?> ComposeAsync(OutgoingEmail email, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(domainEvent);
-        var challenge = await challenges.GetByIdAsync(domainEvent.ChallengeId, cancellationToken);
+        ArgumentNullException.ThrowIfNull(email);
+        var challengeId = EmailData.GuidOf(email, "challengeId");
+        var challenge = challengeId is { } id ? await challenges.GetByIdAsync(id, cancellationToken) : null;
         var code = secrets.NewCode();
         if (challenge is null || !challenge.IssueCode(secrets.HashCode(code), timeProvider.GetUtcNow()))
         {
-            return;
+            return null;
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
-        await sender.SendAsync(challenge.Email, code, cancellationToken);
+        return EmailContent.GateCode(email.To, code);
     }
 }
 
@@ -324,7 +296,7 @@ public sealed class SubmitAccessRequestCommandValidator : AbstractValidator<Subm
             .Must(about => !string.IsNullOrWhiteSpace(about) && about.Trim().Length <= AccessRequest.MaxAboutLength)
             .WithMessage($"Describe yourself in 1 to {AccessRequest.MaxAboutLength} characters.")
             .OverridePropertyName("about");
-        RuleFor(command => command.AccountToken).MaximumLength(PublicAccessRules.MaxTokenLength).OverridePropertyName("accountToken");
+        RuleFor(command => command.AccountToken).MaximumLength(SignInRules.MaxTokenLength).OverridePropertyName("accountToken");
         RuleFor(command => command.TurnstileToken).MaximumLength(MaxTurnstileTokenLength).OverridePropertyName("turnstileToken");
         When(command => string.IsNullOrWhiteSpace(command.AccountToken), () =>
         {
@@ -342,7 +314,7 @@ public sealed class SubmitAccessRequestCommandValidator : AbstractValidator<Subm
 /// <param name="players">The players.</param>
 /// <param name="requests">The access requests.</param>
 /// <param name="challenges">The visitor codes.</param>
-/// <param name="sessions">The signed-in viewer sessions.</param>
+/// <param name="sessions">The account sessions (P-5); a viewer's is the signed-in one.</param>
 /// <param name="secrets">The secrets.</param>
 /// <param name="turnstile">Checks Turnstile tokens.</param>
 /// <param name="timeProvider">The clock.</param>
@@ -351,7 +323,7 @@ public sealed class SubmitAccessRequestCommandHandler(
     IRepository<Player, Guid> players,
     IRepository<AccessRequest, Guid> requests,
     IRepository<AccessCodeChallenge, Guid> challenges,
-    IRepository<ViewerAccountSession, Guid> sessions,
+    IRepository<AccountSession, Guid> sessions,
     IViewerSecrets secrets,
     ITurnstileVerifier turnstile,
     TimeProvider timeProvider,
@@ -362,7 +334,7 @@ public sealed class SubmitAccessRequestCommandHandler(
     /// <param name="cancellationToken">Cancels the work.</param>
     /// <returns>Sent, or why the code did not verify (a wrong code is saved as a used try).</returns>
     /// <exception cref="NotFoundException">No such published player.</exception>
-    /// <exception cref="ViewerSignInRequiredException">The signed-in viewer's session is not live.</exception>
+    /// <exception cref="SignInRequiredException">The signed-in viewer's session is not live.</exception>
     /// <exception cref="DomainException"><c>turnstile.failed</c>, <c>email.invalid</c> or <c>access_request.about_invalid</c>.</exception>
     /// <exception cref="TooManyRequestsException">A limit was reached.</exception>
     public async Task<AccessRequestOutcome> Handle(SubmitAccessRequestCommand request, CancellationToken cancellationToken)
@@ -374,7 +346,8 @@ public sealed class SubmitAccessRequestCommandHandler(
         AccessRequestSource source;
         if (!string.IsNullOrWhiteSpace(request.AccountToken))
         {
-            var session = await sessions.FindLiveAsync(secrets, request.AccountToken, now, cancellationToken) ?? throw new ViewerSignInRequiredException();
+            var session = await SignInRules.FindLiveSessionAsync(sessions, secrets, SignInAudience.Viewer, request.AccountToken, now, cancellationToken)
+                ?? throw new SignInRequiredException();
             email = session.Email;
             source = AccessRequestSource.SignedIn;
         }
@@ -465,47 +438,5 @@ public sealed class SubmitAccessRequestCommandHandler(
         var seconds = Math.Max(1, (int)Math.Ceiling(wait.TotalSeconds));
         PublicAccessRules.LogRequestLimit(logger, playerId, limit, seconds);
         throw new TooManyRequestsException(PublicAccessRules.TooManyRequestsCode, "Too many requests. Try again later.", TimeSpan.FromSeconds(seconds));
-    }
-}
-
-/// <summary>Reads who is signed in (<c>GET /public/viewer</c>). Public; the session token is the proof.</summary>
-/// <param name="AccountToken">The session token, or <see langword="null"/>.</param>
-public sealed record GetPublicViewerQuery(string? AccountToken) : IQuery<PublicViewerDto>;
-
-/// <summary>Handles <see cref="GetPublicViewerQuery"/>.</summary>
-/// <param name="sessions">The sessions.</param>
-/// <param name="secrets">Hashes the token.</param>
-/// <param name="timeProvider">The clock.</param>
-public sealed class GetPublicViewerQueryHandler(IRepository<ViewerAccountSession, Guid> sessions, IViewerSecrets secrets, TimeProvider timeProvider) : IQueryHandler<GetPublicViewerQuery, PublicViewerDto>
-{
-    /// <inheritdoc />
-    public async Task<PublicViewerDto> Handle(GetPublicViewerQuery request, CancellationToken cancellationToken)
-    {
-        var session = await sessions.FindLiveAsync(secrets, request.AccountToken, timeProvider.GetUtcNow(), cancellationToken) ?? throw new ViewerSignInRequiredException();
-        return new PublicViewerDto { Email = session.Email.Value, ExpiresAt = session.ExpiresAt };
-    }
-}
-
-/// <summary>Ends a signed-in session (<c>POST /public/viewer/sign-out</c>). Public; a missing or unknown token does nothing.</summary>
-/// <param name="AccountToken">The session token, or <see langword="null"/>.</param>
-public sealed record SignOutViewerCommand(string? AccountToken) : ICommand;
-
-/// <summary>Handles <see cref="SignOutViewerCommand"/>.</summary>
-/// <param name="sessions">The sessions.</param>
-/// <param name="secrets">Hashes the token.</param>
-/// <param name="timeProvider">The clock.</param>
-public sealed class SignOutViewerCommandHandler(IRepository<ViewerAccountSession, Guid> sessions, IViewerSecrets secrets, TimeProvider timeProvider) : ICommandHandler<SignOutViewerCommand>
-{
-    /// <inheritdoc />
-    public async Task Handle(SignOutViewerCommand request, CancellationToken cancellationToken)
-    {
-        var now = timeProvider.GetUtcNow();
-        if (string.IsNullOrWhiteSpace(request.AccountToken) || request.AccountToken.Length > PublicAccessRules.MaxTokenLength)
-        {
-            return;
-        }
-
-        var session = await sessions.FirstOrDefaultAsync(new ViewerAccountSessionByTokenSpec(secrets.HashToken(request.AccountToken)), cancellationToken);
-        session?.SignOut(now);
     }
 }
