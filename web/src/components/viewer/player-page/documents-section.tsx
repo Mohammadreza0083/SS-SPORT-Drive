@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { DocumentViewer } from "@/components/viewer/document-viewer/document-viewer";
+import { fetchPages } from "@/lib/viewer/media-client";
 import { pageCopy } from "./copy";
 import type { PlayerDocument } from "./types";
 
@@ -24,13 +25,42 @@ type DocumentsSectionProps = {
  */
 export function DocumentsSection({ documents, playerName, viewerEmail }: DocumentsSectionProps) {
   const [openId, setOpenId] = useState<string | null>(null);
+  const [signedPages, setSignedPages] = useState<string[] | null>(null);
+  const [failed, setFailed] = useState(false);
   const cardRefs = useRef(new Map<string, HTMLButtonElement>());
   const open = documents.find((doc) => doc.id === openId);
+
+  /**
+   * Opens a document. One with a pages route (V-5b) has its page images signed first, each time it is opened, because the
+   * token lives 30 minutes; a document with fixed pages (the design preview) opens at once.
+   *
+   * @param doc - The document whose card was pressed.
+   */
+  const openDocument = (doc: PlayerDocument) => {
+    setFailed(false);
+    if (doc.pages.length > 0 || !doc.pagesPath) {
+      setSignedPages(null);
+      setOpenId(doc.id);
+      return;
+    }
+    fetchPages(doc.pagesPath).then(
+      (pages) => {
+        if (pages.length === 0) {
+          setFailed(true);
+          return;
+        }
+        setSignedPages(pages);
+        setOpenId(doc.id);
+      },
+      () => setFailed(true),
+    );
+  };
 
   /** Closes the viewer and returns focus to the card that opened it. */
   const close = () => {
     const card = openId ? cardRefs.current.get(openId) : undefined;
     setOpenId(null);
+    setSignedPages(null);
     card?.focus();
   };
 
@@ -52,7 +82,7 @@ export function DocumentsSection({ documents, playerName, viewerEmail }: Documen
               }
             }}
             className="pp-doc ss-doc ss-press ss-sr"
-            onClick={() => setOpenId(doc.id)}
+            onClick={() => openDocument(doc)}
           >
             <span className={i % 2 === 0 ? "pp-page pp-page-chart" : "pp-page pp-page-text"} aria-hidden="true">
               <span className="pp-page-head" />
@@ -86,7 +116,12 @@ export function DocumentsSection({ documents, playerName, viewerEmail }: Documen
           </button>
         ))}
       </div>
-      {open ? <DocumentViewer document={open} playerName={playerName} viewerEmail={viewerEmail} onClose={close} /> : null}
+      {failed ? (
+        <p className="pp-unavailable" role="alert">
+          {pageCopy.documentUnavailable}
+        </p>
+      ) : null}
+      {open ? <DocumentViewer document={signedPages ? { ...open, pages: signedPages } : open} playerName={playerName} viewerEmail={viewerEmail} onClose={close} /> : null}
     </section>
   );
 }

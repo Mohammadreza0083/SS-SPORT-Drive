@@ -135,7 +135,7 @@ describe("ScoutsSection", () => {
   });
 
   it("reads the report when a file is opened, and shows it", async () => {
-    const fetchMock = vi.fn(async () => Response.json(report));
+    const fetchMock = vi.fn<typeof fetch>(async () => Response.json(report));
     vi.stubGlobal("fetch", fetchMock);
     render(<ScoutsSection scouts={scouts} playerName="Arash Tehrani" viewerEmail="j.demir@aurora-volley.example" />);
 

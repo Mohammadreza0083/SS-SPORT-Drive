@@ -36,7 +36,7 @@ function browser(cookie = true): Request {
  * @returns The stub.
  */
 function api(status: number, body: unknown = {}) {
-  return vi.fn(async () => Response.json(body, { status }));
+  return vi.fn<typeof fetch>(async () => Response.json(body, { status }));
 }
 
 /** The three forwarders with the API path each one calls. */

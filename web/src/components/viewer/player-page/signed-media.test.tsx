@@ -16,7 +16,7 @@ afterEach(() => {
 
 describe("VideosSection", () => {
   it("signs the current video's stream from its path", async () => {
-    const fetchMock = vi.fn(async () => Response.json({ playlistUrl: "/hls/tok/players/p/videos/v1/v1/hls/master.m3u8", expiresAt: "2026-11-12T10:30:00Z" }));
+    const fetchMock = vi.fn<typeof fetch>(async () => Response.json({ playlistUrl: "/hls/tok/players/p/videos/v1/v1/hls/master.m3u8", expiresAt: "2026-11-12T10:30:00Z" }));
     vi.stubGlobal("fetch", fetchMock);
 
     render(
@@ -36,7 +36,7 @@ describe("VideosSection", () => {
 
 describe("DocumentsSection", () => {
   it("reads a document's signed pages when it is opened, and shows them", async () => {
-    const fetchMock = vi.fn(async () => Response.json({ pages: ["/pages/tok/f/1.webp", "/pages/tok/f/2.webp"], expiresAt: "2026-11-12T10:30:00Z" }));
+    const fetchMock = vi.fn<typeof fetch>(async () => Response.json({ pages: ["/pages/tok/f/1.webp", "/pages/tok/f/2.webp"], expiresAt: "2026-11-12T10:30:00Z" }));
     vi.stubGlobal("fetch", fetchMock);
     render(
       <DocumentsSection

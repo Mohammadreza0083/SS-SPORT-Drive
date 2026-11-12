@@ -21,7 +21,7 @@ afterEach(() => {
  */
 function signer(...urls: string[]) {
   let call = 0;
-  return vi.fn(async () => Response.json({ playlistUrl: urls[Math.min(call++, urls.length - 1)], expiresAt: "2026-11-12T10:30:00Z" }));
+  return vi.fn<typeof fetch>(async () => Response.json({ playlistUrl: urls[Math.min(call++, urls.length - 1)], expiresAt: "2026-11-12T10:30:00Z" }));
 }
 
 describe("useSignedSource", () => {

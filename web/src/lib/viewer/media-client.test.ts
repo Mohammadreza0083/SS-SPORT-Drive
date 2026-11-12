@@ -28,7 +28,7 @@ describe("paths", () => {
  * @returns The stub.
  */
 function answer(status: number, body: unknown = {}) {
-  return vi.fn(async () => Response.json(body, { status }));
+  return vi.fn<typeof fetch>(async () => Response.json(body, { status }));
 }
 
 describe("fetchStreamUrl", () => {

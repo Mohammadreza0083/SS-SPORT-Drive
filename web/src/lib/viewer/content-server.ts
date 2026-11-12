@@ -3,6 +3,8 @@ import { pageCopy } from "@/components/viewer/player-page/copy";
 import type { RosterData } from "@/components/viewer/roster/types";
 import { SESSION_COOKIE } from "./gate";
 import { clientAddress, readCookie } from "./gate-server";
+import { pagesPath, scoutPath, streamPath } from "./media-client";
+import type { PlayerScout } from "./scout";
 
 export { clientAddress };
 
@@ -22,7 +24,7 @@ const ROSTER_PAGE_SIZE = 20;
 const MEDIA_PAGE_SIZE = 100;
 
 /** A player id as the API issues them. */
-const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** One page of a list, as the API answers it. */
 type Paged<T> = { items: T[]; page: number; pageSize: number; totalCount: number; totalPages: number };
@@ -54,7 +56,7 @@ type LinkPlayer = {
   nationality: Country;
   volleyboxUrl: string;
   hasPhoto: boolean;
-  stats: { videos: number; minutes: number; documents: number };
+  stats: { videos: number; minutes: number; documents: number; matches: number };
 };
 
 /** A video row. */
@@ -62,6 +64,9 @@ type LinkVideo = { id: string; title: string; tag: string; durationSeconds: numb
 
 /** A document row. */
 type LinkDocument = { id: string; title: string; pageCount: number };
+
+/** A scout file row. */
+type LinkScout = { id: string; title: string };
 
 /** What `/r/{code}` shows: the gate, one player's page, or the roster. */
 export type ViewerPage = { kind: "gate" } | { kind: "player"; data: PlayerPageData } | { kind: "roster"; data: RosterData };
@@ -86,7 +91,7 @@ class ApiStatus extends Error {
  * @param clientIp - The viewer's address, if known.
  * @returns The headers.
  */
-function apiHeaders(sessionToken: string, clientIp: string | null): Headers {
+export function apiHeaders(sessionToken: string, clientIp: string | null): Headers {
   const headers = new Headers({ [SESSION_HEADER]: sessionToken });
   if (clientIp) {
     headers.set("X-Forwarded-For", clientIp);
@@ -120,7 +125,7 @@ async function getJson<T>(fetchImpl: typeof fetch, url: string, headers: Headers
  * @param linkCode - The link code.
  * @returns The base URL, with no trailing slash.
  */
-function linkBase(apiBaseUrl: string, linkCode: string): string {
+export function linkBase(apiBaseUrl: string, linkCode: string): string {
   return `${apiBaseUrl.replace(/\/+$/, "")}/links/${encodeURIComponent(linkCode)}`;
 }
 
@@ -159,9 +164,10 @@ function gateOnUnauthorized(error: unknown): { kind: "gate" } {
  * @param player - The player header.
  * @param videos - The first page of videos.
  * @param documents - The first page of documents.
+ * @param scouts - The first page of scout files.
  * @returns The page data.
  */
-function toPlayerPage(linkCode: string, content: LinkContent, player: LinkPlayer, videos: Paged<LinkVideo>, documents: Paged<LinkDocument>): PlayerPageData {
+function toPlayerPage(linkCode: string, content: LinkContent, player: LinkPlayer, videos: Paged<LinkVideo>, documents: Paged<LinkDocument>, scouts: Paged<LinkScout>): PlayerPageData {
   const { organisation, name } = content.recipient;
   return {
     player: {
@@ -176,10 +182,25 @@ function toPlayerPage(linkCode: string, content: LinkContent, player: LinkPlayer
     recipient: organisation ? { organisation, name } : { name },
     note: content.note ? { text: content.note, author: pageCopy.noteAuthor } : undefined,
     stats: player.stats,
-    // The stream URL is signed per viewer by the edge once V-5b lands; until then the player has nothing to load.
-    videos: videos.items.map((video) => ({ id: video.id, title: video.title, tag: video.tag, durationSeconds: video.durationSeconds, src: "" })),
-    // Page images come from ingest (I-4) through the edge (V-5b); the PDF itself never reaches the browser.
-    documents: documents.items.map((document) => ({ id: document.id, title: document.title, pageCount: document.pageCount, pages: [] })),
+    // Streams and page images are signed per viewer when they are needed (V-5b): the page carries the route that signs
+    // each one, never a stream URL or a page. The PDF itself never reaches the browser.
+    videos: videos.items.map((video) => ({
+      id: video.id,
+      title: video.title,
+      tag: video.tag,
+      durationSeconds: video.durationSeconds,
+      src: "",
+      streamPath: streamPath(linkCode, player.id, video.id),
+    })),
+    documents: documents.items.map((document) => ({
+      id: document.id,
+      title: document.title,
+      pageCount: document.pageCount,
+      pages: [],
+      pagesPath: pagesPath(linkCode, player.id, document.id),
+    })),
+    // V-8: the player's DataVolley files; a report is read when one is opened.
+    scouts: scouts.items.map((scout): PlayerScout => ({ id: scout.id, title: scout.title, reportPath: scoutPath(linkCode, player.id, scout.id) })),
   };
 }
 
@@ -196,12 +217,13 @@ function toPlayerPage(linkCode: string, content: LinkContent, player: LinkPlayer
  */
 async function readPlayer(fetchImpl: typeof fetch, base: string, linkCode: string, playerId: string, content: LinkContent, headers: Headers): Promise<PlayerPageData> {
   const player = `${base}/players/${playerId}`;
-  const [header, videos, documents] = await Promise.all([
+  const [header, videos, documents, scouts] = await Promise.all([
     getJson<LinkPlayer>(fetchImpl, player, headers),
     getJson<Paged<LinkVideo>>(fetchImpl, `${player}/videos?page=1&pageSize=${MEDIA_PAGE_SIZE}`, headers),
     getJson<Paged<LinkDocument>>(fetchImpl, `${player}/documents?page=1&pageSize=${MEDIA_PAGE_SIZE}`, headers),
+    getJson<Paged<LinkScout>>(fetchImpl, `${player}/scouts?page=1&pageSize=${MEDIA_PAGE_SIZE}`, headers),
   ]);
-  return toPlayerPage(linkCode, content, header, videos, documents);
+  return toPlayerPage(linkCode, content, header, videos, documents, scouts);
 }
 
 /**
