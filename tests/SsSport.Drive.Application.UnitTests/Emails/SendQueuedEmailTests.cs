@@ -108,7 +108,7 @@ public sealed class SendQueuedEmailTests
         await Handler().HandleAsync(new EmailQueued(email.Id), new EventContext(null), TestContext.Current.CancellationToken);
 
         email.Status.Should().Be(EmailStatus.Skipped);
-        await _dispatcher.DidNotReceiveWithAnyArgs().SendAsync(default, default!, default);
+        await _dispatcher.DidNotReceiveWithAnyArgs().SendAsync(default, default!, TestContext.Current.CancellationToken);
     }
 
     /// <summary>An email already sent, failed or skipped (a duplicate job) is left alone.</summary>
@@ -122,7 +122,7 @@ public sealed class SendQueuedEmailTests
         await Handler().HandleAsync(new EmailQueued(email.Id), new EventContext(null), TestContext.Current.CancellationToken);
 
         email.Attempts.Should().Be(1);
-        await _dispatcher.DidNotReceiveWithAnyArgs().SendAsync(default, default!, default);
+        await _dispatcher.DidNotReceiveWithAnyArgs().SendAsync(default, default!, TestContext.Current.CancellationToken);
     }
 
     /// <summary>An unknown email id is ignored.</summary>
@@ -132,7 +132,7 @@ public sealed class SendQueuedEmailTests
     {
         await Handler().HandleAsync(new EmailQueued(Guid.CreateVersion7()), new EventContext(null), TestContext.Current.CancellationToken);
 
-        await _dispatcher.DidNotReceiveWithAnyArgs().SendAsync(default, default!, default);
+        await _dispatcher.DidNotReceiveWithAnyArgs().SendAsync(default, default!, TestContext.Current.CancellationToken);
     }
 
     /// <summary>A template with no composer is skipped (a bug, logged as an error), not retried for ever.</summary>
@@ -146,7 +146,7 @@ public sealed class SendQueuedEmailTests
         await Handler().HandleAsync(new EmailQueued(email.Id), new EventContext(null), TestContext.Current.CancellationToken);
 
         email.Status.Should().Be(EmailStatus.Skipped);
-        await _dispatcher.DidNotReceiveWithAnyArgs().SendAsync(default, default!, default);
+        await _dispatcher.DidNotReceiveWithAnyArgs().SendAsync(default, default!, TestContext.Current.CancellationToken);
     }
 
     /// <summary>Queues an email the repository will find.</summary>

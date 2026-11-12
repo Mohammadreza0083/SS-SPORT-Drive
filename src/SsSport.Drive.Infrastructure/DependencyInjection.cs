@@ -17,6 +17,7 @@ using SsSport.Drive.Application.Abstractions.Media;
 using SsSport.Drive.Application.Abstractions.Persistence;
 using SsSport.Drive.Application.Abstractions.Security;
 using SsSport.Drive.Application.Abstractions.Storage;
+using SsSport.Drive.Application.Abstractions.Web;
 using SsSport.Drive.Application.Telegram;
 using SsSport.Drive.Application.Telegram.Notices;
 using SsSport.Drive.Infrastructure.BackgroundJobs;
@@ -28,6 +29,7 @@ using SsSport.Drive.Infrastructure.Links;
 using SsSport.Drive.Infrastructure.Persistence;
 using SsSport.Drive.Infrastructure.Storage;
 using SsSport.Drive.Infrastructure.Telegram;
+using SsSport.Drive.Infrastructure.Web;
 using Telegram.Bot;
 
 namespace SsSport.Drive.Infrastructure;
@@ -129,10 +131,18 @@ public static class DependencyInjection
                 (options, environment) => options.PickupDirectory.Length == 0 || !environment.IsProduction(),
                 "Email__PickupDirectory is for local development only; production must send real email.")
             .ValidateOnStart();
-        services.AddSingleton<IEmailCodeSender>(provider => new EmailCodeSender(
-            provider.GetRequiredService<IOptions<EmailOptions>>(),
-            new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(5) }) { Timeout = TimeSpan.FromSeconds(15) },
-            provider.GetRequiredService<ILogger<EmailCodeSender>>()));
+        // Every email goes through the Hangfire queue (L-4). The dispatcher picks the providers by kind: codes Resend then
+        // Brevo, everything else Google SMTP; the pickup folder takes all in development.
+        services.AddSingleton<IEmailTransport>(provider => new ResendTransport(provider.GetRequiredService<IOptions<EmailOptions>>(), NewEmailHttpClient()));
+        services.AddSingleton<IEmailTransport>(provider => new BrevoTransport(provider.GetRequiredService<IOptions<EmailOptions>>(), NewEmailHttpClient()));
+        services.AddSingleton<IEmailTransport, GoogleSmtpTransport>();
+        services.AddSingleton<IEmailTransport, PickupDirectoryTransport>();
+        services.AddSingleton<IEmailDispatcher, EmailDispatcher>();
+        services.AddOptions<WebOptions>()
+            .BindConfiguration(WebOptions.SectionName)
+            .Validate(options => options.IsValid(), "Web__PublicBaseUrl must be empty or an absolute http(s) address, e.g. https://drive.ss-sport.co.")
+            .ValidateOnStart();
+        services.AddSingleton<IWebLinks, WebLinks>();
 
         services.AddTelegram();
         return services;
@@ -189,6 +199,11 @@ public static class DependencyInjection
         services.AddHostedService<BotNoticeServer>();
         return services;
     }
+
+    /// <summary>Makes the HTTP client an email provider uses: pooled connections and a 15-second timeout.</summary>
+    /// <returns>The client.</returns>
+    private static HttpClient NewEmailHttpClient() =>
+        new(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(5) }) { Timeout = TimeSpan.FromSeconds(15) };
 
     /// <summary>Checks that the gate's key decodes to at least 32 bytes.</summary>
     /// <param name="options">The settings.</param>

@@ -97,3 +97,6 @@ k6-results/
 __pycache__/
 *.pyc
 .venv/
+
+# Local execution plan (not part of the repo)
+.claude/consolidation-plan.md
