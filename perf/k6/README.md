@@ -300,6 +300,25 @@ The viewer scenarios run only with `SESSION_TOKEN`. Smoke runs 30 s at light rat
    docker run --rm -v "$PWD:/work" -w /work grafana/k6:2.2.0 run -e BASE_URL=http://host.docker.internal:5080 -e LINK_CODE=<code> -e RECIPIENT=<recipient email> -e SESSION_TOKEN=<token> -e PROFILE=smoke --summary-export k6-results/viewer-links-smoke.json perf/k6/viewer-links.js
    ```
 
+**HTTPS:** outside Development the API redirects plain HTTP to HTTPS, as a real proxy terminates TLS. The script therefore sends `X-Forwarded-Proto: https` on every request. Start the API with `Security__TrustedProxies` covering the k6 machine; for a local run, `0.0.0.0/0,::/0`.
+
+### Results (2026-11-12, local Windows machine, API in Release as Staging, PostgreSQL 17 and RustFS in Docker, pool 20)
+
+Seed: 12 published players on one Roster link, each with 8 videos (one hidden, the 5th the hero) and 2 documents (one still processing), 10 photos. The session came from the real gate (pickup directory).
+
+| Run | Requests | Rate | Failed | p95 content | p95 player | p95 videos | p95 documents | p95 photo | p95 gate card | p95 wrong code |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `smoke` (with `SEND_CODES=1`) | 2 162 | 71/s | 0 | 35 ms | 38 ms | 67 ms | 48 ms | 169 ms | 23 ms | 45 ms |
+| `load`, peak 20, no codes | 21 425 | 102/s | 0 | 28 ms | 29 ms | 45 ms | 35 ms | 142 ms | 31 ms | 28 ms |
+| `load`, peak 20, `SEND_CODES=1` | 20 844 | 99/s | 0 | 3.36 s | 3.41 s | 3.87 s | 3.55 s | 9.42 s | 2.88 s | 2.73 s |
+| `load`, peak 50, `SEND_CODES=1` | 41 102 | 196/s | 5.5 % (503) | 14.4 s | 14.6 s | 17.0 s | 16.0 s | 19.2 s | 12.1 s | 11.9 s |
+
+**Findings:**
+- **Viewer reads and the gate are fast while no codes are being sent:** every threshold passes at about 100 requests a second, which is roughly 20 player pages opened per second.
+- **About one code request a second slows the whole API down:** at the same rate, everything goes from tens of milliseconds to seconds, and even single-row lookups by index log as slow SQL (about 500 ms). All 578 email jobs succeeded and none backed up, so the cause is not a job backlog. It needs its own investigation: K-10 (SSD-128).
+- At peak 50 (about 200 requests a second, every endpoint at the full peak) the 20-connection pool runs out and the API answers 503 `database.busy`, as D-15 intends. The default peak counts every endpoint at the full rate, so it is about 6× a real page-view rate.
+- The `ssd-hardening` stack was running on the same machine during these runs.
+
 ### Notes
 
 - **The wrong-code scenario spends the recipient's latest code.** Ask for a new code before you use the link in a browser.

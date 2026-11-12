@@ -51,6 +51,12 @@ const PEAK_RATE = Number(__ENV.PEAK_RATE || 50);
 const SEND_CODES = __ENV.SEND_CODES === '1';
 const VIEWER = SESSION_TOKEN !== '';
 
+/**
+ * Every request says it came through the TLS proxy, as in production: outside Development the API redirects plain
+ * HTTP to HTTPS. Start the API with Security__TrustedProxies covering the k6 machine (see README).
+ */
+const PROXY = { 'X-Forwarded-Proto': 'https' };
+
 /** A well-formed code that no link has: the 404 path. */
 const UNKNOWN_CODE = 'Zz9Yy8';
 
@@ -135,7 +141,7 @@ export const options = {
  * @returns {object} the k6 params.
  */
 function viewer(name, expected = [200]) {
-  return { headers: { 'X-Viewer-Session': SESSION_TOKEN }, tags: { name }, responseCallback: http.expectedStatuses(...expected) };
+  return { headers: { ...PROXY, 'X-Viewer-Session': SESSION_TOKEN }, tags: { name }, responseCallback: http.expectedStatuses(...expected) };
 }
 
 /**
@@ -151,7 +157,7 @@ export function setup() {
     fail("Set RECIPIENT to one of the link's recipient emails.");
   }
 
-  const card = http.get(`${BASE_URL}/links/${LINK_CODE}`);
+  const card = http.get(`${BASE_URL}/links/${LINK_CODE}`, { headers: PROXY });
   if (card.status !== 200) {
     fail(`GET /links/${LINK_CODE} answered ${card.status}; is the link open and the API up?`);
   }
@@ -184,20 +190,20 @@ function pick(data) {
 
 /** The gate card. */
 export function gateCard() {
-  const response = http.get(`${BASE_URL}/links/${LINK_CODE}`, { tags: { name: 'gate_card' } });
+  const response = http.get(`${BASE_URL}/links/${LINK_CODE}`, { headers: PROXY, tags: { name: 'gate_card' } });
   check(response, { 'gate card 200': (r) => r.status === 200 });
 }
 
 /** A code that does not open. */
 export function unknownLink() {
-  const response = http.get(`${BASE_URL}/links/${UNKNOWN_CODE}`, { tags: { name: 'unknown_link' }, responseCallback: http.expectedStatuses(404) });
+  const response = http.get(`${BASE_URL}/links/${UNKNOWN_CODE}`, { headers: PROXY, tags: { name: 'unknown_link' }, responseCallback: http.expectedStatuses(404) });
   check(response, { 'unknown link 404': (r) => r.status === 404 });
 }
 
 /** A wrong code for the recipient. */
 export function wrongCode() {
   const response = http.post(`${BASE_URL}/links/${LINK_CODE}/verify`, JSON.stringify({ email: RECIPIENT, code: '000000' }), {
-    headers: { 'Content-Type': 'application/json' },
+    headers: { ...PROXY, 'Content-Type': 'application/json' },
     tags: { name: 'wrong_code' },
     responseCallback: http.expectedStatuses(422),
   });
@@ -207,7 +213,7 @@ export function wrongCode() {
 /** A device token the API never issued. */
 export function staleDevice() {
   const response = http.post(`${BASE_URL}/links/${LINK_CODE}/session`, null, {
-    headers: { 'X-Viewer-Device': `k6-not-a-device-${exec.scenario.iterationInTest}-aaaaaaaaaaaaaaaaaaaa` },
+    headers: { ...PROXY, 'X-Viewer-Device': `k6-not-a-device-${exec.scenario.iterationInTest}-aaaaaaaaaaaaaaaaaaaa` },
     tags: { name: 'stale_device' },
     responseCallback: http.expectedStatuses(401),
   });
@@ -218,7 +224,7 @@ export function staleDevice() {
 export function emailCode() {
   const email = `k6-${Date.now()}-${exec.scenario.iterationInTest}@example.test`;
   const response = http.post(`${BASE_URL}/links/${LINK_CODE}/email-code`, JSON.stringify({ email }), {
-    headers: { 'Content-Type': 'application/json' },
+    headers: { ...PROXY, 'Content-Type': 'application/json' },
     tags: { name: 'email_code' },
   });
   check(response, { 'email code 202': (r) => r.status === 202 });
@@ -280,6 +286,6 @@ export function photo(data) {
 
 /** A content read without a session. */
 export function noSession() {
-  const response = http.get(`${BASE_URL}/links/${LINK_CODE}/content`, { tags: { name: 'no_session' }, responseCallback: http.expectedStatuses(401) });
+  const response = http.get(`${BASE_URL}/links/${LINK_CODE}/content`, { headers: PROXY, tags: { name: 'no_session' }, responseCallback: http.expectedStatuses(401) });
   check(response, { 'no session 401': (r) => r.status === 401 });
 }
