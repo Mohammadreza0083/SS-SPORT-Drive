@@ -100,3 +100,6 @@ __pycache__/
 
 # Local execution plan (not part of the repo)
 .claude/consolidation-plan.md
+
+# Local execution plans written by Claude (not part of the product)
+.claude/plans/

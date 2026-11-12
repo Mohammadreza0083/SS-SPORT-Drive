@@ -115,6 +115,7 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | P-4 | Admin access-request inbox (console + bot): approve → auto personal link + approval email | Claude | E2E green |
 | P-5 | Viewer login by email magic link (1-day session) | Claude | Tests green |
 | P-7 | Home page login button; signed-in viewers request access without email/OTP | Claude | Tests green |
+| P-8 | Backend half of P-1, P-2, P-3 and P-7: public player search + locked player API, request-access API (OTP, Turnstile, rate limits), `/api/public/*` and sign-out routes, real `/players/{slug}` page, real Turnstile widget + CSP. The front-end of all four is done on sample data (`/design/home`, `/design/locked`) | Claude | Tests green; the public pages run on real data |
 
 ## EPIC 7 — Admin console
 | Key | Task | Assignee | Done when |

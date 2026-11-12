@@ -245,7 +245,7 @@ SS-SPORT Drive/
 | 3 | Ingest, transcode & sync | 🚧 In progress (I-1 Drive reader done) |
 | 4 | Viewer site & media protection | 🚧 In progress (V-1–V-4, V-5a, V-6 PDF viewer done) |
 | 5 | Personal links, OTP & tracking | 🚧 In progress (L-1 share links, L-2 email gate, L-2b clean-up, L-3 forwarding done) |
-| 6 | Public search & access requests | ⏳ Planned |
+| 6 | Public search & access requests | 🚧 In progress (home, locked player page and request-access dialog built on sample data; backend P-8 next) |
 | 7 | Admin console | ⏳ Planned |
 | 8 | Archive migration | ⏳ Planned |
 | 9 | Deploy & operations | ⏳ Planned |
