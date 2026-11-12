@@ -2,12 +2,14 @@ using System.Text.Json;
 using Hangfire;
 using Hangfire.PostgreSql;
 using Hangfire.PostgreSql.Factories;
+using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using SsSport.Drive.Application.Abstractions.Events;
+using SsSport.Drive.Application.Telegram.Notices;
 using SsSport.Drive.Domain.Primitives;
 
 namespace SsSport.Drive.Infrastructure.BackgroundJobs;
@@ -39,6 +41,18 @@ public static class HangfireStorage
             .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
             .UseSimpleAssemblyNameTypeSerializer()
             .UseRecommendedSerializerSettings();
+
+    /// <summary>
+    /// Registers (or updates) the recurring jobs: the every-minute round that sends held bot notices (T-8). <c>migrate</c>
+    /// calls it after installing the schema, so app instances never race to register it; safe to run on every deploy.
+    /// </summary>
+    /// <param name="storage">Hangfire's storage.</param>
+    public static void RegisterRecurringJobs(JobStorage storage) =>
+        new RecurringJobManager(storage).AddOrUpdate<NoticeFlushJob>(
+            NoticeFlushJob.RecurringJobId,
+            BotNoticeJob.Queue,
+            job => job.RunAsync(CancellationToken.None),
+            Cron.Minutely());
 
     /// <summary>Installs or upgrades Hangfire's schema; safe to run on every deploy.</summary>
     /// <param name="dataSource">The database.</param>
@@ -118,6 +132,43 @@ public sealed partial class BotNoticeJob(IBackgroundEventRunner runner, ILogger<
     private static partial void LogFailed(ILogger logger, Exception exception, string EventType);
 }
 
+/// <summary>
+/// The recurring Hangfire job that sends held bot notices once they are due (T-8): every minute, on the notices queue,
+/// so it never runs at the same time as a notice job (one worker).
+/// </summary>
+/// <param name="sender">Sends the MediatR command.</param>
+/// <param name="logger">The logger: Hangfire's own logging is not wired to ours, so failures are logged here.</param>
+public sealed partial class NoticeFlushJob(ISender sender, ILogger<NoticeFlushJob> logger)
+{
+    /// <summary>The recurring job's id.</summary>
+    public const string RecurringJobId = "bot-notices-due";
+
+    /// <summary>Sends the due notices. A failure is not retried: the next minute's run picks them up.</summary>
+    /// <param name="cancellationToken">Cancelled when the server shuts down.</param>
+    /// <returns>A task that completes when the round is done.</returns>
+    [Queue(BotNoticeJob.Queue)]
+    [AutomaticRetry(Attempts = 0)]
+    [DisableConcurrentExecution(timeoutInSeconds: 60)]
+    public async Task RunAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await sender.Send(new SendDueNoticesCommand(), cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            LogFailed(logger, exception);
+            throw;
+        }
+    }
+
+    /// <summary>Logs a round that failed; the next one tries again.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="exception">The failure.</param>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Sending due bot notices failed; the next round tries again")]
+    private static partial void LogFailed(ILogger logger, Exception exception);
+}
+
 /// <summary>Queues events for their background handlers as Hangfire jobs on PostgreSQL (T-6c).</summary>
 /// <param name="jobs">Hangfire's client.</param>
 internal sealed class HangfireBackgroundEventQueue(IBackgroundJobClient jobs) : IBackgroundEventQueue
@@ -140,7 +191,8 @@ internal sealed class HangfireBackgroundEventQueue(IBackgroundJobClient jobs) : 
 
 /// <summary>
 /// The Hangfire server inside the API (owner, 2026-10-31): one worker on the notices queue, so a player's notices run
-/// in the order they were raised. It does not start without a database (a bare host), or when
+/// in the order they were raised. It also runs the every-minute job that sends held notices (T-8), which
+/// <c>migrate</c> registers. It does not start without a database (a bare host), or when
 /// <c>BackgroundJobs__RunServer</c> is <c>false</c> (the test suite, which runs many hosts in one process).
 /// </summary>
 /// <param name="services">The root service provider.</param>

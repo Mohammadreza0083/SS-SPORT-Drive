@@ -126,7 +126,7 @@ function updateBody(updateId) {
  */
 function post(updateId, secret, extra = {}) {
   return http.post(WEBHOOK_URL, updateBody(updateId), {
-    headers: { 'Content-Type': 'application/json', [SECRET_HEADER]: secret },
+    headers: { 'X-Forwarded-Proto': 'https', 'Content-Type': 'application/json', [SECRET_HEADER]: secret },
     ...extra,
   });
 }

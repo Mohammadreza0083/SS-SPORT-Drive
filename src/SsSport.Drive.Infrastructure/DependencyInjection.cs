@@ -18,6 +18,7 @@ using SsSport.Drive.Application.Abstractions.Persistence;
 using SsSport.Drive.Application.Abstractions.Security;
 using SsSport.Drive.Application.Abstractions.Storage;
 using SsSport.Drive.Application.Telegram;
+using SsSport.Drive.Application.Telegram.Notices;
 using SsSport.Drive.Infrastructure.BackgroundJobs;
 using SsSport.Drive.Infrastructure.Drive;
 using SsSport.Drive.Infrastructure.Edge;
@@ -150,6 +151,13 @@ public static class DependencyInjection
             .Validate(options => TelegramOptions.IsValidMiniAppUrl(options.MiniAppUrl), "Telegram__MiniAppUrl must be empty or an absolute HTTPS URL.")
             .Validate(options => options.IsPolling || string.Equals(options.Mode, TelegramOptions.WebhookMode, StringComparison.OrdinalIgnoreCase), "Telegram__Mode must be Webhook or Polling.")
             .ValidateOnStart();
+
+        // The bot notice rules (T-8): throttle and quiet hours, checked at start-up.
+        services.AddOptions<NotificationOptions>()
+            .BindConfiguration(NotificationOptions.SectionName)
+            .Validate(options => options.IsValid(), "Notifications__ThrottleMinutes must be 1-1440, Notifications__QuietHoursStart/End HH:mm and Notifications__TimeZone a known time zone (e.g. Asia/Tehran).")
+            .ValidateOnStart();
+        services.AddSingleton<INotificationSettings, ConfiguredNotificationSettings>();
 
         services.AddScoped<ITelegramUpdateInbox, TelegramUpdateInbox>();
         services.AddSingleton<IBotAdminSettings, TelegramBotAdminSettings>();

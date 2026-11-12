@@ -148,4 +148,6 @@ Press Create to add the player.</value></data>
   <data name="ChatFieldVolleybox" xml:space="preserve"><value>Volleybox</value></data>
   <data name="ChatFieldDriveFolder" xml:space="preserve"><value>Drive folder</value></data>
   <data name="ChatFieldPhoto" xml:space="preserve"><value>Photo</value></data>
+  <data name="PlayerPublishedNotice" xml:space="preserve"><value>🚀 {0} is published and live.</value></data>
+  <data name="NoticeDigestHeader" xml:space="preserve"><value>🔔 {0} updates while notices were paused:</value></data>
 </root>
