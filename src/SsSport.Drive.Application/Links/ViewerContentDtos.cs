@@ -105,6 +105,9 @@ public sealed record PlayerStatsDto
 
     /// <summary>Gets the number of documents.</summary>
     public int Documents { get; init; }
+
+    /// <summary>Gets the number of DataVolley scout files the viewer can open (shown as matches).</summary>
+    public int Matches { get; init; }
 }
 
 /// <summary>One video on a player page. Its stream is signed per viewer by the edge (V-5b); no storage key is sent.</summary>
@@ -149,6 +152,7 @@ public sealed record LinkDocumentDto
 /// <param name="VideoCount">Ready and visible videos.</param>
 /// <param name="VideoSeconds">Their total length in seconds.</param>
 /// <param name="DocumentCount">Ready and visible documents.</param>
+/// <param name="ScoutCount">Ready and visible DataVolley scout files.</param>
 public sealed record LinkPlayerFacts(
     Guid Id,
     string Name,
@@ -158,4 +162,5 @@ public sealed record LinkPlayerFacts(
     string VolleyboxUrl,
     int VideoCount,
     double VideoSeconds,
-    int DocumentCount);
+    int DocumentCount,
+    int ScoutCount);

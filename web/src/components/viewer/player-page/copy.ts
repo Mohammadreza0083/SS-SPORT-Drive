@@ -23,6 +23,10 @@ export const pageCopy = {
   fullMatchIncluded: "Full Match Included",
   videoCount: (count: number) => `${count} ${count === 1 ? "Video" : "Videos"}`,
   documents: "Documents",
+  /** Shown in the player's place when its stream could not be signed (V-5b). */
+  videoUnavailable: "This video cannot be played right now.",
+  /** Shown near the document cards when a document's pages could not be signed (V-5b). */
+  documentUnavailable: "This document cannot be opened right now.",
   pdfPages: (pages: number) => `PDF · ${pages} ${pages === 1 ? "page" : "pages"}`,
   viewOnly: "View only →",
   viewOnlyShort: "view only",

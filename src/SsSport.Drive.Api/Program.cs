@@ -93,6 +93,7 @@ app.MapEmailQueue();
 app.MapSignIn();
 app.MapViewerGate();
 app.MapViewerContent();
+app.MapViewerMedia();
 app.MapTracking();
 
 await app.RunAsync();

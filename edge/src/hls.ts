@@ -1,9 +1,11 @@
 /**
- * HLS edge tokens (backlog V-5a). The API signs them (HmacHlsTokenIssuer in .NET); this file checks them.
+ * Edge media tokens (backlog V-5a for HLS, V-5b for document pages). The API signs them (HmacHlsTokenIssuer in .NET);
+ * this file checks them. One token format serves two kinds of URL: `/hls/{token}/{folder}/{file}` and
+ * `/pages/{token}/{folder}/{n}.webp`; a token works only on its own kind, by the folder it was signed for.
  * Format, pinned by contracts/hls-token-vectors.json:
  *   token = base64url(JSON {v, p, s, e}) + "." + base64url(HMAC-SHA256(key, first part))
  *   p = the video's HLS folder, s = base64url(first 16 bytes of SHA-256(session cookie)), e = expiry (Unix seconds)
- *   URL = /hls/{token}/{p}/{file}
+ *   URL = /hls/{token}/{p}/{file}   or   /pages/{token}/{p}/{n}.webp
  */
 
 /** Name of the viewer's session cookie (set by the site after the email gate, L-2). */
@@ -15,7 +17,19 @@ const FORMAT_VERSION = 1;
 /** File names the edge serves: HLS playlists, MPEG-TS and fMP4 segments, and an fMP4 init segment. */
 const SERVABLE_FILE = /^(?:[A-Za-z0-9_-]+\.(?:m3u8|ts|m4s)|init\.mp4)$/;
 
-/** A safe path segment inside a video's HLS folder. */
+/** The page images the edge serves: `1.webp`, `2.webp`, and so on (no leading zero, at most four digits). */
+const PAGE_FILE = /^[1-9][0-9]{0,3}\.webp$/;
+
+/** What each kind of URL may serve: the end of the token's folder and the file names. */
+const KINDS = {
+  hls: { folderEnd: "/hls", file: SERVABLE_FILE },
+  pages: { folderEnd: "/pages", file: PAGE_FILE },
+} as const;
+
+/** The kind of media URL a token is used on. */
+export type MediaKind = keyof typeof KINDS;
+
+/** A safe path segment inside a video's HLS folder or a document's pages folder. */
 const SAFE_SEGMENT = /^[A-Za-z0-9_.-]+$/;
 
 /** The parts of a verified token the worker needs. */
@@ -79,6 +93,8 @@ export function readCookie(header: string | null, name: string): string | null {
 
 /** What the worker needs to check one HLS request. */
 export type HlsRequest = {
+  /** Which URL the token is used on: HLS files or page images. */
+  kind: MediaKind;
   /** The token from the URL. */
   token: string;
   /** The object key after the token, e.g. `players/…/hls/720p/seg_00042.ts`. */
@@ -99,7 +115,7 @@ export type HlsRequest = {
  * @returns True when the file may be served.
  */
 export async function isAllowed(request: HlsRequest): Promise<boolean> {
-  const { token, objectKey, sessionCookie, nowUnix, signingKeyBase64 } = request;
+  const { kind, token, objectKey, sessionCookie, nowUnix, signingKeyBase64 } = request;
   if (!sessionCookie) {
     return false;
   }
@@ -129,6 +145,10 @@ export async function isAllowed(request: HlsRequest): Promise<boolean> {
   if (payload.v !== FORMAT_VERSION || typeof payload.p !== "string" || typeof payload.e !== "number" || nowUnix >= payload.e) {
     return false;
   }
+  // A token signed for a video's folder never opens page images, nor the other way round.
+  if (!payload.p.endsWith(KINDS[kind].folderEnd)) {
+    return false;
+  }
   if (payload.s !== (await sessionHash(sessionCookie))) {
     return false;
   }
@@ -138,12 +158,12 @@ export async function isAllowed(request: HlsRequest): Promise<boolean> {
   return (
     objectKey.startsWith(`${payload.p}/`) &&
     segments.every((segment) => SAFE_SEGMENT.test(segment) && segment !== "." && segment !== "..") &&
-    SERVABLE_FILE.test(fileName)
+    KINDS[kind].file.test(fileName)
   );
 }
 
 /**
- * The content type for an HLS file.
+ * The content type for an HLS file or a page image.
  *
  * @param objectKey - The file's key.
  * @returns The MIME type.
@@ -154,6 +174,9 @@ export function contentType(objectKey: string): string {
   }
   if (objectKey.endsWith(".ts")) {
     return "video/mp2t";
+  }
+  if (objectKey.endsWith(".webp")) {
+    return "image/webp";
   }
   return "video/mp4";
 }

@@ -1,3 +1,5 @@
+import type { PlayerScout } from "@/lib/viewer/scout";
+
 /**
  * What the player page (backlog V-2) needs to render. On `/r/{code}` it is built from the viewer API (V-2b,
  * `lib/viewer/content-server.ts`); the design preview uses {@link "./sample"}.
@@ -24,12 +26,14 @@ export type PlayerPageData = {
   recipient?: { organisation?: string; name: string };
   /** The personal note an admin wrote on the link. */
   note?: { text: string; author: string };
-  /** Totals shown in the stats row. */
-  stats: { videos: number; minutes: number; documents: number };
+  /** Totals shown in the stats row; `matches` counts the DataVolley files (V-8) and is shown when above zero. */
+  stats: { videos: number; minutes: number; documents: number; matches?: number };
   /** The visible videos, in their display order. */
   videos: PlayerVideo[];
   /** The visible documents (view-only PDFs). */
   documents: PlayerDocument[];
+  /** The player's DataVolley scout files (V-8); the "Match stats" section is left out when there are none. */
+  scouts?: PlayerScout[];
 };
 
 /** One video on the page. */
@@ -42,8 +46,10 @@ export type PlayerVideo = {
   tag: string;
   /** Length in seconds. */
   durationSeconds: number;
-  /** HLS master playlist (signed once V-5 lands). */
+  /** HLS master playlist for fixed sources (the design preview). Empty on `/r/{code}`, where `streamPath` signs it. */
   src: string;
+  /** The same-origin route that signs this video's stream for the viewer (V-5b); the player asks for it when the video is shown. */
+  streamPath?: string;
   /** Thumbnail image; a tinted gradient is shown while missing. */
   thumbnailUrl?: string;
   /** Frame rate, for frame stepping. */
@@ -58,6 +64,8 @@ export type PlayerDocument = {
   title: string;
   /** Number of pages. */
   pageCount: number;
-  /** One image URL per page, in order: rendered by ingest (I-4) and signed by the edge (V-5b). The PDF file itself never reaches the browser. */
+  /** One image URL per page, in order: fixed pages (the design preview), or empty on `/r/{code}`, where `pagesPath` signs them. The PDF file itself never reaches the browser. */
   pages: string[];
+  /** The same-origin route that signs this document's page images for the viewer (V-5b); asked for when the document is opened. */
+  pagesPath?: string;
 };

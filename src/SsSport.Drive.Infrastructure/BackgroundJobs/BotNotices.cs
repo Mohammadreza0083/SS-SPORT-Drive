@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Npgsql;
 using SsSport.Drive.Application.Abstractions.Events;
 using SsSport.Drive.Application.Links;
+using SsSport.Drive.Application.Telegram.Digest;
 using SsSport.Drive.Application.Telegram.Notices;
 using SsSport.Drive.Domain.Emails;
 using SsSport.Drive.Domain.Primitives;
@@ -46,7 +47,8 @@ public static class HangfireStorage
 
     /// <summary>
     /// Registers (or updates) the recurring jobs: the every-minute round that sends held bot notices (T-8), and the daily
-    /// clean-up of the gate's expired rows at 00:00 UTC, 03:30 in Tehran (L-2b). <c>migrate</c> calls it after installing
+    /// clean-up of the gate's expired rows at 00:00 UTC, 03:30 in Tehran (L-2b), and the admins' daily digest at 05:30 UTC, 09:00 in Tehran
+    /// (L-7; Iran has had no daylight saving since 2022, so the UTC time is fixed). <c>migrate</c> calls it after installing
     /// the schema, so app instances never race to register them; safe to run on every deploy.
     /// </summary>
     /// <param name="storage">Hangfire's storage.</param>
@@ -63,6 +65,11 @@ public static class HangfireStorage
             BotNoticeJob.Queue,
             job => job.RunAsync(CancellationToken.None),
             Cron.Daily(0, 0));
+        manager.AddOrUpdate<DailyDigestJob>(
+            DailyDigestJob.RecurringJobId,
+            BotNoticeJob.Queue,
+            job => job.RunAsync(CancellationToken.None),
+            Cron.Daily(5, 30));
     }
 
     /// <summary>Installs or upgrades Hangfire's schema; safe to run on every deploy.</summary>
@@ -411,5 +418,50 @@ public sealed partial class GatePurgeJob(ISender sender, TimeProvider timeProvid
     /// <param name="logger">The logger.</param>
     /// <param name="exception">The failure.</param>
     [LoggerMessage(Level = LogLevel.Warning, Message = "Gate clean-up failed; the next daily run tries again")]
+    private static partial void LogFailed(ILogger logger, Exception exception);
+}
+
+/// <summary>
+/// The daily Hangfire job that sends the admins' digest of yesterday (L-7) at 09:00 Tehran. It runs on the notices queue,
+/// the one the API's Hangfire server works.
+/// </summary>
+/// <param name="sender">Sends the MediatR command.</param>
+/// <param name="timeProvider">The clock.</param>
+/// <param name="logger">The logger: Hangfire's own logging is not wired to ours.</param>
+public sealed partial class DailyDigestJob(ISender sender, TimeProvider timeProvider, ILogger<DailyDigestJob> logger)
+{
+    /// <summary>The recurring job's id.</summary>
+    public const string RecurringJobId = "daily-digest";
+
+    /// <summary>Sends the digest. A failure is not retried: a late digest of yesterday is worse than none, and tomorrow's covers its own day.</summary>
+    /// <param name="cancellationToken">Cancelled when the server shuts down.</param>
+    /// <returns>A task that completes when the digest has been sent.</returns>
+    [Queue(BotNoticeJob.Queue)]
+    [AutomaticRetry(Attempts = 0)]
+    [DisableConcurrentExecution(timeoutInSeconds: 600)]
+    public async Task RunAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var admins = await sender.Send(new SendDailyDigestCommand(timeProvider.GetUtcNow()), cancellationToken);
+            LogSent(logger, admins);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            LogFailed(logger, exception);
+            throw;
+        }
+    }
+
+    /// <summary>Logs a digest that went out.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="Admins">How many admins got it.</param>
+    [LoggerMessage(Level = LogLevel.Information, Message = "The daily digest was sent to {Admins} admins")]
+    private static partial void LogSent(ILogger logger, int Admins);
+
+    /// <summary>Logs a digest that failed.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="exception">The failure.</param>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "The daily digest failed")]
     private static partial void LogFailed(ILogger logger, Exception exception);
 }

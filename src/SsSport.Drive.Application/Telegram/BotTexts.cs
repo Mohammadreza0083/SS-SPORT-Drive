@@ -572,6 +572,120 @@ public static class BotTexts
     /// <summary>Gets the "MyPlayersFileHidden" text (T-10b chat).</summary>
     public static string MyPlayersFileHidden => Get(nameof(MyPlayersFileHidden));
 
+    /// <summary>Formats the "LinkOpenedAlert" text: code, recipient, email, player names.</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatLinkOpenedAlert(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("LinkOpenedAlert"), args);
+
+    /// <summary>Gets the "LinkOpenedForwardSuffix" text.</summary>
+    public static string LinkOpenedForwardSuffix => Get(nameof(LinkOpenedForwardSuffix));
+
+    /// <summary>Formats the "DigestHeader" text: the day.</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatDigestHeader(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("DigestHeader"), args);
+
+    /// <summary>Gets the "DigestNoActivity" text.</summary>
+    public static string DigestNoActivity => Get(nameof(DigestNoActivity));
+
+    /// <summary>Formats the "DigestActivity" text: links, viewers, plays, minutes (each already worded).</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatDigestActivity(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("DigestActivity"), args);
+
+    /// <summary>Formats the "DigestLinksOpenedOne" text: count.</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatDigestLinksOpenedOne(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("DigestLinksOpenedOne"), args);
+
+    /// <summary>Formats the "DigestLinksOpenedMany" text: count.</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatDigestLinksOpenedMany(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("DigestLinksOpenedMany"), args);
+
+    /// <summary>Formats the "DigestViewersOne" text: count.</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatDigestViewersOne(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("DigestViewersOne"), args);
+
+    /// <summary>Formats the "DigestViewersMany" text: count.</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatDigestViewersMany(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("DigestViewersMany"), args);
+
+    /// <summary>Formats the "DigestPlaysOne" text: count.</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatDigestPlaysOne(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("DigestPlaysOne"), args);
+
+    /// <summary>Formats the "DigestPlaysMany" text: count.</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatDigestPlaysMany(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("DigestPlaysMany"), args);
+
+    /// <summary>Formats the "DigestMinutes" text: minutes.</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatDigestMinutes(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("DigestMinutes"), args);
+
+    /// <summary>Formats the "DigestTopPlayers" text: the players, already worded.</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatDigestTopPlayers(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("DigestTopPlayers"), args);
+
+    /// <summary>Formats the "DigestTopPlayer" text: name, minutes.</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatDigestTopPlayer(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("DigestTopPlayer"), args);
+
+    /// <summary>Formats the "DigestWaiting" text: the waiting parts, already worded.</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatDigestWaiting(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("DigestWaiting"), args);
+
+    /// <summary>Gets the "DigestNothingWaiting" text.</summary>
+    public static string DigestNothingWaiting => Get(nameof(DigestNothingWaiting));
+
+    /// <summary>Formats the "DigestForwardsOne" text: count.</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatDigestForwardsOne(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("DigestForwardsOne"), args);
+
+    /// <summary>Formats the "DigestForwardsMany" text: count.</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatDigestForwardsMany(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("DigestForwardsMany"), args);
+
+    /// <summary>Formats the "DigestWaitingPlayersOne" text: count.</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatDigestWaitingPlayersOne(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("DigestWaitingPlayersOne"), args);
+
+    /// <summary>Formats the "DigestWaitingPlayersMany" text: count.</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatDigestWaitingPlayersMany(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("DigestWaitingPlayersMany"), args);
+
+    /// <summary>Formats the "DigestAccessRequestsOne" text: count.</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatDigestAccessRequestsOne(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("DigestAccessRequestsOne"), args);
+
+    /// <summary>Formats the "DigestAccessRequestsMany" text: count.</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatDigestAccessRequestsMany(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("DigestAccessRequestsMany"), args);
+
+    /// <summary>Formats the "DigestFailedEmailsOne" text: count.</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatDigestFailedEmailsOne(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("DigestFailedEmailsOne"), args);
+
+    /// <summary>Formats the "DigestFailedEmailsMany" text: count.</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatDigestFailedEmailsMany(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("DigestFailedEmailsMany"), args);
+
     /// <summary>Reads a text.</summary>
     /// <param name="key">The resource key.</param>
     /// <returns>The text.</returns>
