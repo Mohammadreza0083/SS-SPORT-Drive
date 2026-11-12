@@ -60,6 +60,13 @@ public sealed class Repository<TAggregate, TId>(DbContext context) : IRepository
     /// <param name="aggregate">The aggregate to remove.</param>
     public void Remove(TAggregate aggregate) => context.Set<TAggregate>().Remove(aggregate);
 
+    /// <summary>Deletes the rows a specification selects with one SQL <c>DELETE</c>, without loading them.</summary>
+    /// <param name="specification">The rows to delete; its criteria and <c>Take</c> apply.</param>
+    /// <param name="cancellationToken">Cancels the delete.</param>
+    /// <returns>How many rows were deleted.</returns>
+    public Task<int> DeleteAsync(ISpecification<TAggregate> specification, CancellationToken cancellationToken = default) =>
+        Apply(specification).ExecuteDeleteAsync(cancellationToken);
+
     /// <summary>Builds the query for a specification.</summary>
     /// <param name="specification">The specification to evaluate.</param>
     /// <param name="criteriaOnly">When <see langword="true"/>, only the criteria are applied (no ordering, paging or includes).</param>

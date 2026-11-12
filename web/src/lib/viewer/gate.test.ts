@@ -50,6 +50,12 @@ describe("verifyCode", () => {
     expect(JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string)).toEqual({ email: "marco@lube.it", code: "042917" });
   });
 
+  it("answers pending when the email is a forward an admin has not kept yet (L-3)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({ ok: true, awaitingApproval: true }));
+
+    expect(await verifyCode("Ab3xYz", "scout@other.com", "042917", fetchMock)).toEqual({ kind: "pending" });
+  });
+
   it("answers why a code was refused, with the tries left", async () => {
     const fetchMock = vi.fn().mockResolvedValue(problem(422, { code: "email_code.invalid", title: "That code is not right. 3 tries left.", attemptsLeft: 3 }));
 
@@ -63,16 +69,20 @@ describe("verifyCode", () => {
 });
 
 describe("openWithDevice", () => {
-  it("answers true when the device opens the link", async () => {
+  it("answers opened when the device opens the link", async () => {
     const fetchMock = vi.fn().mockResolvedValue(Response.json({ ok: true }));
 
-    expect(await openWithDevice("Ab3xYz", fetchMock)).toBe(true);
+    expect(await openWithDevice("Ab3xYz", fetchMock)).toBe("opened");
     expect(fetchMock).toHaveBeenCalledWith("/api/links/Ab3xYz/session", expect.objectContaining({ method: "POST" }));
   });
 
-  it("answers false when the gate is needed, or the call fails", async () => {
-    expect(await openWithDevice("Ab3xYz", vi.fn().mockResolvedValue(problem(401, { code: "viewer.verification_required" })))).toBe(false);
-    expect(await openWithDevice("Ab3xYz", vi.fn().mockRejectedValue(new TypeError("offline")))).toBe(false);
+  it("answers pending when the device's forward waits for an admin (L-3)", async () => {
+    expect(await openWithDevice("Ab3xYz", vi.fn().mockResolvedValue(problem(403, { code: "share_link.forward_pending" })))).toBe("pending");
+  });
+
+  it("answers gate when the gate is needed, or the call fails", async () => {
+    expect(await openWithDevice("Ab3xYz", vi.fn().mockResolvedValue(problem(401, { code: "viewer.verification_required" })))).toBe("gate");
+    expect(await openWithDevice("Ab3xYz", vi.fn().mockRejectedValue(new TypeError("offline")))).toBe("gate");
   });
 });
 

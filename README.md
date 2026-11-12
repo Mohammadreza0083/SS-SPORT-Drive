@@ -119,7 +119,7 @@ Admins create personal links at `POST /admin/links` (L-1): a recipient (name, or
 
 Opening `/r/{code}` shows the gate card (the player's name, position and nationality; no photo or files) and asks for an email. One of the recipient's emails passes; another one passes as a forward when the link allows it. A 6-digit code is mailed in the background (Resend, then Brevo), valid 10 minutes and 5 tries, with a 60-second wait between codes and at most 5 per email per link per hour. The code is drawn inside the job that sends it and stored only as a salted HMAC. The right code trusts the browser for 90 days (`__Host-ssd_dev`) and starts a one-day session (`__Host-ssd_vs`, the cookie the HLS edge tokens are bound to); a trusted browser later gets a new session without a code. The browser only calls the site's same-origin `/api/links/{code}/…` routes, which refuse cross-origin and non-JSON requests and keep the tokens in `HttpOnly` cookies; the API (`/links/{code}/email-code`, `/verify`, `/session`) reads them from headers. Set `Viewer__TokenKey`; for local development without email keys, `Email__PickupDirectory=.mail` writes the codes as `.eml` files.
 
-After the gate (V-2b), a `Personal` link opens straight on its player's page and a `Roster` link on the canvas Roster: position chips filter the cards, and each card opens `/r/{code}/p/{playerId}`. The page reads the API's viewer content endpoints with the session token in `X-Viewer-Session`: `/links/{code}/content` (type, recipient, note, the viewer's email), `/links/{code}/players` (paged, in the link's order), `/links/{code}/players/{id}` (card and stats) and its `/videos`, `/documents` (ready and visible only, paged, the hero video first) and `/photo` (streamed through the site's same-origin photo route). A player who is not on the link is 404; no storage key leaves the API. The web app passes each viewer's address on in `X-Forwarded-For`, so set `Security__TrustedProxies` to a network that includes the web container; viewer content reads have their own budget, `RateLimiting__ViewerPermitsPerMinute` (240). Videos play once the edge signs their streams (V-5b), and document pages appear once ingest renders them (I-4).
+Forwards (L-3): an email that is not the recipient's is alerted to every admin in the bot with **Keep** / **Block**. The link stays closed for it ("Waiting for approval") until an admin keeps it; a block shuts the email out of that link. A daily job deletes expired codes, sessions and devices (L-2b).
 
 ### Viewer design previews and visual tests
 
@@ -240,9 +240,9 @@ SS-SPORT Drive/
 | 0 | Setup & accounts | 🚧 In progress |
 | 1 | Core domain & persistence | ✅ Done |
 | 2 | Telegram bot & Mini App | 🚧 In progress |
-| 3 | Ingest, transcode & sync | ⏳ Planned |
-| 4 | Viewer site & media protection | 🚧 In progress (V-1–V-4, V-2b real player page and Roster, V-5a, V-6 PDF viewer done) |
-| 5 | Personal links, OTP & tracking | 🚧 In progress (L-1 share links, L-2 email gate done) |
+| 3 | Ingest, transcode & sync | 🚧 In progress (I-1 Drive reader done) |
+| 4 | Viewer site & media protection | 🚧 In progress (V-1–V-4, V-5a, V-6 PDF viewer done) |
+| 5 | Personal links, OTP & tracking | 🚧 In progress (L-1 share links, L-2 email gate, L-2b clean-up, L-3 forwarding done) |
 | 6 | Public search & access requests | ⏳ Planned |
 | 7 | Admin console | ⏳ Planned |
 | 8 | Archive migration | ⏳ Planned |

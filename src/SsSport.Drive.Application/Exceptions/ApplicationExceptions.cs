@@ -119,6 +119,22 @@ public sealed class ViewerVerificationRequiredException : Exception
     }
 }
 
+/// <summary>
+/// A forwarded email verified on a link, but no admin has kept it yet (L-3), so the link does not open. The API returns 403
+/// with <see cref="Code"/>; the gate shows the "waiting for approval" step.
+/// </summary>
+public sealed class ForwardPendingException : Exception
+{
+    /// <summary>The stable code clients see.</summary>
+    public const string Code = "share_link.forward_pending";
+
+    /// <summary>Initializes the exception.</summary>
+    public ForwardPendingException()
+        : base("SS-SPORT is checking this request. The link opens here once it is approved.")
+    {
+    }
+}
+
 /// <summary>The caller is signed in but lacks a required role. The API returns 403.</summary>
 public sealed class ForbiddenAccessException : Exception
 {

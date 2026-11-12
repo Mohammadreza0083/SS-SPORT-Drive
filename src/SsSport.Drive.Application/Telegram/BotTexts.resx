@@ -150,4 +150,17 @@ Press Create to add the player.</value></data>
   <data name="ChatFieldPhoto" xml:space="preserve"><value>Photo</value></data>
   <data name="PlayerPublishedNotice" xml:space="preserve"><value>🚀 {0} is published and live.</value></data>
   <data name="NoticeDigestHeader" xml:space="preserve"><value>🔔 {0} updates while notices were paused:</value></data>
+  <data name="ForwardAlert" xml:space="preserve"><value>🔁 Forwarded link
+
+Link {0} for {1} ({2}) was opened by another email:
+{3}
+
+It stays closed for this email until you keep it.</value></data>
+  <data name="ForwardKeepButton" xml:space="preserve"><value>✅ Keep</value></data>
+  <data name="ForwardBlockButton" xml:space="preserve"><value>⛔ Block</value></data>
+  <data name="ForwardKept" xml:space="preserve"><value>✅ {0} can open link {1}. Kept by {2}.</value></data>
+  <data name="ForwardBlocked" xml:space="preserve"><value>⛔ {0} is blocked from link {1}. Blocked by {2}.</value></data>
+  <data name="ForwardAlreadyDecided" xml:space="preserve"><value>ℹ️ {0} on link {1} was already {2} by {3}.</value></data>
+  <data name="ForwardGone" xml:space="preserve"><value>ℹ️ This forward no longer exists.</value></data>
+  <data name="OnlyAdminsForwards" xml:space="preserve"><value>Only admins can keep or block forwarded links.</value></data>
 </root>

@@ -141,6 +141,23 @@ describe("forwardGate (API calls)", () => {
     expect(cookies[1]).toBe("__Host-ssd_vs=session-token-from-api; Path=/; Max-Age=86400; HttpOnly; Secure; SameSite=Lax");
   });
 
+  it("a forward awaiting approval (L-3) gets only the device cookie, and the body says it waits", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({ ...access, sessionToken: null, sessionExpiresAt: null, awaitingApproval: true }));
+
+    const response = await forwardGate(
+      browserRequest("verify", { body: { email: "scout@other.com", code: "042917" } }),
+      API,
+      "Ab3xYz",
+      "verify",
+      fetchMock,
+      Date.parse("2026-11-06T09:00:00Z"),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true, awaitingApproval: true });
+    expect(response.headers.getSetCookie()).toEqual(["__Host-ssd_dev=dev-token-from-api; Path=/; Max-Age=7776000; HttpOnly; Secure; SameSite=Lax"]);
+  });
+
   it("opens from a trusted device: only the session cookie is set", async () => {
     const fetchMock = vi.fn().mockResolvedValue(Response.json({ ...access, deviceToken: null, deviceExpiresAt: null }));
 

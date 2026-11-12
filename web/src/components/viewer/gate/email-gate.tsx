@@ -27,7 +27,7 @@ function reloadPage() {
 }
 
 /** The gate's steps, as in the canvas. */
-type Step = "email" | "code" | "done";
+type Step = "email" | "code" | "done" | "pending";
 
 /**
  * Picks the message for a refusal: the API's own text, a countdown for rate limits, or a generic line.
@@ -72,9 +72,9 @@ export function EmailGate({ link, signedIn = false, onOpened = reloadPage, stayO
     }
 
     let active = true;
-    void openWithDevice(link.code).then((opened) => {
-      if (active && opened) {
-        setStep("done");
+    void openWithDevice(link.code).then((opening) => {
+      if (active && opening !== "gate") {
+        setStep(opening === "opened" ? "done" : "pending");
       }
     });
     return () => {
@@ -148,8 +148,8 @@ export function EmailGate({ link, signedIn = false, onOpened = reloadPage, stayO
     setBusy(true);
     const result = await verifyCode(link.code, email, code);
     setBusy(false);
-    if (result.kind === "verified") {
-      setStep("done");
+    if (result.kind !== "refused") {
+      setStep(result.kind === "verified" ? "done" : "pending");
       return;
     }
 
@@ -325,6 +325,14 @@ export function EmailGate({ link, signedIn = false, onOpened = reloadPage, stayO
               </div>
               <p className="gate-note gate-done-note">{gateCopy.remembered}</p>
               <p className="gate-note gate-done-note-2">{gateCopy.overlayNote}</p>
+            </div>
+          )}
+
+          {step === "pending" && (
+            <div className="gate-step gate-pending" role="status">
+              <h1 className="gate-title">{gateCopy.pendingTitle}</h1>
+              <p className="gate-intro">{gateCopy.pendingText}</p>
+              <p className="gate-note">{gateCopy.pendingNote}</p>
             </div>
           )}
         </div>

@@ -43,7 +43,8 @@ public static class ViewerGateEndpoints
           "deviceToken": "pX2bq9ZcR1t0mKvL8wYhN3sD5fG7jA4eU6iO0rT2yQw",
           "deviceExpiresAt": "2027-02-04T09:00:00+00:00",
           "sessionToken": "Vb7nM2qX9kL4tR8wZ1cY5hJ3gF6dS0aP2eU4iO7rT9y",
-          "sessionExpiresAt": "2026-11-07T09:00:00+00:00"
+          "sessionExpiresAt": "2026-11-07T09:00:00+00:00",
+          "awaitingApproval": false
         }
         """;
 
@@ -54,7 +55,8 @@ public static class ViewerGateEndpoints
           "deviceToken": null,
           "deviceExpiresAt": null,
           "sessionToken": "Vb7nM2qX9kL4tR8wZ1cY5hJ3gF6dS0aP2eU4iO7rT9y",
-          "sessionExpiresAt": "2026-11-07T09:00:00+00:00"
+          "sessionExpiresAt": "2026-11-07T09:00:00+00:00",
+          "awaitingApproval": false
         }
         """;
 
@@ -75,7 +77,8 @@ public static class ViewerGateEndpoints
             .WithSummary("Email a 6-digit code to open a personal link")
             .WithDescription(
                 "Public. The email must be one of the recipient's, or, when the link allows forwarding, any email (`AnyEmail`) or one on the " +
-                "recipient's domain (`SameDomain`); anything else is 422 `share_link.email_not_allowed`. A malformed email is 422 `email.invalid`. " +
+                "recipient's domain (`SameDomain`); anything else, and a forward an admin blocked, is 422 `share_link.email_not_allowed`. " +
+                "A malformed email is 422 `email.invalid`. " +
                 "The code is drawn and mailed in the background (Resend, then Brevo), valid 10 minutes and 5 tries; asking again replaces it. " +
                 "A new code waits 60 seconds and an email gets at most 5 per link per hour: 429 `email_code.too_many` with `Retry-After`. " +
                 "A link that does not open is the same 404 `share_link.unavailable` as `GET /links/{code}`.")
@@ -95,7 +98,10 @@ public static class ViewerGateEndpoints
                 $"the device token it sends in `{DeviceHeader}`, or gets a new one) and starts a one-day session. The web app puts both tokens into " +
                 "`HttpOnly` cookies; they are stored only as keyed hashes. A wrong code is 422 `email_code.invalid` with `attemptsLeft`; the fifth wrong " +
                 "code, and any code after it, is 422 `email_code.exhausted`; an old or replaced code is 422 `email_code.expired`; a used code is 422 " +
-                "`email_code.used`. The code must be 6 digits (400).")
+                "`email_code.used`. The code must be 6 digits (400). " +
+                "Forwards (L-3): an email that is not the recipient's is recorded and every admin is alerted in the bot with Keep / Block. Until an " +
+                "admin keeps it the answer is 200 with `awaitingApproval: true`, the device token and no session (`sessionToken` and " +
+                "`sessionExpiresAt` are null): the gate shows \"waiting for approval\". A blocked forward is 422 `share_link.email_not_allowed`.")
             .Accepts<VerifyEmailCodeFormDto>("application/json")
             .Produces<ViewerAccessDto>(StatusCodes.Status200OK)
             .ProducesValidationProblem()
@@ -110,9 +116,11 @@ public static class ViewerGateEndpoints
             .WithDescription(
                 "Public. A device trusted for this link (within 90 days of its code) gets a new one-day session without a code; no new device token is " +
                 "issued. A link with `verifyOnNewDevice` off opens for anyone, as the recipient's first email. Otherwise 401 " +
-                "`viewer.verification_required`: show the email gate.")
+                "`viewer.verification_required`: show the email gate. A device whose email is a forward no admin has kept yet is 403 " +
+                "`share_link.forward_pending` (show \"waiting for approval\"); once kept it opens, and once blocked it is 401.")
             .Produces<ViewerAccessDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .AddOpenApiOperationTransformer(Document("200", ExampleOpened, null, DeviceSchemeName, optional: true));
 

@@ -2,8 +2,10 @@ using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using SsSport.Drive.Application.Abstractions.Messaging;
+using SsSport.Drive.Application.Links;
 using SsSport.Drive.Application.Telegram.Access;
 using SsSport.Drive.Application.Telegram.Chat;
+using SsSport.Drive.Application.Telegram.Links;
 using SsSport.Drive.Application.Telegram.Photos;
 
 namespace SsSport.Drive.Application.Telegram;
@@ -247,6 +249,12 @@ public sealed partial class HandleTelegramUpdateCommandHandler(
                 return;
         }
 
+        if (ForwardCallbacks.TryParse(data, out var keep, out var forwardId))
+        {
+            await OnForwardButtonAsync(from, keep, forwardId, callbackId, messageId, cancellationToken);
+            return;
+        }
+
         if (!BotCallbacks.TryParseReview(data, out var decision, out var userId))
         {
             await bot.AnswerCallbackAsync(callbackId, null, false, cancellationToken);
@@ -273,6 +281,30 @@ public sealed partial class HandleTelegramUpdateCommandHandler(
             _ => BotTexts.RequestGone,
         };
         await ReplyAsync(from, messageId, outcomeText, null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Answers a Keep or Block press on a forward alert (L-3): only admins decide; the alert is replaced by the outcome.
+    /// </summary>
+    /// <param name="from">The presser.</param>
+    /// <param name="keep"><see langword="true"/> for Keep.</param>
+    /// <param name="forwardId">The forward.</param>
+    /// <param name="callbackId">The callback query to answer.</param>
+    /// <param name="messageId">The alert message.</param>
+    /// <param name="cancellationToken">Cancels the work.</param>
+    /// <returns>A task that completes when the press is answered.</returns>
+    private async Task OnForwardButtonAsync(TelegramSender from, bool keep, Guid forwardId, string callbackId, int? messageId, CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(new DecideForwardCommand(from.UserId, forwardId, keep), cancellationToken);
+        if (result.Outcome == ForwardDecisionOutcome.NotAllowed)
+        {
+            LogForwardDenied(logger, from.UserId, forwardId);
+            await bot.AnswerCallbackAsync(callbackId, BotTexts.OnlyAdminsForwards, true, cancellationToken);
+            return;
+        }
+
+        await bot.AnswerCallbackAsync(callbackId, null, false, cancellationToken);
+        await ReplyAsync(from, messageId, ForwardCallbacks.Describe(result), null, cancellationToken);
     }
 
     /// <summary>Tells what a message is for the new-player chat: <c>/new</c>, <c>/cancel</c> or typed text.</summary>
@@ -398,4 +430,11 @@ public sealed partial class HandleTelegramUpdateCommandHandler(
     /// <param name="UpdateKind">The update type.</param>
     [LoggerMessage(Level = LogLevel.Debug, Message = "Telegram update {UpdateId} ({UpdateKind}) was already received; skipped")]
     private static partial void LogDuplicate(ILogger logger, long UpdateId, string UpdateKind);
+
+    /// <summary>Logs a Keep or Block press by someone who is not an active admin (suspicious activity, decisions §1b).</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="TelegramUserId">Who pressed.</param>
+    /// <param name="ForwardId">The forward.</param>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Forward decision denied: Telegram user {TelegramUserId} is not an admin (forward {ForwardId})")]
+    private static partial void LogForwardDenied(ILogger logger, long TelegramUserId, Guid ForwardId);
 }

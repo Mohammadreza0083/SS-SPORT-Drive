@@ -22,6 +22,9 @@ internal sealed class EmailChallengeConfiguration : IEntityTypeConfiguration<Ema
         builder.Property(challenge => challenge.CodeHash).HasMaxLength(100);
 
         builder.HasIndex(challenge => new { challenge.ShareLinkId, challenge.Email, challenge.RequestedAt });
+
+        // The daily clean-up (L-2b) deletes by age.
+        builder.HasIndex(challenge => challenge.RequestedAt);
     }
 }
 
@@ -41,6 +44,10 @@ internal sealed class TrustedDeviceConfiguration : IEntityTypeConfiguration<Trus
         builder.Property(device => device.Email).HasConversion(ValueConverters.RequiredEmail).HasMaxLength(254);
 
         builder.HasIndex(device => new { device.TokenHash, device.ShareLinkId }).IsUnique();
+
+        // A blocked forward (L-3) removes the email's devices on the link; the daily clean-up (L-2b) deletes by expiry.
+        builder.HasIndex(device => new { device.ShareLinkId, device.Email });
+        builder.HasIndex(device => device.ExpiresAt);
     }
 }
 
@@ -65,5 +72,29 @@ internal sealed class ViewerSessionConfiguration : IEntityTypeConfiguration<View
 
         builder.HasIndex(session => session.TokenHash).IsUnique();
         builder.HasIndex(session => session.ExpiresAt);
+
+        // A blocked forward (L-3) removes the email's sessions on the link.
+        builder.HasIndex(session => new { session.ShareLinkId, session.Email });
+    }
+}
+
+/// <summary>Maps <see cref="LinkForward"/> to <c>link_forwards</c>: one row per link and forwarded email (L-3).</summary>
+internal sealed class LinkForwardConfiguration : IEntityTypeConfiguration<LinkForward>
+{
+    /// <summary>Configures the forward table.</summary>
+    /// <param name="builder">The entity builder.</param>
+    public void Configure(EntityTypeBuilder<LinkForward> builder)
+    {
+        builder.ToTable("link_forwards");
+        builder.HasKey(forward => forward.Id);
+
+        // Get-only properties are mapped explicitly; EF Core skips them by convention.
+        builder.Property(forward => forward.ShareLinkId);
+        builder.Property(forward => forward.Email).HasConversion(ValueConverters.RequiredEmail).HasMaxLength(254);
+        builder.Property(forward => forward.FirstVerifiedAt);
+        builder.Property(forward => forward.Status).HasConversion<string>().HasMaxLength(16);
+        builder.Ignore(forward => forward.OpensLink);
+
+        builder.HasIndex(forward => new { forward.ShareLinkId, forward.Email }).IsUnique();
     }
 }
