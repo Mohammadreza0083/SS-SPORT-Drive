@@ -105,7 +105,9 @@ public static class DependencyInjection
             .Validate(options => options.Proxy.Length == 0 || Uri.TryCreate(options.Proxy, UriKind.Absolute, out _), "GoogleDrive__Proxy must be an absolute URL, e.g. http://127.0.0.1:10808.")
             .ValidateOnStart();
         services.AddSingleton<IDriveApi, GoogleDriveApi>();
-        services.AddSingleton<IDriveFolderReader, GoogleDriveFolderReader>();
+        services.AddSingleton<GoogleDriveFolderReader>();
+        services.AddSingleton<IDriveFolderReader>(provider => provider.GetRequiredService<GoogleDriveFolderReader>());
+        services.AddSingleton<IDriveFolderLister>(provider => provider.GetRequiredService<GoogleDriveFolderReader>());
 
         services.AddOptions<EdgeOptions>()
             .BindConfiguration(EdgeOptions.SectionName)
