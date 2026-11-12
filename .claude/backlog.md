@@ -100,6 +100,7 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | L-2 | Device binding + email gate + OTP (6 digits, 10 min, 5 tries) | Claude | Tests green |
 | L-2b | Purge expired gate rows (email codes, viewer sessions, trusted devices) with a recurring Hangfire job; retention confirmed with the owner (found while building L-2) | Claude | Tests green |
 | L-3 | Forwarding: any OTP-verified email, LinkForwarded alert, Keep/Block | Claude | Tests green |
+| L-3b | Email the viewer when an admin keeps their forwarded link (found while building L-3); never on Block; needs L-4's email queue | Claude | Tests green; Keep sends one email, Block none |
 | L-4 | Email queue on Hangfire: Resend → Brevo failover for OTP, Google SMTP for the rest, retries, admin view | Claude | Failover test green |
 | L-5 | Tracking events + heartbeats + sessions | Claude | Tests green |
 | L-6 | Metrics: unique watched (range merge), watch time, plays, hotspots, completion | Claude | Unit test per metric |
