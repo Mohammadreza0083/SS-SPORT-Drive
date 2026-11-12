@@ -3,13 +3,16 @@ using DotNetEnv;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using SsSport.Drive.Api;
+using SsSport.Drive.Api.Accounts;
 using SsSport.Drive.Api.Authentication;
+using SsSport.Drive.Api.Emails;
 using SsSport.Drive.Api.Endpoints;
 using SsSport.Drive.Api.ErrorHandling;
 using SsSport.Drive.Api.Links;
 using SsSport.Drive.Api.MiniApp;
 using SsSport.Drive.Api.Security;
 using SsSport.Drive.Api.Telegram;
+using SsSport.Drive.Api.Tracking;
 using SsSport.Drive.Application;
 using SsSport.Drive.Application.Abstractions.Authentication;
 using SsSport.Drive.Infrastructure;
@@ -32,9 +35,15 @@ builder.Services.AddBotNoticeServer();
 builder.Services.AddHostedService<TelegramPollingService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.Replace(ServiceDescriptor.Scoped<ICurrentUser, HttpContextCurrentUser>());
-// Mini App callers sign in per request with Telegram-signed initData (T-3). The admin and viewer sessions join later.
-builder.Services.AddAuthentication(TelegramMiniAppAuthenticationHandler.SchemeName)
-    .AddScheme<AuthenticationSchemeOptions, TelegramMiniAppAuthenticationHandler>(TelegramMiniAppAuthenticationHandler.SchemeName, configureOptions: null);
+// Mini App callers sign in per request with Telegram-signed initData (T-3); the admin console sends its magic-link session
+// token in X-Admin-Session (A-1). One policy scheme picks the right handler, so every /admin/* endpoint accepts either.
+builder.Services.AddAuthentication("Combined")
+    .AddPolicyScheme("Combined", "Mini App signature or admin console session", options =>
+        options.ForwardDefaultSelector = context => context.Request.Headers.ContainsKey(AdminSessionAuthenticationHandler.HeaderName)
+            ? AdminSessionAuthenticationHandler.SchemeName
+            : TelegramMiniAppAuthenticationHandler.SchemeName)
+    .AddScheme<AuthenticationSchemeOptions, TelegramMiniAppAuthenticationHandler>(TelegramMiniAppAuthenticationHandler.SchemeName, configureOptions: null)
+    .AddScheme<AuthenticationSchemeOptions, AdminSessionAuthenticationHandler>(AdminSessionAuthenticationHandler.SchemeName, configureOptions: null);
 builder.Services.AddWebCors();
 // Security baseline (decisions §1b): HTTPS + HSTS behind the trusted proxy, and per-client rate limits.
 builder.Services.AddHttpsEnforcement();
@@ -80,8 +89,11 @@ app.MapHealthEndpoints();
 app.MapTelegramWebhook();
 app.MapMiniApp();
 app.MapShareLinks();
+app.MapEmailQueue();
+app.MapSignIn();
 app.MapViewerGate();
 app.MapViewerContent();
+app.MapTracking();
 
 await app.RunAsync();
 

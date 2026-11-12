@@ -34,6 +34,12 @@ public sealed class ApiRateLimitOptions
     /// cannot share the gate's tight budget; every one of them still needs a live session token.
     /// </summary>
     public int ViewerPermitsPerMinute { get; set; } = 240;
+
+    /// <summary>
+    /// Gets or sets the per-address budget of the sign-in endpoints (<c>/auth/*</c>: magic links and sessions, A-1 and
+    /// P-5), tight so links cannot be requested in bulk (proposed: 10).
+    /// </summary>
+    public int AuthPermitsPerMinute { get; set; } = 10;
 }
 
 /// <summary>
@@ -49,6 +55,9 @@ public static partial class ApiRateLimiting
     /// <summary>The public link endpoints, which have their own budget.</summary>
     private const string LinksPrefix = "/links";
 
+    /// <summary>The sign-in endpoints, which have their own budget.</summary>
+    private const string AuthPrefix = "/auth";
+
     /// <summary>The length of one budget window.</summary>
     private static readonly TimeSpan _window = TimeSpan.FromMinutes(1);
 
@@ -59,7 +68,7 @@ public static partial class ApiRateLimiting
     {
         services.AddOptions<ApiRateLimitOptions>()
             .BindConfiguration(ApiRateLimitOptions.SectionName)
-            .Validate(options => options.PermitsPerMinute > 0 && options.WebhookPermitsPerMinute > 0 && options.LinkPermitsPerMinute > 0 && options.ViewerPermitsPerMinute > 0, "Rate limits must be positive.")
+            .Validate(options => options.PermitsPerMinute > 0 && options.WebhookPermitsPerMinute > 0 && options.LinkPermitsPerMinute > 0 && options.ViewerPermitsPerMinute > 0 && options.AuthPermitsPerMinute > 0, "Rate limits must be positive.")
             .ValidateOnStart();
 
         services.AddRateLimiter(_ => { });
@@ -91,7 +100,12 @@ public static partial class ApiRateLimiting
             return FixedWindow($"webhook:{client}", budgets.WebhookPermitsPerMinute);
         }
 
-        if (IsViewerContentRead(context.Request))
+        if (path.StartsWithSegments(AuthPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return FixedWindow($"auth:{client}", budgets.AuthPermitsPerMinute);
+        }
+
+        if (IsViewerContentRead(context.Request) || IsViewerTracking(context.Request))
         {
             return FixedWindow($"viewer:{client}", budgets.ViewerPermitsPerMinute);
         }
@@ -115,6 +129,26 @@ public static partial class ApiRateLimiting
         return segments.Length >= 3
             && string.Equals(segments[0], "links", StringComparison.OrdinalIgnoreCase)
             && (string.Equals(segments[2], "content", StringComparison.OrdinalIgnoreCase) || string.Equals(segments[2], "players", StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Whether a request is a viewer player's tracking call (L-5): a POST to <c>/links/{code}/players/{id}/videos/{id}/watch</c> or
+    /// <c>/links/{code}/watch/…</c>. A player sends a heartbeat every 10 seconds, so these share the viewer budget, not the gate's.
+    /// </summary>
+    /// <param name="request">The request.</param>
+    /// <returns>True for tracking calls.</returns>
+    private static bool IsViewerTracking(HttpRequest request)
+    {
+        if (!HttpMethods.IsPost(request.Method))
+        {
+            return false;
+        }
+
+        var segments = (request.Path.Value ?? string.Empty).Split('/', StringSplitOptions.RemoveEmptyEntries);
+        return segments.Length >= 3
+            && string.Equals(segments[0], "links", StringComparison.OrdinalIgnoreCase)
+            && (string.Equals(segments[2], "watch", StringComparison.OrdinalIgnoreCase)
+                || (segments.Length == 7 && string.Equals(segments[2], "players", StringComparison.OrdinalIgnoreCase) && string.Equals(segments[^1], "watch", StringComparison.OrdinalIgnoreCase)));
     }
 
     /// <summary>A fixed one-minute window with no queue: over the budget is refused at once.</summary>

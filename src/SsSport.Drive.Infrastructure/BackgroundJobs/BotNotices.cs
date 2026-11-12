@@ -11,6 +11,7 @@ using Npgsql;
 using SsSport.Drive.Application.Abstractions.Events;
 using SsSport.Drive.Application.Links;
 using SsSport.Drive.Application.Telegram.Notices;
+using SsSport.Drive.Domain.Emails;
 using SsSport.Drive.Domain.Primitives;
 
 namespace SsSport.Drive.Infrastructure.BackgroundJobs;
@@ -179,11 +180,51 @@ public sealed partial class NoticeFlushJob(ISender sender, ILogger<NoticeFlushJo
     private static partial void LogFailed(ILogger logger, Exception exception);
 }
 
+/// <summary>
+/// The Hangfire job that sends a queued email (L-4). Like <see cref="BotNoticeJob"/> it runs the event's background
+/// handlers, but on its own <c>emails</c> queue with two workers, so a slow provider never holds up bot notices.
+/// </summary>
+/// <param name="runner">Runs the background handlers in the job's scope.</param>
+/// <param name="logger">The logger: Hangfire's own logging is not wired to ours, so failures are logged here.</param>
+public sealed partial class EmailJob(IBackgroundEventRunner runner, ILogger<EmailJob> logger)
+{
+    /// <summary>The queue emails run on.</summary>
+    public const string Queue = "emails";
+
+    /// <summary>Sends the email. A failure is retried up to 3 times by Hangfire (4 attempts in all).</summary>
+    /// <param name="eventType">The event's full type name.</param>
+    /// <param name="payload">The event as JSON.</param>
+    /// <param name="actorUserId">Who caused it, or <see langword="null"/>.</param>
+    /// <param name="cancellationToken">Cancelled when the server shuts down.</param>
+    /// <returns>A task that completes when the email was handled.</returns>
+    [Queue(Queue)]
+    [AutomaticRetry(Attempts = 3)]
+    public async Task RunAsync(string eventType, string payload, Guid? actorUserId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await runner.RunAsync(BotNoticeJob.Deserialize(eventType, payload), new EventContext(actorUserId), cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            LogFailed(logger, exception, eventType);
+            throw;
+        }
+    }
+
+    /// <summary>Logs an email job that failed; Hangfire retries it.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="exception">The failure.</param>
+    /// <param name="EventType">The event's type name.</param>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Email job for {EventType} failed; Hangfire will retry it")]
+    private static partial void LogFailed(ILogger logger, Exception exception, string EventType);
+}
+
 /// <summary>Queues events for their background handlers as Hangfire jobs on PostgreSQL (T-6c).</summary>
 /// <param name="jobs">Hangfire's client.</param>
 internal sealed class HangfireBackgroundEventQueue(IBackgroundJobClient jobs) : IBackgroundEventQueue
 {
-    /// <summary>Stores a job for the event; it runs after the request, on the notices queue.</summary>
+    /// <summary>Stores a job for the event; it runs after the request, on the notices queue (emails: the emails queue).</summary>
     /// <param name="domainEvent">The event.</param>
     /// <param name="context">Who caused it.</param>
     /// <param name="cancellationToken">Unused: Hangfire's client is synchronous.</param>
@@ -194,7 +235,15 @@ internal sealed class HangfireBackgroundEventQueue(IBackgroundJobClient jobs) : 
         ArgumentNullException.ThrowIfNull(context);
         var type = domainEvent.GetType();
         var payload = JsonSerializer.Serialize(domainEvent, type);
-        jobs.Enqueue<BotNoticeJob>(job => job.RunAsync(type.FullName!, payload, context.ActorUserId, CancellationToken.None));
+        if (domainEvent is EmailQueued)
+        {
+            jobs.Enqueue<EmailJob>(job => job.RunAsync(type.FullName!, payload, context.ActorUserId, CancellationToken.None));
+        }
+        else
+        {
+            jobs.Enqueue<BotNoticeJob>(job => job.RunAsync(type.FullName!, payload, context.ActorUserId, CancellationToken.None));
+        }
+
         return Task.CompletedTask;
     }
 }
@@ -213,8 +262,11 @@ internal sealed partial class BotNoticeServer(IServiceProvider services, IConfig
     /// <summary>The setting that turns the server off (default on).</summary>
     public const string RunServerSetting = "BackgroundJobs:RunServer";
 
-    /// <summary>The running server, or <see langword="null"/> when it did not start or has stopped.</summary>
+    /// <summary>The running notices server, or <see langword="null"/> when it did not start or has stopped.</summary>
     private BackgroundJobServer? _server;
+
+    /// <summary>The running emails server (two workers), or <see langword="null"/> when it did not start or has stopped.</summary>
+    private BackgroundJobServer? _emailServer;
 
     /// <summary>Starts the server when a database is configured and the server is not turned off.</summary>
     /// <param name="cancellationToken">Unused.</param>
@@ -243,6 +295,18 @@ internal sealed partial class BotNoticeServer(IServiceProvider services, IConfig
         };
         _server = new BackgroundJobServer(options, services.GetRequiredService<JobStorage>());
         LogStarted(logger, BotNoticeJob.Queue);
+
+        // Emails (L-4) have their own queue and two workers: a slow provider must not hold up bot notices.
+        _emailServer = new BackgroundJobServer(
+            new BackgroundJobServerOptions
+            {
+                Queues = [EmailJob.Queue],
+                WorkerCount = 2,
+                ServerName = $"api-emails:{Environment.MachineName}",
+                Activator = services.GetRequiredService<JobActivator>(),
+            },
+            services.GetRequiredService<JobStorage>());
+        LogStarted(logger, EmailJob.Queue);
         return Task.CompletedTask;
     }
 
@@ -254,19 +318,26 @@ internal sealed partial class BotNoticeServer(IServiceProvider services, IConfig
     /// <returns>A task that completes when the server has stopped.</returns>
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        if (Interlocked.Exchange(ref _server, null) is not { } server)
-        {
-            return;
-        }
-
+        var emailServer = Interlocked.Exchange(ref _emailServer, null);
+        var server = Interlocked.Exchange(ref _server, null);
         try
         {
-            server.SendStop();
-            await server.WaitForShutdownAsync(cancellationToken);
+            emailServer?.SendStop();
+            server?.SendStop();
+            if (emailServer is not null)
+            {
+                await emailServer.WaitForShutdownAsync(cancellationToken);
+            }
+
+            if (server is not null)
+            {
+                await server.WaitForShutdownAsync(cancellationToken);
+            }
         }
         finally
         {
-            server.Dispose();
+            emailServer?.Dispose();
+            server?.Dispose();
         }
     }
 
@@ -274,6 +345,7 @@ internal sealed partial class BotNoticeServer(IServiceProvider services, IConfig
     /// <returns>A completed task.</returns>
     public ValueTask DisposeAsync()
     {
+        Interlocked.Exchange(ref _emailServer, null)?.Dispose();
         Interlocked.Exchange(ref _server, null)?.Dispose();
         return ValueTask.CompletedTask;
     }

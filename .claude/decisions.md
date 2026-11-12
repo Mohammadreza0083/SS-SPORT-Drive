@@ -825,6 +825,15 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
 - **Contact address** shown to viewers: `info@ss-sport.co`.
 - **Google SMTP sends from `info@ss-sport.co`** with an app password (owner, 2026-10-23), not `drive@ss-sport.co`.
 
+### 8a. Email queue, sign-in links and watch tracking (L-4, L-3b, A-1, P-5, L-5, L-6; owner approved the proposed values 2026-11-12)
+
+- **Email queue (L-4):** every email is an `outgoing_emails` row (kind `Code` or `General`, a template key, safe JSON data with no address, code or token) sent by a Hangfire job on its own `emails` queue with 2 workers, 4 attempts in all. The job composes the mail from its template, so a code or token is drawn inside the job and stored only as a keyed hash. `Code` mail goes Resend then Brevo; `General` mail goes through Google SMTP only (`Email__GoogleSmtp__*`, built-in `System.Net.Mail`, STARTTLS 587). The development pickup folder takes everything. Failures store only the exception type. Admins read the queue at `GET /admin/emails` (cursor-paged, newest first, masked recipients). Retention of the rows is still open.
+- **Kept forward (L-3b):** Keep queues one `forward.kept` mail with the `/r/{code}` link; Block and a second press send nothing.
+- **Magic-link sign-in (A-1, P-5):** `POST /auth/{admin|viewer}/link` always answers 202 (nobody can probe for admins); only an active admin's address gets an admin link; at most 5 links per address and audience per hour; the link works once for 15 minutes and is sent as `Code` mail. `POST …/session` turns the token into a session (admin 7 days, viewer 1 day; viewers get a `viewer_accounts` row on first sign-in); `GET …/me`; `POST …/sign-out`. The API reads the session only from `X-Admin-Session` / `X-Viewer-Account`, never cookies; every POST must be JSON (415 otherwise, the CSRF check). An admin session gives the same claims as the Mini App signature, so `/admin/*` accepts either; a demoted admin's session stops working at once. `/auth/*` has its own budget `RateLimiting__AuthPermitsPerMinute` (10). The console pages, cookies and home-page buttons are a web follow-up; purging old sign-in rows is still open.
+- **Public address:** `Web__PublicBaseUrl` builds emailed links.
+- **Watch tracking (L-5):** `POST /links/{code}/players/{id}/videos/{id}/watch` (201, one play), `POST /links/{code}/watch/{id}/heartbeat` (range played, every 10 s, at most 30 s, within 1 s of the end, ranges within 0.5 s join, at most 2000 ranges) and `…/events` (`Play`, `Pause`, `Seek`, `Ended`; playing again after `Ended` is a new play). All need the viewer session of the link; they share the viewer rate budget.
+- **Metrics (L-6):** per viewer email and video, summed over watches: plays, watch time (every second played), unique seconds (ranges merged), completion (unique share, complete from 90 %), hotspots in 5-second buckets (per watch). Admins read them, paged in SQL, at `GET /admin/links/{id}/viewing`, with full viewer emails.
+
 ## 9. Viewer site design
 
 - **Fonts:**
