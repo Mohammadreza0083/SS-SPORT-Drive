@@ -204,6 +204,31 @@ describe("EmailGate (L-2, canvas Gate)", () => {
     expect(screen.getByRole("heading", { name: "Confirm it's you" })).toBeTruthy();
   });
 
+  it("a forward waits for approval after the right code (L-3)", async () => {
+    stubRoutes({
+      "email-code": sent,
+      verify: () => Response.json({ ok: true, awaitingApproval: true }),
+    });
+    render(<EmailGate link={personal} />);
+
+    await sendEmail("scout@other.com");
+    fireEvent.change(await screen.findByLabelText("6-digit code"), {
+      target: { value: "042917" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Watch" }));
+
+    expect(await screen.findByRole("heading", { name: "Waiting for approval" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "You're in" })).toBeNull();
+  });
+
+  it("a device whose forward still waits shows the waiting step at once (L-3)", async () => {
+    stubRoutes({ session: () => Response.json({ status: 403, code: "share_link.forward_pending" }, { status: 403 }) });
+
+    render(<EmailGate link={personal} />);
+
+    expect(await screen.findByRole("heading", { name: "Waiting for approval" })).toBeTruthy();
+  });
+
   it("a viewer with a session starts on You're in, without asking the API", () => {
     const fetchMock = stubRoutes({});
 

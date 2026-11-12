@@ -65,6 +65,12 @@ public static partial class ViewerGateRules
     /// <summary>The code clients see when asking too often.</summary>
     public const string TooManyCode = "email_code.too_many";
 
+    /// <summary>The code clients see for an email the link does not admit, or a blocked forward (the same, on purpose).</summary>
+    public const string EmailNotAllowedCode = "share_link.email_not_allowed";
+
+    /// <summary>The message shown with <see cref="EmailNotAllowedCode"/>.</summary>
+    public const string EmailNotAllowedMessage = "This link was shared with someone else. Use the email it was sent to.";
+
     /// <summary>
     /// Starts a session on a link for an email, and returns its token. The token goes to the browser; only its hash is
     /// stored.
@@ -145,7 +151,8 @@ public sealed record EmailCodeSentDto
 }
 
 /// <summary>
-/// The tokens a viewer gets at the gate, for the web app to put into cookies: never shown to scripts.
+/// The tokens a viewer gets at the gate, for the web app to put into cookies: never shown to scripts. A forward that no
+/// admin has kept yet (L-3) gets the device token only, with <see cref="AwaitingApproval"/> set.
 /// </summary>
 public sealed record ViewerAccessDto
 {
@@ -155,11 +162,14 @@ public sealed record ViewerAccessDto
     /// <summary>Gets when the device is forgotten, or <see langword="null"/> with no device token.</summary>
     public DateTimeOffset? DeviceExpiresAt { get; init; }
 
-    /// <summary>Gets the session token (<c>__Host-ssd_vs</c>).</summary>
-    public string SessionToken { get; init; } = string.Empty;
+    /// <summary>Gets the session token (<c>__Host-ssd_vs</c>), or <see langword="null"/> while awaiting approval.</summary>
+    public string? SessionToken { get; init; }
 
-    /// <summary>Gets when the session ends.</summary>
-    public DateTimeOffset SessionExpiresAt { get; init; }
+    /// <summary>Gets when the session ends, or <see langword="null"/> while awaiting approval.</summary>
+    public DateTimeOffset? SessionExpiresAt { get; init; }
+
+    /// <summary>Gets whether the email is a forward an admin has not kept yet: the device is trusted, the link stays closed.</summary>
+    public bool AwaitingApproval { get; init; }
 }
 
 /// <summary>Who a session belongs to.</summary>
@@ -215,12 +225,14 @@ public sealed class RequestEmailCodeCommandValidator : AbstractValidator<Request
 /// <param name="links">The links.</param>
 /// <param name="recipients">The recipients.</param>
 /// <param name="challenges">The codes.</param>
+/// <param name="forwards">The forwards, to refuse blocked ones (L-3).</param>
 /// <param name="timeProvider">The clock.</param>
 /// <param name="logger">The logger.</param>
 public sealed class RequestEmailCodeCommandHandler(
     IRepository<ShareLink, Guid> links,
     IRepository<Recipient, Guid> recipients,
     IRepository<EmailChallenge, Guid> challenges,
+    IRepository<LinkForward, Guid> forwards,
     TimeProvider timeProvider,
     ILogger<RequestEmailCodeCommandHandler> logger) : ICommandHandler<RequestEmailCodeCommand, EmailCodeSentDto>
 {
@@ -241,10 +253,10 @@ public sealed class RequestEmailCodeCommandHandler(
         var email = EmailAddress.Create(request.Email);
         var recipient = await recipients.GetByIdAsync(link.RecipientId, cancellationToken) ?? throw new ShareLinkUnavailableException();
         var admission = link.Admit(recipient, email);
-        if (admission == EmailAdmission.Refused)
+        if (admission == EmailAdmission.Refused || (admission == EmailAdmission.Forward && await IsBlockedAsync(link.Id, email, cancellationToken)))
         {
             ViewerGateRules.LogEmailRefused(logger, link.Id);
-            throw new DomainException("share_link.email_not_allowed", "This link was shared with someone else. Use the email it was sent to.");
+            throw new DomainException(ViewerGateRules.EmailNotAllowedCode, ViewerGateRules.EmailNotAllowedMessage);
         }
 
         await EnsureNotTooOftenAsync(link.Id, email, now, cancellationToken);
@@ -256,6 +268,14 @@ public sealed class RequestEmailCodeCommandHandler(
             ExpiresInSeconds = (int)EmailChallenge.CodeLifetime.TotalSeconds,
         };
     }
+
+    /// <summary>Tells whether an admin blocked this forward (L-3).</summary>
+    /// <param name="shareLinkId">The link.</param>
+    /// <param name="email">The forwarded email.</param>
+    /// <param name="cancellationToken">Cancels the query.</param>
+    /// <returns><see langword="true"/> when blocked.</returns>
+    private async Task<bool> IsBlockedAsync(Guid shareLinkId, EmailAddress email, CancellationToken cancellationToken) =>
+        await forwards.FirstOrDefaultAsync(new LinkForwardSpec(shareLinkId, email), cancellationToken) is { Status: ForwardStatus.Blocked };
 
     /// <summary>Refuses a code asked for within 60 seconds of the last one, or over the hourly cap.</summary>
     /// <param name="shareLinkId">The link.</param>
@@ -332,7 +352,9 @@ public sealed class SendEmailCode(
 
 /// <summary>
 /// Types the code at the gate (<c>POST /links/{code}/verify</c>). Public. The right code trusts the device for 90 days
-/// and starts a one-day session; a wrong one uses a try, which is saved either way.
+/// and starts a one-day session; a wrong one uses a try, which is saved either way. A forward (L-3) is recorded and
+/// alerted the first time; until an admin keeps it, the device is trusted but no session starts. A blocked forward is
+/// refused like an email the link does not admit.
 /// </summary>
 /// <param name="Code">The link code.</param>
 /// <param name="Email">The email the code went to.</param>
@@ -367,6 +389,7 @@ public sealed class VerifyEmailCodeCommandValidator : AbstractValidator<VerifyEm
 /// <param name="challenges">The codes.</param>
 /// <param name="devices">The trusted devices.</param>
 /// <param name="sessions">The sessions.</param>
+/// <param name="forwards">The forwards (L-3).</param>
 /// <param name="secrets">The gate's secrets.</param>
 /// <param name="timeProvider">The clock.</param>
 /// <param name="logger">The logger.</param>
@@ -375,6 +398,7 @@ public sealed class VerifyEmailCodeCommandHandler(
     IRepository<EmailChallenge, Guid> challenges,
     IRepository<TrustedDevice, Guid> devices,
     IRepository<ViewerSession, Guid> sessions,
+    IRepository<LinkForward, Guid> forwards,
     IViewerSecrets secrets,
     TimeProvider timeProvider,
     ILogger<VerifyEmailCodeCommandHandler> logger) : ICommandHandler<VerifyEmailCodeCommand, EmailCodeVerification>
@@ -397,6 +421,13 @@ public sealed class VerifyEmailCodeCommandHandler(
             return EmailCodeVerification.Failed(EmailCodeCheck.Expired, 0);
         }
 
+        var forward = challenge.IsForward ? await forwards.FirstOrDefaultAsync(new LinkForwardSpec(link.Id, email), cancellationToken) : null;
+        if (forward is { Status: ForwardStatus.Blocked })
+        {
+            ViewerGateRules.LogEmailRefused(logger, link.Id);
+            return new EmailCodeVerification(null, ViewerGateRules.EmailNotAllowedCode, ViewerGateRules.EmailNotAllowedMessage, 0);
+        }
+
         var check = challenge.Check(secrets.CodeMatches(request.EmailCode!, challenge.CodeHash), now);
         if (check != EmailCodeCheck.Verified)
         {
@@ -405,6 +436,18 @@ public sealed class VerifyEmailCodeCommandHandler(
         }
 
         var device = await TrustDeviceAsync(request.DeviceToken, link.Id, challenge, now, cancellationToken);
+        if (challenge.IsForward && forward is null)
+        {
+            forward = LinkForward.Record(link.Id, email, now);
+            forwards.Add(forward);
+        }
+
+        if (forward is { OpensLink: false })
+        {
+            var waiting = new ViewerAccessDto { DeviceToken = device.Token, DeviceExpiresAt = device.Row.ExpiresAt, AwaitingApproval = true };
+            return new EmailCodeVerification(waiting, null, null, challenge.AttemptsLeft);
+        }
+
         var (sessionToken, sessionExpiresAt) = ViewerGateRules.StartSession(sessions, secrets, link, email, challenge.IsForward, device.Row.Id, now);
         var access = new ViewerAccessDto
         {
@@ -461,6 +504,7 @@ public sealed record OpenWithDeviceCommand(string Code, string? DeviceToken) : I
 /// <param name="recipients">The recipients.</param>
 /// <param name="devices">The trusted devices.</param>
 /// <param name="sessions">The sessions.</param>
+/// <param name="forwards">The forwards (L-3).</param>
 /// <param name="secrets">The gate's secrets.</param>
 /// <param name="timeProvider">The clock.</param>
 public sealed class OpenWithDeviceCommandHandler(
@@ -468,6 +512,7 @@ public sealed class OpenWithDeviceCommandHandler(
     IRepository<Recipient, Guid> recipients,
     IRepository<TrustedDevice, Guid> devices,
     IRepository<ViewerSession, Guid> sessions,
+    IRepository<LinkForward, Guid> forwards,
     IViewerSecrets secrets,
     TimeProvider timeProvider) : ICommandHandler<OpenWithDeviceCommand, ViewerAccessDto>
 {
@@ -476,7 +521,8 @@ public sealed class OpenWithDeviceCommandHandler(
     /// <param name="cancellationToken">Cancels the work.</param>
     /// <returns>The session token (no new device token).</returns>
     /// <exception cref="ShareLinkUnavailableException">The link does not open.</exception>
-    /// <exception cref="ViewerVerificationRequiredException">The device is not trusted for the link.</exception>
+    /// <exception cref="ViewerVerificationRequiredException">The device is not trusted for the link, or its forward was blocked.</exception>
+    /// <exception cref="ForwardPendingException">The device's email is a forward no admin has kept yet.</exception>
     public async Task<ViewerAccessDto> Handle(OpenWithDeviceCommand request, CancellationToken cancellationToken)
     {
         var now = timeProvider.GetUtcNow();
@@ -496,6 +542,20 @@ public sealed class OpenWithDeviceCommandHandler(
         if (device is null || !device.IsTrustedAt(now))
         {
             throw new ViewerVerificationRequiredException();
+        }
+
+        if (device.IsForward)
+        {
+            var forward = await forwards.FirstOrDefaultAsync(new LinkForwardSpec(link.Id, device.Email), cancellationToken);
+            if (forward is { Status: ForwardStatus.Blocked })
+            {
+                throw new ViewerVerificationRequiredException();
+            }
+
+            if (forward is not { OpensLink: true })
+            {
+                throw new ForwardPendingException();
+            }
         }
 
         device.Seen(now);

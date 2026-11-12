@@ -64,6 +64,12 @@ public sealed class ApplicationExceptionHandler(IProblemDetailsService problemDe
                 Title = verification.Message,
                 Extensions = { ["code"] = ViewerVerificationRequiredException.Code },
             },
+            ForwardPendingException pending => new ProblemDetails
+            {
+                Status = StatusCodes.Status403Forbidden,
+                Title = pending.Message,
+                Extensions = { ["code"] = ForwardPendingException.Code },
+            },
             TooManyRequestsException tooMany => new ProblemDetails
             {
                 Status = StatusCodes.Status429TooManyRequests,

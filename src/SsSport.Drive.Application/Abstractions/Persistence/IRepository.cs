@@ -51,4 +51,14 @@ public interface IRepository<TAggregate, TId>
     /// <summary>Stages an aggregate to be deleted on the next save.</summary>
     /// <param name="aggregate">The aggregate to remove.</param>
     void Remove(TAggregate aggregate);
+
+    /// <summary>
+    /// Deletes the rows a specification selects straight in SQL, at once and without loading them, and returns how many
+    /// went. Its criteria and <c>Take</c> apply, so large deletes run in batches. Domain events and the unit of work are
+    /// bypassed: use it only for rows with no events or invariants left, such as expired ones.
+    /// </summary>
+    /// <param name="specification">The rows to delete.</param>
+    /// <param name="cancellationToken">Cancels the delete.</param>
+    /// <returns>How many rows were deleted.</returns>
+    Task<int> DeleteAsync(ISpecification<TAggregate> specification, CancellationToken cancellationToken = default);
 }

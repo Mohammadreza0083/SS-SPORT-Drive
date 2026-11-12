@@ -79,6 +79,38 @@ public static class BotTexts
     /// <returns>The text.</returns>
     public static string FormatRequestTooSoon(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("RequestTooSoon"), args);
 
+    /// <summary>Gets the "ForwardKeepButton" text.</summary>
+    public static string ForwardKeepButton => Get(nameof(ForwardKeepButton));
+
+    /// <summary>Gets the "ForwardBlockButton" text.</summary>
+    public static string ForwardBlockButton => Get(nameof(ForwardBlockButton));
+
+    /// <summary>Gets the "ForwardGone" text.</summary>
+    public static string ForwardGone => Get(nameof(ForwardGone));
+
+    /// <summary>Gets the "OnlyAdminsForwards" text.</summary>
+    public static string OnlyAdminsForwards => Get(nameof(OnlyAdminsForwards));
+
+    /// <summary>Formats the "ForwardAlert" text: link code, recipient, players, email.</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatForwardAlert(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("ForwardAlert"), args);
+
+    /// <summary>Formats the "ForwardKept" text: email, link code, admin.</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatForwardKept(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("ForwardKept"), args);
+
+    /// <summary>Formats the "ForwardBlocked" text: email, link code, admin.</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatForwardBlocked(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("ForwardBlocked"), args);
+
+    /// <summary>Formats the "ForwardAlreadyDecided" text: email, link code, kept or blocked, admin.</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatForwardAlreadyDecided(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("ForwardAlreadyDecided"), args);
+
     /// <summary>Formats the "AdminRequest" text.</summary>
     /// <param name="args">The values for its placeholders.</param>
     /// <returns>The text.</returns>

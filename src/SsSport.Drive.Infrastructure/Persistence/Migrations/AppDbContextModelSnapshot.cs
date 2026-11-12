@@ -1625,10 +1625,63 @@ namespace SsSport.Drive.Infrastructure.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("pk_email_challenges");
 
+                    b.HasIndex("RequestedAt")
+                        .HasDatabaseName("ix_email_challenges_requested_at");
+
                     b.HasIndex("ShareLinkId", "Email", "RequestedAt")
                         .HasDatabaseName("ix_email_challenges_share_link_id_email_requested_at");
 
                     b.ToTable("email_challenges", (string)null);
+                });
+
+            modelBuilder.Entity("SsSport.Drive.Domain.Links.LinkForward", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("DecidedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("decided_at");
+
+                    b.Property<Guid?>("DecidedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("decided_by_user_id");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)")
+                        .HasColumnName("email");
+
+                    b.Property<DateTimeOffset>("FirstVerifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("first_verified_at");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<Guid>("ShareLinkId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("share_link_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.HasKey("Id")
+                        .HasName("pk_link_forwards");
+
+                    b.HasIndex("ShareLinkId", "Email")
+                        .IsUnique()
+                        .HasDatabaseName("ix_link_forwards_share_link_id_email");
+
+                    b.ToTable("link_forwards", (string)null);
                 });
 
             modelBuilder.Entity("SsSport.Drive.Domain.Links.Recipient", b =>
@@ -1820,6 +1873,12 @@ namespace SsSport.Drive.Infrastructure.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("pk_trusted_devices");
 
+                    b.HasIndex("ExpiresAt")
+                        .HasDatabaseName("ix_trusted_devices_expires_at");
+
+                    b.HasIndex("ShareLinkId", "Email")
+                        .HasDatabaseName("ix_trusted_devices_share_link_id_email");
+
                     b.HasIndex("TokenHash", "ShareLinkId")
                         .IsUnique()
                         .HasDatabaseName("ix_trusted_devices_token_hash_share_link_id");
@@ -1880,6 +1939,9 @@ namespace SsSport.Drive.Infrastructure.Persistence.Migrations
                     b.HasIndex("TokenHash")
                         .IsUnique()
                         .HasDatabaseName("ix_viewer_sessions_token_hash");
+
+                    b.HasIndex("ShareLinkId", "Email")
+                        .HasDatabaseName("ix_viewer_sessions_share_link_id_email");
 
                     b.ToTable("viewer_sessions", (string)null);
                 });

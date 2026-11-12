@@ -15,12 +15,13 @@ const SESSION_HEADER = "X-Viewer-Session";
 /** The gate actions the routes forward. */
 export type GateAction = "email-code" | "verify" | "session";
 
-/** The tokens the API hands out at the gate. */
+/** The tokens the API hands out at the gate; a forward waiting for an admin (L-3) gets no session. */
 type ViewerAccess = {
   deviceToken: string | null;
   deviceExpiresAt: string | null;
-  sessionToken: string;
-  sessionExpiresAt: string;
+  sessionToken: string | null;
+  sessionExpiresAt: string | null;
+  awaitingApproval?: boolean;
 };
 
 /**
@@ -141,12 +142,15 @@ export async function forwardGate(
 
   if (action !== "email-code" && response.ok) {
     const access = (await response.json()) as ViewerAccess;
-    const answer = Response.json({ ok: true });
+    const answer = Response.json(access.awaitingApproval === true ? { ok: true, awaitingApproval: true } : { ok: true });
     if (access.deviceToken && access.deviceExpiresAt) {
       answer.headers.append("Set-Cookie", gateCookie(DEVICE_COOKIE, access.deviceToken, access.deviceExpiresAt, now));
     }
 
-    answer.headers.append("Set-Cookie", gateCookie(SESSION_COOKIE, access.sessionToken, access.sessionExpiresAt, now));
+    if (access.sessionToken && access.sessionExpiresAt) {
+      answer.headers.append("Set-Cookie", gateCookie(SESSION_COOKIE, access.sessionToken, access.sessionExpiresAt, now));
+    }
+
     return answer;
   }
 

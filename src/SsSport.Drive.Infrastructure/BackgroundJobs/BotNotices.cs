@@ -9,6 +9,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using SsSport.Drive.Application.Abstractions.Events;
+using SsSport.Drive.Application.Links;
 using SsSport.Drive.Application.Telegram.Notices;
 using SsSport.Drive.Domain.Primitives;
 
@@ -43,16 +44,25 @@ public static class HangfireStorage
             .UseRecommendedSerializerSettings();
 
     /// <summary>
-    /// Registers (or updates) the recurring jobs: the every-minute round that sends held bot notices (T-8). <c>migrate</c>
-    /// calls it after installing the schema, so app instances never race to register it; safe to run on every deploy.
+    /// Registers (or updates) the recurring jobs: the every-minute round that sends held bot notices (T-8), and the daily
+    /// clean-up of the gate's expired rows at 00:00 UTC, 03:30 in Tehran (L-2b). <c>migrate</c> calls it after installing
+    /// the schema, so app instances never race to register them; safe to run on every deploy.
     /// </summary>
     /// <param name="storage">Hangfire's storage.</param>
-    public static void RegisterRecurringJobs(JobStorage storage) =>
-        new RecurringJobManager(storage).AddOrUpdate<NoticeFlushJob>(
+    public static void RegisterRecurringJobs(JobStorage storage)
+    {
+        var manager = new RecurringJobManager(storage);
+        manager.AddOrUpdate<NoticeFlushJob>(
             NoticeFlushJob.RecurringJobId,
             BotNoticeJob.Queue,
             job => job.RunAsync(CancellationToken.None),
             Cron.Minutely());
+        manager.AddOrUpdate<GatePurgeJob>(
+            GatePurgeJob.RecurringJobId,
+            BotNoticeJob.Queue,
+            job => job.RunAsync(CancellationToken.None),
+            Cron.Daily(0, 0));
+    }
 
     /// <summary>Installs or upgrades Hangfire's schema; safe to run on every deploy.</summary>
     /// <param name="dataSource">The database.</param>
@@ -283,4 +293,51 @@ internal sealed partial class BotNoticeServer(IServiceProvider services, IConfig
     /// <param name="logger">The logger.</param>
     [LoggerMessage(Level = LogLevel.Information, Message = "Hangfire server not started: BackgroundJobs__RunServer is false")]
     private static partial void LogTurnedOff(ILogger logger);
+}
+
+/// <summary>
+/// The daily Hangfire job that deletes the gate's expired rows (L-2b): email codes, viewer sessions and trusted devices
+/// past their retention. It runs on the notices queue, the one the API's Hangfire server works.
+/// </summary>
+/// <param name="sender">Sends the MediatR command.</param>
+/// <param name="timeProvider">The clock.</param>
+/// <param name="logger">The logger: Hangfire's own logging is not wired to ours.</param>
+public sealed partial class GatePurgeJob(ISender sender, TimeProvider timeProvider, ILogger<GatePurgeJob> logger)
+{
+    /// <summary>The recurring job's id.</summary>
+    public const string RecurringJobId = "gate-purge";
+
+    /// <summary>Deletes the expired rows. A failure is not retried: the next day's run picks them up.</summary>
+    /// <param name="cancellationToken">Cancelled when the server shuts down.</param>
+    /// <returns>A task that completes when the clean-up is done.</returns>
+    [Queue(BotNoticeJob.Queue)]
+    [AutomaticRetry(Attempts = 0)]
+    [DisableConcurrentExecution(timeoutInSeconds: 600)]
+    public async Task RunAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await sender.Send(new PurgeGateRowsCommand(timeProvider.GetUtcNow()), cancellationToken);
+            LogPurged(logger, result.EmailCodes, result.Sessions, result.Devices);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            LogFailed(logger, exception);
+            throw;
+        }
+    }
+
+    /// <summary>Logs what a run deleted.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="EmailCodes">Email codes deleted.</param>
+    /// <param name="Sessions">Viewer sessions deleted.</param>
+    /// <param name="Devices">Trusted devices deleted.</param>
+    [LoggerMessage(Level = LogLevel.Information, Message = "Gate clean-up deleted {EmailCodes} email codes, {Sessions} viewer sessions and {Devices} trusted devices")]
+    private static partial void LogPurged(ILogger logger, int EmailCodes, int Sessions, int Devices);
+
+    /// <summary>Logs a run that failed; the next one tries again.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="exception">The failure.</param>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Gate clean-up failed; the next daily run tries again")]
+    private static partial void LogFailed(ILogger logger, Exception exception);
 }

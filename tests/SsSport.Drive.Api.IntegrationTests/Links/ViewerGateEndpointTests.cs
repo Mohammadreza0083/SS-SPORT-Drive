@@ -13,6 +13,7 @@ using SsSport.Drive.Api.IntegrationTests.Telegram;
 using SsSport.Drive.Application.Abstractions.Email;
 using SsSport.Drive.Application.Abstractions.Persistence;
 using SsSport.Drive.Application.Telegram;
+using SsSport.Drive.Domain.Audit;
 using SsSport.Drive.Domain.Links;
 using SsSport.Drive.Domain.Players;
 using SsSport.Drive.Domain.Primitives;
@@ -26,7 +27,8 @@ namespace SsSport.Drive.Api.IntegrationTests.Links;
 /// <summary>
 /// The email gate (L-2): a viewer asks for a 6-digit code for an email the link admits, types it in, and gets a device
 /// remembered for 90 days and a one-day session. Codes last 10 minutes and 5 tries; new codes wait 60 seconds and are
-/// capped per hour. Tokens are stored only as hashes.
+/// capped per hour. Tokens are stored only as hashes. Forwards (L-3) wait for an admin's Keep in the bot before they open;
+/// Block shuts the email out of the link.
 /// </summary>
 public sealed class ViewerGateEndpointTests : IAsyncLifetime
 {
@@ -35,6 +37,15 @@ public sealed class ViewerGateEndpointTests : IAsyncLifetime
 
     /// <summary>An admin, who creates the links.</summary>
     private const long AdminTelegramId = 801;
+
+    /// <summary>An analyst, who may not decide on forwards.</summary>
+    private const long AnalystTelegramId = 802;
+
+    /// <summary>The webhook secret.</summary>
+    private const string WebhookSecret = "viewer-gate-secret";
+
+    /// <summary>A forwarded email.</summary>
+    private const string ForwardEmail = "scout@other.com";
 
     /// <summary>The recipient's email.</summary>
     private const string RecipientEmail = "marco@lube.it";
@@ -47,6 +58,12 @@ public sealed class ViewerGateEndpointTests : IAsyncLifetime
 
     /// <summary>Catches the codes the API sends.</summary>
     private readonly RecordingEmailCodeSender _mail = new();
+
+    /// <summary>Records the bot's messages.</summary>
+    private readonly RecordingMessenger _bot = new();
+
+    /// <summary>The last Telegram update id used.</summary>
+    private int _updateId;
 
     /// <summary>The API under test.</summary>
     private WebApplicationFactory<Program> _api = null!;
@@ -65,14 +82,14 @@ public sealed class ViewerGateEndpointTests : IAsyncLifetime
             {
                 ["ConnectionStrings:DefaultConnection"] = _postgres.GetConnectionString(),
                 ["Telegram:BotToken"] = BotToken,
-                ["Telegram:WebhookSecret"] = "viewer-gate-secret",
+                ["Telegram:WebhookSecret"] = WebhookSecret,
                 ["Telegram:Mode"] = "Webhook",
                 ["Viewer:TokenKey"] = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
                 ["RateLimiting:LinkPermitsPerMinute"] = "1000",
             }));
             builder.ConfigureTestServices(services =>
             {
-                services.Replace(ServiceDescriptor.Singleton<ITelegramMessenger>(new RecordingMessenger()));
+                services.Replace(ServiceDescriptor.Singleton<ITelegramMessenger>(_bot));
                 services.Replace(ServiceDescriptor.Singleton<IEmailCodeSender>(_mail));
                 services.Replace(ServiceDescriptor.Singleton<TimeProvider>(_clock));
                 services.UseInlineBotNotices();
@@ -81,8 +98,11 @@ public sealed class ViewerGateEndpointTests : IAsyncLifetime
         await DatabaseMigrator.MigrateAsync(_api.Services, TestContext.Current.CancellationToken);
 
         using var scope = _api.Services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<IRepository<User, Guid>>()
-            .Add(User.CreateFirstAdmin(AdminTelegramId, "Owner", EmailAddress.Create("owner@ss-sport.co"), _clock.GetUtcNow()));
+        var users = scope.ServiceProvider.GetRequiredService<IRepository<User, Guid>>();
+        users.Add(User.CreateFirstAdmin(AdminTelegramId, "Owner", EmailAddress.Create("owner@ss-sport.co"), _clock.GetUtcNow()));
+        var analyst = User.RequestAccess(AnalystTelegramId, "analyst", "Analyst", _clock.GetUtcNow());
+        analyst.Approve(Role.Analyst);
+        users.Add(analyst);
         await scope.ServiceProvider.GetRequiredService<IUnitOfWork>().SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
@@ -353,18 +373,162 @@ public sealed class ViewerGateEndpointTests : IAsyncLifetime
         newest.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
-    /// <summary>A forwarded link opens for another email after the code, and the session says it is a forward.</summary>
+    /// <summary>
+    /// A forward's right code trusts the device but opens nothing: no session until an admin keeps it. Every active admin
+    /// is told in the bot, with the link, the recipient, the player and the full email, and Keep / Block buttons.
+    /// </summary>
     [Fact]
-    public async Task A_forward_is_admitted_and_marked()
+    public async Task A_forward_waits_for_an_admin()
     {
         var code = await CreateLinkAsync();
 
-        var access = await VerifyAsync(code, "scout@other.com");
+        using var verified = await VerifyRawAsync(code, ForwardEmail);
 
-        using var session = await SessionAsync(code, access.SessionToken);
-        using var body = await ReadJsonAsync(session);
-        body.RootElement.GetProperty("email").GetString().Should().Be("scout@other.com");
-        body.RootElement.GetProperty("isForward").GetBoolean().Should().BeTrue();
+        var root = verified.RootElement;
+        root.GetProperty("awaitingApproval").GetBoolean().Should().BeTrue();
+        root.GetProperty("deviceToken").GetString().Should().MatchRegex("^[A-Za-z0-9_-]{43}$");
+        root.GetProperty("sessionToken").ValueKind.Should().Be(JsonValueKind.Null);
+        root.GetProperty("sessionExpiresAt").ValueKind.Should().Be(JsonValueKind.Null);
+        (await QueryAsync(db => db.Set<ViewerSession>().CountAsync(TestContext.Current.CancellationToken))).Should().Be(0);
+
+        using var open = await OpenAsync(code, root.GetProperty("deviceToken").GetString());
+        open.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        using var openBody = await ReadJsonAsync(open);
+        openBody.RootElement.GetProperty("code").GetString().Should().Be("share_link.forward_pending");
+
+        var alert = ForwardAlert();
+        alert.Text.Should().Contain(code).And.Contain(ForwardEmail).And.Contain("Marco Rossi").And.Contain("Arash Tehrani");
+        alert.Keyboard!.Rows.SelectMany(row => row).Should().HaveCount(2);
+        ForwardAlerts(AnalystTelegramId).Should().BeEmpty();
+    }
+
+    /// <summary>Keep opens the link on the waiting device, as a forward; the alert says who kept it and the decision is audited.</summary>
+    [Fact]
+    public async Task Keep_opens_the_forward()
+    {
+        var code = await CreateLinkAsync();
+        using var verified = await VerifyRawAsync(code, ForwardEmail);
+        var deviceToken = verified.RootElement.GetProperty("deviceToken").GetString();
+
+        await PressAsync(AdminTelegramId, ForwardButton(0));
+
+        using var open = await OpenAsync(code, deviceToken);
+        open.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var openBody = await ReadJsonAsync(open);
+        using var session = await SessionAsync(code, openBody.RootElement.GetProperty("sessionToken").GetString()!);
+        using var sessionBody = await ReadJsonAsync(session);
+        sessionBody.RootElement.GetProperty("email").GetString().Should().Be(ForwardEmail);
+        sessionBody.RootElement.GetProperty("isForward").GetBoolean().Should().BeTrue();
+
+        var edit = _bot.ToChat(AdminTelegramId).Last(call => call.Kind == "Edit");
+        edit.Text.Should().Contain("Owner").And.Contain(ForwardEmail);
+        edit.Keyboard.Should().BeNull();
+        var actions = await QueryAsync(db => db.Set<AuditEntry>().Select(entry => entry.Action).ToListAsync(TestContext.Current.CancellationToken));
+        actions.Should().Contain("share_link.forward_kept");
+    }
+
+    /// <summary>Once kept, the forward verifies on another device and opens at once, and the admins are not told again.</summary>
+    [Fact]
+    public async Task A_kept_forward_opens_on_other_devices_without_a_new_alert()
+    {
+        var code = await CreateLinkAsync();
+        using (await VerifyRawAsync(code, ForwardEmail))
+        {
+        }
+
+        await PressAsync(AdminTelegramId, ForwardButton(0));
+        _clock.Advance(TimeSpan.FromSeconds(61));
+
+        using var again = await VerifyRawAsync(code, ForwardEmail);
+
+        again.RootElement.GetProperty("awaitingApproval").GetBoolean().Should().BeFalse();
+        again.RootElement.GetProperty("sessionToken").GetString().Should().NotBeNullOrEmpty();
+        ForwardAlerts(AdminTelegramId).Should().ContainSingle();
+    }
+
+    /// <summary>Block forgets the email's devices on the link, and the email cannot ask for a code there again.</summary>
+    [Fact]
+    public async Task Block_shuts_the_forward_out()
+    {
+        var code = await CreateLinkAsync();
+        using var verified = await VerifyRawAsync(code, ForwardEmail);
+        var deviceToken = verified.RootElement.GetProperty("deviceToken").GetString();
+
+        await PressAsync(AdminTelegramId, ForwardButton(1));
+
+        using var open = await OpenAsync(code, deviceToken);
+        open.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        (await QueryAsync(db => db.Set<TrustedDevice>().CountAsync(TestContext.Current.CancellationToken))).Should().Be(0);
+
+        _clock.Advance(TimeSpan.FromSeconds(61));
+        using var ask = await PostAsync($"/links/{code}/email-code", new { email = ForwardEmail });
+        ask.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        using var askBody = await ReadJsonAsync(ask);
+        askBody.RootElement.GetProperty("code").GetString().Should().Be("share_link.email_not_allowed");
+
+        var actions = await QueryAsync(db => db.Set<AuditEntry>().Select(entry => entry.Action).ToListAsync(TestContext.Current.CancellationToken));
+        actions.Should().Contain("share_link.forward_blocked");
+    }
+
+    /// <summary>A code asked for before the block cannot be used after it.</summary>
+    [Fact]
+    public async Task A_code_from_before_the_block_does_not_open()
+    {
+        var code = await CreateLinkAsync();
+        using (await VerifyRawAsync(code, ForwardEmail))
+        {
+        }
+
+        _clock.Advance(TimeSpan.FromSeconds(61));
+        using (var asked = await PostAsync($"/links/{code}/email-code", new { email = ForwardEmail }))
+        {
+            asked.StatusCode.Should().Be(HttpStatusCode.Accepted);
+        }
+
+        await PressAsync(AdminTelegramId, ForwardButton(1));
+        var sent = _mail.Sent.Last(item => item.To.Value == ForwardEmail).Code;
+
+        using var response = await PostAsync($"/links/{code}/verify", new { email = ForwardEmail, code = sent });
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        using var body = await ReadJsonAsync(response);
+        body.RootElement.GetProperty("code").GetString().Should().Be("share_link.email_not_allowed");
+        (await QueryAsync(db => db.Set<TrustedDevice>().CountAsync(TestContext.Current.CancellationToken))).Should().Be(0);
+    }
+
+    /// <summary>Only admins decide: an analyst's press is refused and the forward keeps waiting; a second decision changes nothing.</summary>
+    [Fact]
+    public async Task Only_the_first_admin_decision_counts()
+    {
+        var code = await CreateLinkAsync();
+        using var verified = await VerifyRawAsync(code, ForwardEmail);
+        var deviceToken = verified.RootElement.GetProperty("deviceToken").GetString();
+
+        await PressAsync(AnalystTelegramId, ForwardButton(1));
+        _bot.Calls.Should().ContainSingle(call => call.Kind == "Answer" && call.ShowAlert);
+        using (var stillWaiting = await OpenAsync(code, deviceToken))
+        {
+            stillWaiting.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
+
+        await PressAsync(AdminTelegramId, ForwardButton(0));
+        await PressAsync(AdminTelegramId, ForwardButton(1));
+
+        using var open = await OpenAsync(code, deviceToken);
+        open.StatusCode.Should().Be(HttpStatusCode.OK);
+        _bot.ToChat(AdminTelegramId).Last(call => call.Kind == "Edit").Text.Should().Contain("already");
+    }
+
+    /// <summary>The recipient's own email never counts as a forward: no alert.</summary>
+    [Fact]
+    public async Task The_recipient_is_not_a_forward()
+    {
+        var code = await CreateLinkAsync();
+
+        await VerifyAsync(code, RecipientEmail);
+
+        ForwardAlerts(AdminTelegramId).Should().BeEmpty();
+        (await QueryAsync(db => db.Set<LinkForward>().CountAsync(TestContext.Current.CancellationToken))).Should().Be(0);
     }
 
     /// <summary>With forwarding off, another email is refused before any code is sent.</summary>
@@ -481,6 +645,63 @@ public sealed class ViewerGateEndpointTests : IAsyncLifetime
             root.GetProperty("deviceExpiresAt").GetDateTimeOffset(),
             root.GetProperty("sessionToken").GetString()!,
             root.GetProperty("sessionExpiresAt").GetDateTimeOffset());
+    }
+
+    /// <summary>Asks for a code, reads it from the mail and verifies it; expects 200 and returns the body as it is.</summary>
+    /// <param name="code">The link code.</param>
+    /// <param name="email">The email.</param>
+    /// <returns>The response body.</returns>
+    private async Task<JsonDocument> VerifyRawAsync(string code, string email)
+    {
+        using (var asked = await PostAsync($"/links/{code}/email-code", new { email }))
+        {
+            asked.StatusCode.Should().Be(HttpStatusCode.Accepted);
+        }
+
+        var sent = _mail.Sent.Last(item => item.To.Value == email).Code;
+        using var response = await PostAsync($"/links/{code}/verify", new { email, code = sent });
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        return await ReadJsonAsync(response);
+    }
+
+    /// <summary>Gets the forward alert the admin received.</summary>
+    /// <returns>The bot message.</returns>
+    private BotCall ForwardAlert() => ForwardAlerts(AdminTelegramId).Should().ContainSingle().Subject;
+
+    /// <summary>Gets the forward alerts a user received: the messages with Keep / Block buttons.</summary>
+    /// <param name="telegramId">The user.</param>
+    /// <returns>The alerts, in order.</returns>
+    private List<BotCall> ForwardAlerts(long telegramId) =>
+        [.. _bot.ToChat(telegramId).Where(call => call.Kind == "Send" && call.Keyboard?.Rows.SelectMany(row => row).Any(button => button.CallbackData.StartsWith("fwd:", StringComparison.Ordinal)) == true)];
+
+    /// <summary>Gets the callback data of a button of the forward alert.</summary>
+    /// <param name="index">0 for Keep, 1 for Block.</param>
+    /// <returns>The callback data.</returns>
+    private string ForwardButton(int index) => ForwardAlert().Keyboard!.Rows.SelectMany(row => row).ElementAt(index).CallbackData;
+
+    /// <summary>Presses a bot button as a Telegram user, through the webhook.</summary>
+    /// <param name="fromId">Who presses.</param>
+    /// <param name="data">The callback data.</param>
+    /// <returns>A task that completes when the API answered 200.</returns>
+    private async Task PressAsync(long fromId, string data)
+    {
+        var update = new
+        {
+            update_id = Interlocked.Increment(ref _updateId),
+            callback_query = new
+            {
+                id = $"cb{Interlocked.Increment(ref _updateId)}",
+                from = new { id = fromId, is_bot = false, first_name = "Reza", username = $"reza_{fromId}" },
+                chat_instance = "1",
+                data,
+                message = new { message_id = 5, date = 1761379200, chat = new { id = fromId, type = "private" }, text = "alert" },
+            },
+        };
+        using var client = Client();
+        using var request = new HttpRequestMessage(HttpMethod.Post, new Uri("/telegram/webhook", UriKind.Relative)) { Content = JsonContent.Create(update) };
+        request.Headers.Add("X-Telegram-Bot-Api-Secret-Token", WebhookSecret);
+        using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     /// <summary>Asks for a session on a device.</summary>

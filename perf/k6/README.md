@@ -279,3 +279,22 @@ Since D-14, EF Core logs at Warning: no SQL command is logged unless it fails or
 - **It writes data.** Each `create_player` iteration adds a player and a Drive folder; a peak-200 `load` run adds about 4 000 of each. Run it on a throwaway database or on staging only, never on production.
 - **Each run gets its own Volleybox id window** of 100 000 ids between 100 000 000 and 999 999 999 (Volleybox ids have at most 9 digits), chosen by the start minute. Two runs started in the same minute share a window, and `create_player` would then hit `player.volleybox_taken`. Wait a minute between runs.
 - **The bot token never leaves the machine:** k6 only uses it to sign. It is not logged, and the API logs only rejection reasons.
+
+## Personal link gate with forwarding (L-3) and clean-up (L-2b)
+
+L-3 adds one indexed lookup (`link_forwards` by link and email) to `POST /links/{code}/email-code` for forward emails, and to `/verify` and `/session` for forwards. L-2b adds no request work: it is a daily job. The gate scenarios of `viewer-links.js` cover these endpoints. That script arrives with V-2b (PR #57), so this run used its copy from that branch, with no `SESSION_TOKEN`: only the gate scenarios ran. `email_code` sends each request from a fresh forward address, so it runs the new lookup every time.
+
+### Results (2026-11-12, local Windows machine, API in Release as Staging, PostgreSQL 17 in Docker, pool 40)
+
+Seed: one published player on one Personal link, made in SQL. Codes went to a pickup directory (`Email__PickupDirectory`; Production refuses it, hence Staging). Rate limits were raised as above, and `Security__TrustedProxies=0.0.0.0/0,::/0` was set. Two other local stacks (`ssd-live`, `ssd-hardening`) were running idle on the same machine.
+
+| Run (`SEND_CODES=1`) | Requests | Rate | Failed | p95 gate card | p95 unknown link | p95 wrong code | p95 stale device | p95 email code |
+|---|---|---|---|---|---|---|---|---|
+| `smoke` | 365 | 12/s | 0 | 24.4 ms | 15.1 ms | 23.3 ms | 23.6 ms | 82.3 ms |
+| `load`, peak 20 | 2 296 | 11/s | 0 | 12.8 ms | 9.5 ms | 12.1 ms | 13.0 ms | 46.2 ms |
+| `load`, peak 50 | 5 593 | 27/s | 0 | 21.9 ms | 14.5 ms | 19.0 ms | 19.3 ms | 69.1 ms |
+
+- Every threshold passed, and all checks passed (0 failed of 8 251). All 761 email jobs succeeded.
+- The rates are lower than V-2b's runs at the same `PEAK_RATE`, because the viewer scenarios (most of the traffic) did not run. The numbers measure the gate alone.
+- A manual pass on the same build confirmed the forward flow: code request 202; verify 200 with `awaitingApproval: true`, a device token and no session; `/session` 403 `share_link.forward_pending`; one `Pending` row in `link_forwards`.
+- **Log noise:** the expected 401/404 answers of `stale_device` and `unknown_link` are logged by `LoggingBehavior` as `fail` (Error) with a stack trace: 2 552 entries in this run. That predates L-3, but it will fill Loki with errors that are not errors.

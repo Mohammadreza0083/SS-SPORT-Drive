@@ -675,7 +675,7 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
 
 ## 7. Viewer access
 
-- **Forwarding:** anyone may open a forwarded personal link after verifying their email with an OTP code. Every forward is logged, and admins are alerted with Keep / Block actions.
+- **Forwarding:** a forwarded personal link opens for another email only after that email is verified with an OTP code **and an admin keeps it** (owner, 2026-11-12, replacing "anyone may open after the OTP"). Every forward is logged, and admins are alerted with Keep / Block actions.
 - **No `/p/{slug}` public showcase pages.** Only personal `/r/{code}` links show content.
 - **Personal share links (L-1, built 2026-11-01; the owner approved starting L-1, the choices below are to be confirmed):**
   - **Model (brief §5):**
@@ -705,7 +705,7 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
     - One of the recipient's emails always passes.
     - Another email passes as a **forward** when the link allows forwarding and the scope fits (`SameDomain` = the domain of one of the recipient's emails).
     - Anything else is refused with 422 `share_link.email_not_allowed`.
-    - L-3 adds the forward alert and Keep / Block.
+    - L-3 adds the forward alert and Keep / Block (below).
   - **Codes:**
     - 6 digits, valid **10 minutes**, **5 tries**; the 5th wrong try spends the code (`email_code.exhausted`).
     - A new code may be asked for after **60 seconds**, at most **5 codes per email per link per hour** (429 `email_code.too_many`, with `Retry-After`).
@@ -728,6 +728,25 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
   - **Rate limits:** `/links/*` has its own per-address budget, `RateLimiting__LinkPermitsPerMinute` (30), on top of the per-email limits above.
   - **Logging:** wrong codes, spent codes and refused emails are structured warnings with the link id only, never the email or code.
   - **After the gate:** the real player page is V-2b (SSD-125). Until it lands, `/r/{code}` with a session shows the gate's "You're in" step.
+- **Forwards: alert, Keep / Block (L-3, owner-approved 2026-11-12):**
+  - **No access until an admin keeps it (owner's change to the plan).** The forward's right code trusts the device for 90 days but starts no session. The gate shows "Waiting for approval"; once kept, the same device opens without a new code.
+  - **Record:** one `link_forwards` row per link and email, made the first time that email verifies. It keeps the status (`Pending`, `Kept`, `Blocked`), who decided and when. These rows are the audit trail of who a link reached and are never purged.
+  - **Alert:** every active admin gets a bot message at once with the link code, the recipient, the player names, the full email, and **Keep** / **Block** buttons. It is exempt from the notice rules (T-8), like access requests. The email appears only in this bot message, never in logs. A second verification of the same email does not alert again.
+  - **Keep:** the link opens for the email on every device it verifies on. The alert is replaced by "Kept by …".
+  - **Block:**
+    - The email's trusted devices and sessions on the link are deleted in the same save.
+    - New codes for the email on that link get the same 422 `share_link.email_not_allowed` as any email the link does not admit, so the blocked person cannot tell they were blocked.
+    - A code asked for before the block no longer opens.
+  - **Who:** only active admins. Another user's press gets "Only admins can keep or block forwarded links" and is logged as a warning (suspicious activity, §1b).
+  - **Final:** the first decision stands; a later press only says who decided. Changing it, and the list of forwards, come with the link page of the admin console (A-4).
+  - **Audit:** `share_link.forward_kept` / `share_link.forward_blocked`, target `LinkForward`, with the link id and no email.
+  - **API:** `POST /links/{code}/verify` answers 200 with `awaitingApproval: true`, the device token and a null session. `POST /links/{code}/session` answers 403 `share_link.forward_pending` for a waiting device.
+- **Gate clean-up (L-2b, owner-approved 2026-11-12):**
+  - A daily Hangfire job (`gate-purge`, 00:00 UTC = 03:30 Tehran, registered by `migrate`) deletes, in SQL batches of 1,000 (at most 100,000 rows per table per run):
+    - email codes 1 day after they expire;
+    - viewer sessions 7 days after they end;
+    - trusted devices 7 days after their 90 days end.
+  - Forward records stay (see above).
 - **Public home page** (`drive.ss-sport.co`):
   - Visitors search players by name, with a position filter.
   - A result shows the full player page (photo, name, position, flag, counts), but **videos, stats and PDFs are blurred and locked**. The backend must not send real media or document URLs for locked pages.
@@ -843,7 +862,7 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
 |---|---|---|
 | 1 | Positions / DS | **Resolved:** DS added |
 | 2 | Public showcase `/p/` | **Resolved:** none. Replaced by a public search home with locked pages + request access |
-| 3 | Forwarding default | **Resolved:** any email, OTP-verified, admins notified |
+| 3 | Forwarding default | **Resolved:** any email, OTP-verified, opens only after an admin keeps it (2026-11-12) |
 | 4 | Contact CTA | **Resolved:** email only, `info@ss-sport.co` |
 | 5 | Email provider | **Resolved:** Resend (OTP primary), Brevo (OTP fallback), Google SMTP (everything else), all via Hangfire |
 | 6 | Archive players without Volleybox | **Resolved:** not published; waiting list, completed manually by an admin |

@@ -42,8 +42,20 @@ export type CodeRequest =
   | { kind: "sent"; resendAfterSeconds: number }
   | { kind: "refused"; code: string | null; message: string | null; retryAfterSeconds: number | null };
 
-/** The outcome of typing a code. */
-export type CodeCheck = { kind: "verified" } | { kind: "refused"; code: string | null; message: string | null; attemptsLeft: number | null };
+/**
+ * The outcome of typing a code. `pending`: the email is a forward an admin has not kept yet (L-3); the device is
+ * remembered, but the link stays closed.
+ */
+export type CodeCheck =
+  | { kind: "verified" }
+  | { kind: "pending" }
+  | { kind: "refused"; code: string | null; message: string | null; attemptsLeft: number | null };
+
+/** What opening the link from this device gave: a session, a forward still waiting for an admin, or the gate. */
+export type DeviceOpening = "opened" | "pending" | "gate";
+
+/** The code the API answers for a forward no admin has kept yet. */
+const FORWARD_PENDING = "share_link.forward_pending";
 
 /** The parts of a ProblemDetails body the gate reads. */
 type Problem = { code: string | null; message: string | null; attemptsLeft: number | null };
@@ -110,18 +122,24 @@ export async function requestCode(linkCode: string, email: string, fetchImpl: ty
 }
 
 /**
- * Types a code; on success the route has set the device and session cookies.
+ * Types a code; on success the route has set the device and session cookies (only the device cookie for a forward
+ * that waits for an admin).
  *
  * @param linkCode - The link code.
  * @param email - The email the code went to.
  * @param code - The six digits.
  * @param fetchImpl - The fetch to use (tests pass a stub).
- * @returns Verified, or why not.
+ * @returns Verified, pending approval, or why not.
  */
 export async function verifyCode(linkCode: string, email: string, code: string, fetchImpl: typeof fetch = fetch): Promise<CodeCheck> {
   try {
     const response = await post(linkCode, "verify", { email: email.trim(), code }, fetchImpl);
-    return response.ok ? { kind: "verified" } : { kind: "refused", ...(await readProblem(response)) };
+    if (!response.ok) {
+      return { kind: "refused", ...(await readProblem(response)) };
+    }
+
+    const body = (await response.json()) as { awaitingApproval?: unknown };
+    return body.awaitingApproval === true ? { kind: "pending" } : { kind: "verified" };
   } catch {
     return { kind: "refused", code: null, message: null, attemptsLeft: null };
   }
@@ -133,13 +151,18 @@ export async function verifyCode(linkCode: string, email: string, code: string, 
  *
  * @param linkCode - The link code.
  * @param fetchImpl - The fetch to use (tests pass a stub).
- * @returns True when the link opened without the gate.
+ * @returns `opened`, `pending` for a forward still waiting for an admin (L-3), or `gate` when the email gate is needed.
  */
-export async function openWithDevice(linkCode: string, fetchImpl: typeof fetch = fetch): Promise<boolean> {
+export async function openWithDevice(linkCode: string, fetchImpl: typeof fetch = fetch): Promise<DeviceOpening> {
   try {
-    return (await post(linkCode, "session", undefined, fetchImpl)).ok;
+    const response = await post(linkCode, "session", undefined, fetchImpl);
+    if (response.ok) {
+      return "opened";
+    }
+
+    return response.status === 403 && (await readProblem(response)).code === FORWARD_PENDING ? "pending" : "gate";
   } catch {
-    return false;
+    return "gate";
   }
 }
 
