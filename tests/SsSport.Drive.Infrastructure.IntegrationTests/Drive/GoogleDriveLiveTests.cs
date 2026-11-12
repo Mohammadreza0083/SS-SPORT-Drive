@@ -45,5 +45,15 @@ public sealed class GoogleDriveLiveTests
         summary.Name.Should().NotBeNullOrWhiteSpace();
         TestContext.Current.SendDiagnosticMessage(
             $"Live Drive folder: {summary.VideoCount} videos, {summary.DocumentCount} documents, {summary.ScoutCount} scout files, {summary.OtherCount} other, {summary.TotalBytes} bytes, truncated={summary.IsTruncated}");
+
+        // I-1: the ingest listing agrees with the counts, and Drive gives an md5 for every binary file.
+        var listing = await reader.ListAsync(player.Id, cancellationToken);
+
+        listing.Status.Should().Be(DriveFolderStatus.Found);
+        listing.Files.Count.Should().BeLessThanOrEqualTo(summary.VideoCount + summary.DocumentCount + summary.ScoutCount);
+        (listing.Files.Count + listing.SkippedCount).Should().Be(summary.VideoCount + summary.DocumentCount + summary.ScoutCount + summary.OtherCount);
+        listing.Files.Should().OnlyContain(file => file.Md5 != null && file.Md5.Length == 32 && file.SizeBytes > 0);
+        TestContext.Current.SendDiagnosticMessage(
+            $"Live Drive listing: {listing.Files.Count} files, {listing.SkippedCount} skipped, deepest subfolder level {listing.Files.Select(file => file.Subfolders.Count).DefaultIfEmpty().Max()}");
     }
 }
