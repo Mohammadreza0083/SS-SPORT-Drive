@@ -2,6 +2,7 @@ using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using SsSport.Drive.Application.Abstractions.Authentication;
+using SsSport.Drive.Application.Accounts;
 using SsSport.Drive.Application.Abstractions.Email;
 using SsSport.Drive.Application.Abstractions.Events;
 using SsSport.Drive.Application.Behaviors;
@@ -9,6 +10,7 @@ using SsSport.Drive.Application.Emails;
 using SsSport.Drive.Application.Events;
 using SsSport.Drive.Application.Paging;
 using SsSport.Drive.Application.Telegram.Notices;
+using SsSport.Drive.Domain.Accounts;
 
 namespace SsSport.Drive.Application;
 
@@ -40,6 +42,8 @@ public static class DependencyInjection
         services.Scan(AssemblyReference.Assembly);
         services.AddScoped<IEmailComposer, GateCodeComposer>();
         services.AddScoped<IEmailComposer, ForwardKeptComposer>();
+        services.AddScoped<IEmailComposer>(provider => ActivatorUtilities.CreateInstance<SignInEmailComposer>(provider, SignInAudience.Admin));
+        services.AddScoped<IEmailComposer>(provider => ActivatorUtilities.CreateInstance<SignInEmailComposer>(provider, SignInAudience.Viewer));
         services.TryAddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
         services.TryAddScoped<IBackgroundEventRunner, BackgroundEventRunner>();
         services.TryAddScoped<IBotNoticeOutbox, BotNoticeOutbox>();

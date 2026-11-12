@@ -18,6 +18,7 @@ using SsSport.Drive.Application.Abstractions.Persistence;
 using SsSport.Drive.Application.Abstractions.Security;
 using SsSport.Drive.Application.Abstractions.Storage;
 using SsSport.Drive.Application.Abstractions.Web;
+using SsSport.Drive.Application.Tracking;
 using SsSport.Drive.Application.Telegram;
 using SsSport.Drive.Application.Telegram.Notices;
 using SsSport.Drive.Infrastructure.BackgroundJobs;
@@ -86,6 +87,7 @@ public static class DependencyInjection
         services.AddScoped<IPlayerListReader, PlayerListReader>();
         services.AddScoped<ILinkPlayerReader, LinkPlayerReader>();
         services.AddScoped<IShareLinkListReader, ShareLinkListReader>();
+        services.AddScoped<IViewingReader, ViewingReader>();
 
         // Background jobs (T-6c): Hangfire on PostgreSQL, built lazily from the same data source, so a host without a
         // database still starts. The schema comes from `migrate`, never from start-up. Everything Hangfire needs is

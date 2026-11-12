@@ -15,6 +15,20 @@ namespace SsSport.Drive.Api.ErrorHandling;
 /// <param name="problemDetails">Writes ProblemDetails responses.</param>
 public sealed class ApplicationExceptionHandler(IProblemDetailsService problemDetails) : IExceptionHandler
 {
+    /// <summary>Builds the 404 answer, with the stable code when the exception has one.</summary>
+    /// <param name="notFound">The exception.</param>
+    /// <returns>The problem.</returns>
+    private static ProblemDetails NotFoundProblem(NotFoundException notFound)
+    {
+        var problem = new ProblemDetails { Status = StatusCodes.Status404NotFound, Title = notFound.Message };
+        if (notFound.Code is not null)
+        {
+            problem.Extensions["code"] = notFound.Code;
+        }
+
+        return problem;
+    }
+
     /// <summary>Handles validation, authentication and authorization failures.</summary>
     /// <param name="httpContext">The current request.</param>
     /// <param name="exception">The unhandled exception.</param>
@@ -40,11 +54,7 @@ public sealed class ApplicationExceptionHandler(IProblemDetailsService problemDe
                 Status = StatusCodes.Status403Forbidden,
                 Title = "You do not have access to this action.",
             },
-            NotFoundException notFound => new ProblemDetails
-            {
-                Status = StatusCodes.Status404NotFound,
-                Title = notFound.Message,
-            },
+            NotFoundException notFound => NotFoundProblem(notFound),
             ShareLinkUnavailableException unavailableLink => new ProblemDetails
             {
                 Status = StatusCodes.Status404NotFound,
@@ -69,6 +79,18 @@ public sealed class ApplicationExceptionHandler(IProblemDetailsService problemDe
                 Status = StatusCodes.Status403Forbidden,
                 Title = pending.Message,
                 Extensions = { ["code"] = ForwardPendingException.Code },
+            },
+            SignInInvalidException invalid => new ProblemDetails
+            {
+                Status = StatusCodes.Status401Unauthorized,
+                Title = invalid.Message,
+                Extensions = { ["code"] = SignInInvalidException.Code },
+            },
+            SignInRequiredException required => new ProblemDetails
+            {
+                Status = StatusCodes.Status401Unauthorized,
+                Title = required.Message,
+                Extensions = { ["code"] = SignInRequiredException.Code },
             },
             TooManyRequestsException tooMany => new ProblemDetails
             {
