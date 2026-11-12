@@ -43,6 +43,14 @@ public sealed class PositionTests
             .Should().Equal("S", "OH", "OPP", "MB", "L", "DS");
     }
 
+    /// <summary>Each position has the English label the player page shows next to the code.</summary>
+    [Fact]
+    public void Exposes_display_labels()
+    {
+        Enum.GetValues<Position>().Select(position => position.Label())
+            .Should().Equal("Setter", "Outside hitter", "Opposite", "Middle blocker", "Libero", "Defensive specialist");
+    }
+
     /// <summary>One or two distinct positions are accepted, in order; the first is primary.</summary>
     [Fact]
     public void Keeps_order_with_the_first_as_primary()

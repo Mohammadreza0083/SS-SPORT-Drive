@@ -254,3 +254,54 @@ Since D-14, EF Core logs at Warning: no SQL command is logged unless it fails or
 - **It writes data.** Each `create_player` iteration adds a player and a Drive folder; a peak-200 `load` run adds about 4 000 of each. Run it on a throwaway database or on staging only, never on production.
 - **Each run gets its own Volleybox id window** of 100 000 ids between 100 000 000 and 999 999 999 (Volleybox ids have at most 9 digits), chosen by the start minute. Two runs started in the same minute share a window, and `create_player` would then hit `player.volleybox_taken`. Wait a minute between runs.
 - **The bot token never leaves the machine:** k6 only uses it to sign. It is not logged, and the API logs only rejection reasons.
+
+## `viewer-links.js`: personal links (L-2 gate, V-2b viewer content)
+
+The script calls the API the way the web app does for a viewer: tokens in `X-Viewer-Device` / `X-Viewer-Session` headers, never cookies.
+
+| Scenario | Endpoint | Expected | Threshold (p95) |
+|---|---|---|---|
+| `gate_card` | `GET /links/{code}` | 200 | < 150 ms (p99 < 300 ms) |
+| `unknown_link` | `GET /links/{unknown}` | 404 | < 100 ms |
+| `wrong_code` | `POST /links/{code}/verify` with a wrong code | 422 | < 200 ms |
+| `stale_device` | `POST /links/{code}/session` with a device token never issued | 401 | < 150 ms |
+| `email_code` (opt-in, `SEND_CODES=1`) | `POST /links/{code}/email-code`, a fresh forward address each time | 202 | < 300 ms |
+| `session` | `GET /links/{code}/session` | 200 | < 150 ms |
+| `content` | `GET /links/{code}/content` | 200 | < 150 ms (p99 < 300 ms) |
+| `players` | `GET /links/{code}/players` | 200 | < 200 ms (p99 < 400 ms) |
+| `player`, `videos`, `documents` | `GET /links/{code}/players/{id}[/videos\|/documents]` | 200 | < 200 ms (p99 < 400 ms) |
+| `photo` | `GET /links/{code}/players/{id}/photo` | 200 (404 when a player has no photo) | < 250 ms |
+| `no_session` | `GET /links/{code}/content` without a token | 401 | < 100 ms |
+
+The viewer scenarios run only with `SESSION_TOKEN`. Smoke runs 30 s at light rates; `load` ramps the player-page reads to `PEAK_RATE`/s (default 50) over 1 min, holds 2 min and ramps down 30 s.
+
+### Run it locally (Docker)
+
+1. **Raise the per-address budgets for the run.** One k6 machine is one address, so add these to `.env` and start the stack (`docker compose up -d --build --wait`). Remove them afterwards:
+
+   ```bash
+   RateLimiting__LinkPermitsPerMinute=1000000
+   RateLimiting__ViewerPermitsPerMinute=1000000
+   ```
+
+2. **Make a link and a session.** Create a link for one or more published players (`POST /admin/links`, or the Mini App), then open the gate once. With `Email__PickupDirectory=.mail` the code lands as an `.eml` file in the API container:
+
+   ```bash
+   curl -s -X POST http://localhost:5080/links/<code>/email-code -H "Content-Type: application/json" -d '{"email":"<recipient email>"}'
+   docker compose exec api sh -c 'grep -h -o "[0-9]\{6\}" .mail/*.eml | tail -1'
+   curl -s -X POST http://localhost:5080/links/<code>/verify -H "Content-Type: application/json" -d '{"email":"<recipient email>","code":"<the code>"}'
+   ```
+
+   The last answer's `sessionToken` lasts one day.
+
+3. **Run it:**
+
+   ```bash
+   docker run --rm -v "$PWD:/work" -w /work grafana/k6:2.2.0 run -e BASE_URL=http://host.docker.internal:5080 -e LINK_CODE=<code> -e RECIPIENT=<recipient email> -e SESSION_TOKEN=<token> -e PROFILE=smoke --summary-export k6-results/viewer-links-smoke.json perf/k6/viewer-links.js
+   ```
+
+### Notes
+
+- **The wrong-code scenario spends the recipient's latest code.** Ask for a new code before you use the link in a browser.
+- **`SEND_CODES=1` queues one email job per request.** Use it only with a pickup directory, never with real email keys.
+- Until ingest (Epic 3) exists, players have no ready videos or documents, so `videos` and `documents` measure the query on an empty result.

@@ -6,6 +6,7 @@ import "@/styles/player.css";
 import "@/styles/player-page.css";
 import "@/styles/document-viewer.css";
 import "@/styles/gate.css";
+import "@/styles/roster.css";
 
 /**
  * Layout of every viewer-facing page (player pages, search, email gate, roster, sign-in): the dark brand

@@ -81,6 +81,7 @@ app.MapTelegramWebhook();
 app.MapMiniApp();
 app.MapShareLinks();
 app.MapViewerGate();
+app.MapViewerContent();
 
 await app.RunAsync();
 

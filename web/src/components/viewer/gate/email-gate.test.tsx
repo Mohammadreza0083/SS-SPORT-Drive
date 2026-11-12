@@ -220,6 +220,33 @@ describe("EmailGate (L-2, canvas Gate)", () => {
 
     expect(await screen.findByRole("heading", { name: "You're in" })).toBeTruthy();
   });
+
+  it("opens the page once the loading bar has run (V-2b)", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    stubRoutes({ session: () => Response.json({ ok: true }) });
+    const onOpened = vi.fn();
+
+    render(<EmailGate link={personal} onOpened={onOpened} />);
+    expect(await screen.findByRole("heading", { name: "You're in" })).toBeTruthy();
+    // Let React run the effects of the "You're in" render before the clock moves.
+    await act(async () => {});
+
+    act(() => vi.advanceTimersByTime(2900));
+    expect(onOpened).not.toHaveBeenCalled();
+    act(() => vi.advanceTimersByTime(200));
+    expect(onOpened).toHaveBeenCalledOnce();
+  });
+
+  it("does not reload a page that is already signed in", () => {
+    vi.useFakeTimers();
+    stubRoutes({});
+    const onOpened = vi.fn();
+
+    render(<EmailGate link={personal} signedIn onOpened={onOpened} />);
+    act(() => vi.advanceTimersByTime(10_000));
+
+    expect(onOpened).not.toHaveBeenCalled();
+  });
 });
 
 describe("LinkUnavailable", () => {

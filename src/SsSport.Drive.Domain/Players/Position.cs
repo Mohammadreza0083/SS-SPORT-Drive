@@ -44,6 +44,20 @@ public static class PositionParser
         ["Defensive Specialist"] = Position.DefensiveSpecialist,
     };
 
+    /// <summary>Gets the English label of a position, as the player page shows it.</summary>
+    /// <param name="position">The position.</param>
+    /// <returns>Setter, Outside hitter, Opposite, Middle blocker, Libero or Defensive specialist.</returns>
+    public static string Label(this Position position) => position switch
+    {
+        Position.Setter => "Setter",
+        Position.OutsideHitter => "Outside hitter",
+        Position.Opposite => "Opposite",
+        Position.MiddleBlocker => "Middle blocker",
+        Position.Libero => "Libero",
+        Position.DefensiveSpecialist => "Defensive specialist",
+        _ => throw new ArgumentOutOfRangeException(nameof(position), position, "Unknown position."),
+    };
+
     /// <summary>Gets the short code of a position.</summary>
     /// <param name="position">The position.</param>
     /// <returns>S, OH, OPP, MB, L or DS.</returns>

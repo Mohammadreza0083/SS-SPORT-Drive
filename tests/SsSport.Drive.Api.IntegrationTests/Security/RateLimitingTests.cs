@@ -21,15 +21,19 @@ public sealed class RateLimitingTests : IDisposable
     /// <summary>A path under the link endpoints that answers 404 without touching the database.</summary>
     private const string LimitedLinkPath = "/links/Ab3xYz/no-such-route";
 
+    /// <summary>A path under the viewer's content reads (V-2b) that answers 404 without touching the database.</summary>
+    private const string ViewerContentPath = "/links/Ab3xYz/players/no-such-route";
+
     /// <summary>The client the tests act as.</summary>
     private const string ClientIp = "198.51.100.7";
 
-    /// <summary>The API host with a tiny budget (3 per minute, 5 for the webhook, 2 for links) so the limit is reached quickly.</summary>
+    /// <summary>The API host with a tiny budget (3 per minute, 5 for the webhook, 2 for links, 4 for viewer content) so the limit is reached quickly.</summary>
     private readonly WebApplicationFactory<Program> _factory = new WebApplicationFactory<Program>()
         .WithWebHostBuilder(builder => builder
             .UseSetting("RateLimiting:PermitsPerMinute", "3")
             .UseSetting("RateLimiting:WebhookPermitsPerMinute", "5")
             .UseSetting("RateLimiting:LinkPermitsPerMinute", "2")
+            .UseSetting("RateLimiting:ViewerPermitsPerMinute", "4")
             .ConfigureLogging(logging => logging.AddFakeLogging())
             .ConfigureTestServices(services => services.AddTransient<IStartupFilter, TestClientAddress>()));
 
@@ -125,6 +129,34 @@ public sealed class RateLimitingTests : IDisposable
         statuses[2].Should().Be(HttpStatusCode.TooManyRequests);
         using var general = await SendAsync(client, LimitedPath, ClientIp);
         general.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    /// <summary>
+    /// A signed-in viewer's content reads (V-2b: <c>GET /links/{code}/content</c> and <c>/players/…</c>, photos included)
+    /// have their own, larger budget, so browsing a roster does not run into the gate's tight one, and they do not use
+    /// it up either. Writes to the same paths stay on the gate's budget.
+    /// </summary>
+    [Fact]
+    public async Task Viewer_content_reads_have_their_own_budget()
+    {
+        using var client = _factory.CreateClient();
+        var statuses = new List<HttpStatusCode>();
+        for (var i = 0; i < 5; i++)
+        {
+            using var response = await SendAsync(client, ViewerContentPath, ClientIp);
+            statuses.Add(response.StatusCode);
+        }
+
+        statuses.Take(4).Should().AllSatisfy(status => status.Should().Be(HttpStatusCode.NotFound));
+        statuses[4].Should().Be(HttpStatusCode.TooManyRequests);
+        using var gate = await SendAsync(client, LimitedLinkPath, ClientIp);
+        gate.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        using var content = await SendAsync(client, "/links/Ab3xYz/content/no-such-route", "198.51.100.9");
+        content.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        using var write = await SendAsync(client, ViewerContentPath, "198.51.100.9", HttpMethod.Post);
+        using var secondWrite = await SendAsync(client, ViewerContentPath, "198.51.100.9", HttpMethod.Post);
+        using var thirdWrite = await SendAsync(client, ViewerContentPath, "198.51.100.9", HttpMethod.Post);
+        thirdWrite.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
     }
 
     /// <summary>Health probes are never limited.</summary>

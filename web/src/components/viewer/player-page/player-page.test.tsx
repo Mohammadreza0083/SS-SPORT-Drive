@@ -46,6 +46,12 @@ describe("PlayerPage", () => {
     expect(container.textContent).not.toContain("Shared privately with");
   });
 
+  it("names the recipient alone when the link has no organisation", () => {
+    render(<PlayerPage data={{ ...samplePlayerPage, recipient: { name: "Jan Demir" } }} />);
+
+    expect(screen.getAllByText((_, el) => el?.textContent === "Prepared for Jan Demir").length).toBeGreaterThan(0);
+  });
+
   it("shows the personal note with its author", () => {
     render(<PlayerPage data={samplePlayerPage} />);
 
