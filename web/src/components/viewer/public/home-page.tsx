@@ -67,6 +67,8 @@ export function HomePage({ data }: HomePageProps) {
               onChange={(event) => setQuery(event.target.value)}
               placeholder={publicCopy.searchPlaceholder}
               autoComplete="off"
+              // Playwright's caret hiding adds a style to the input before React hydrates it; nothing else differs.
+              suppressHydrationWarning
             />
             <span className="ph-count">{resultCountLabel(shown.length)}</span>
           </div>
