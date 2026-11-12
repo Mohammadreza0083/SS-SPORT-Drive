@@ -155,7 +155,7 @@ public sealed class AdminAlertsTests : IAsyncLifetime
     public async Task The_digest_counts_yesterday_and_what_is_waiting()
     {
         var now = DateTimeOffset.UtcNow;
-        var window = DigestWindow.Yesterday(now, TimeZoneInfo.FindSystemTimeZoneById("Asia/Tehran"));
+        var window = DigestWindow.Yesterday(now, TimeZoneInfo.CreateCustomTimeZone("Asia/Tehran", TimeSpan.FromMinutes(210), "Tehran", "Tehran"));
         var player = await AddPlayerAsync();
         var first = await CreateLinkAsync([player], notifyOnOpen: false);
         var second = await CreateLinkAsync([player], notifyOnOpen: false);

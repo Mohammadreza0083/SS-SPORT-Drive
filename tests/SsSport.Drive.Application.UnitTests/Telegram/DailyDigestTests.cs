@@ -10,8 +10,8 @@ namespace SsSport.Drive.Application.UnitTests.Telegram;
 /// </summary>
 public sealed class DailyDigestTests
 {
-    /// <summary>Tehran (UTC+03:30, no daylight saving since 2022).</summary>
-    private static readonly TimeZoneInfo _tehran = TimeZoneInfo.FindSystemTimeZoneById("Asia/Tehran");
+    /// <summary>Tehran: UTC+03:30 all year (no daylight saving since 2022). A fixed zone, because hosts with invariant globalization cannot look IANA ids up.</summary>
+    private static readonly TimeZoneInfo _tehran = TimeZoneInfo.CreateCustomTimeZone("Asia/Tehran", TimeSpan.FromMinutes(210), "Tehran", "Tehran");
 
     /// <summary>Wednesday 11 November 2026.</summary>
     private static readonly DateOnly _day = new(2026, 11, 11);

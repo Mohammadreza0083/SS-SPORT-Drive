@@ -120,6 +120,7 @@ public static partial class ViewerContentMapper
         Videos = facts.VideoCount,
         Minutes = (int)Math.Round(facts.VideoSeconds / 60, MidpointRounding.AwayFromZero),
         Documents = facts.DocumentCount,
+        Matches = facts.ScoutCount,
     };
 
     /// <summary>A length in whole seconds.</summary>

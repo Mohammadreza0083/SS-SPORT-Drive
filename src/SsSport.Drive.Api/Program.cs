@@ -82,6 +82,7 @@ app.MapMiniApp();
 app.MapShareLinks();
 app.MapViewerGate();
 app.MapViewerContent();
+app.MapViewerMedia();
 
 await app.RunAsync();
 

@@ -10,6 +10,9 @@ public enum NoticeKind
 
     /// <summary>An admin published the recipient's player.</summary>
     PlayerPublished,
+
+    /// <summary>An email opened a watched link for the first time (L-7).</summary>
+    LinkOpened,
 }
 
 /// <summary>One bot notice waiting in a <see cref="NoticeBox"/>: a ready-to-send line about one player.</summary>

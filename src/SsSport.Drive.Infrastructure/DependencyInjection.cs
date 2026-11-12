@@ -21,7 +21,10 @@ using SsSport.Drive.Application.Telegram;
 using SsSport.Drive.Application.Telegram.Notices;
 using SsSport.Drive.Infrastructure.BackgroundJobs;
 using SsSport.Drive.Infrastructure.Drive;
+using SsSport.Drive.Application.Links;
+using SsSport.Drive.Application.Telegram.Digest;
 using SsSport.Drive.Infrastructure.Edge;
+using SsSport.Drive.Infrastructure.Scouting;
 using SsSport.Drive.Infrastructure.Email;
 using SsSport.Drive.Infrastructure.Images;
 using SsSport.Drive.Infrastructure.Links;
@@ -83,6 +86,7 @@ public static class DependencyInjection
         services.AddScoped<IPagedReader, PagedReader>();
         services.AddScoped<IPlayerListReader, PlayerListReader>();
         services.AddScoped<ILinkPlayerReader, LinkPlayerReader>();
+        services.AddScoped<IDigestFactsReader, DigestFactsReader>();
         services.AddScoped<IShareLinkListReader, ShareLinkListReader>();
 
         // Background jobs (T-6c): Hangfire on PostgreSQL, built lazily from the same data source, so a host without a
@@ -116,6 +120,8 @@ public static class DependencyInjection
             .Validate(options => options.HlsSigningKey.Length == 0 || EdgeOptions.IsValidSigningKey(options.HlsSigningKey), "Edge__HlsSigningKey must be base64 of at least 32 random bytes (or empty to turn HLS tokens off).")
             .ValidateOnStart();
         services.AddSingleton<IHlsTokenIssuer, HmacHlsTokenIssuer>();
+        services.AddMemoryCache();
+        services.AddSingleton<IScoutMatchCache, MemoryScoutMatchCache>();
 
         // The email gate (L-2): token and code hashes, and the code email (Resend, then Brevo).
         services.AddOptions<ViewerOptions>()
