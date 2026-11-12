@@ -841,6 +841,13 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
     - No download anywhere: context menu blocked, no download button, `controlslist="nodownload"`, and picture-in-picture and casting are off (the moving email overlay of V-4 cannot follow the video into those).
     - Controls auto-hide while playing. On phones the mute button and volume slider are hidden (the device's buttons are used) so the controls fit one row of 44 px targets.
     - `/design/player` is a development-only preview using a public Mux HLS test stream; production answers 404.
+- **Public home and locked player page, front-end (P-1, P-2, P-3 UI, P-7; 2026-11-12):**
+  - Built from the canvas `Home` and `Locked` artboards on sample data, as V-2 was. Previews: `/design/home` and `/design/locked` (development only, 404 in production; `?signedIn=1` shows the signed-in nav and the one-click dialog). The backend half is P-8 (SSD-131).
+  - **Routes:** a home card leads to `/players/{slug}`; Sign in leads to `/signin` (P-5); Sign out is a POST form to `/api/viewer/sign-out` so a prefetch can never sign anyone out; the dialog calls same-origin `/api/public/access-code` and `/api/public/access-requests`.
+  - **Locked page (P-2):** the data type has no field for a media address. Videos are a title, tag and length over a tint; documents a title and page count. A test fails if any media or document address reaches the page.
+  - **Dialog:** email and description, then the 6-digit code (60 s resend wait, same code box as the gate), then "Request sent". A signed-in viewer sends in one click. The description is 1 to 1000 characters; checks in the browser are convenience only. The Turnstile token is passed through when the page provides one; the real widget and its CSP change wait for P-8.
+  - **Any ordinary email works (owner, 2026-11-12):** the box is labelled "Email", not "Work email" (the email gate's box too), and a personal address such as Gmail is accepted. The browser checks only the shape of the address; the backend (P-8) must not require a company domain either.
+  - The canvas's "Preview the email" link and "Any 6 digits work in this prototype" sentence are dropped.
 - **V-2 player page (2026-10-30):**
   - Built from the canvas's Main, Tablet and Mobile artboards. Desktop rules come first; tablet (≤1024 px) and phone (≤640 px) restyle the same markup. Pieces that move between breakpoints (the "Prepared for" ribbon, the personal note) are rendered in each place and shown only where they belong.
   - Data contract `PlayerPageData` (player, recipient, note, stats, videos, documents). Until L-1 serves real personal links, `/design/player-page` shows the canvas's sample player (development only, 404 in production).

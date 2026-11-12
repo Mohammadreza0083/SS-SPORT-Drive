@@ -97,3 +97,6 @@ k6-results/
 __pycache__/
 *.pyc
 .venv/
+
+# Local execution plans written by Claude (not part of the product)
+.claude/plans/
