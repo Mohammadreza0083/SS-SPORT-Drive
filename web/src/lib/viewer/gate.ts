@@ -58,7 +58,7 @@ export type DeviceOpening = "opened" | "pending" | "gate";
 const FORWARD_PENDING = "share_link.forward_pending";
 
 /** The parts of a ProblemDetails body the gate reads. */
-type Problem = { code: string | null; message: string | null; attemptsLeft: number | null };
+export type Problem = { code: string | null; message: string | null; attemptsLeft: number | null };
 
 /**
  * Reads the code, title and tries left of a ProblemDetails response.
@@ -66,7 +66,7 @@ type Problem = { code: string | null; message: string | null; attemptsLeft: numb
  * @param response - The error response.
  * @returns What it says; nulls when the body is not ProblemDetails.
  */
-async function readProblem(response: Response): Promise<Problem> {
+export async function readProblem(response: Response): Promise<Problem> {
   try {
     const body = (await response.json()) as { code?: unknown; title?: unknown; attemptsLeft?: unknown };
     return {
