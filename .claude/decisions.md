@@ -662,6 +662,7 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
   - `white` for the watermark;
   - favicons and app icons.
 - See `brand/README.md`.
+- **Player card (I-5) approved by the owner, 2026-11-14:** the card rendered by the ingest pipeline (PR #68: player name in Barlow Condensed SemiBold on the SS-SPORT brand template, `PlayerImageRenderers`) is accepted as built.
 
 ## 6. Video watermark & media protection
 

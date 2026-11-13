@@ -252,8 +252,8 @@ SS-SPORT Drive/
 |---|---|---|---|
 | 0 | Setup & accounts | 12 / 15 | 🚧 In progress (open: VPS, branch protection, watermark sample) |
 | 1 | Core domain & persistence | 17 / 17 | ✅ Done |
-| 2 | Telegram bot & Mini App | 17 / 17 | ✅ Done (T-6b build steps are in; its demo on real files waits for ingest) |
-| 3 | Ingest, transcode & sync | 8 / 9 | 🚧 In progress (I-1…I-4, I-6…I-9 built; I-5 card design awaits approval; I-9 check on a real link left) |
+| 2 | Telegram bot & Mini App | 17 / 17 | ✅ Done (ingest is in, so T-6b can now be demoed on real files) |
+| 3 | Ingest, transcode & sync | 9 / 9 | ✅ Done (sync, copy, HLS + watermark, thumbnails, PDF pages, QR, cut-out and the approved player card; I-9 still to be checked on a real link once deployed) |
 | 4 | Viewer site & media protection | 10 / 10 | ✅ Done |
 | 5 | Personal links, OTP & tracking | 8 / 11 | 🚧 In progress (L-7 digest numbers, W-2 player heartbeats, W-3 retention left) |
 | 6 | Public search & access requests | 5 / 8 | 🚧 In progress (public home, locked page and request access live on real data; P-4 inbox, P-7 and W-1 sign-in pages left) |
@@ -262,9 +262,9 @@ SS-SPORT Drive/
 | 9 | Deploy & operations | 2 / 10 | 🚧 In progress (O-9 security baseline and O-10 pre-pentest hardening done; CI runs on every PR) |
 | 10 | Performance (k6) | 5 / 11 | 🚧 In progress (Mini App and viewer-link benchmarks done) |
 
-**Overall:** 76 of 123 tasks done (about 62 % by count). The open work is heavier than the done work (ingest, admin console, deploy and the penetration test), so by effort the project is roughly half done.
+**Overall:** 77 of 123 tasks done (about 63 % by count). The open work is heavier than the done work (admin console, archive migration, deploy and the penetration test), so by effort the project is a little over half done.
 
-Work is tracked in Jira (project **SSD**); last synced 2026-11-13.
+Work is tracked in Jira (project **SSD**); last synced 2026-11-14.
 
 ---
 
