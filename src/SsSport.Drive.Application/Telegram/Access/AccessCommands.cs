@@ -1,7 +1,9 @@
 using System.Globalization;
+using FluentValidation;
 using SsSport.Drive.Application.Abstractions.Messaging;
 using SsSport.Drive.Application.Abstractions.Persistence;
 using SsSport.Drive.Application.Users;
+using SsSport.Drive.Application.Validation;
 using SsSport.Drive.Domain.Audit;
 using SsSport.Drive.Domain.Primitives;
 using SsSport.Drive.Domain.Users;
@@ -285,5 +287,37 @@ public sealed class ReviewAccessRequestCommandHandler(IRepository<User, Guid> us
         var entry = await audit.FirstOrDefaultAsync(new LatestAuditEntrySpec("User", Target(requester), ApprovedAction, DeclinedAction), cancellationToken);
         var actor = entry?.ActorUserId is { } actorId ? await users.GetByIdAsync(actorId, cancellationToken) : null;
         return actor?.DisplayName ?? BotTexts.SomeAdmin;
+    }
+}
+
+/// <summary>Validates <see cref="RequestBotAccessCommand"/> on the server (decisions §1b rule 3); malformed input is a 400.</summary>
+public sealed class RequestBotAccessCommandValidator : AbstractValidator<RequestBotAccessCommand>
+{
+    /// <summary>Builds the rules.</summary>
+    public RequestBotAccessCommandValidator()
+    {
+        RuleFor(r => r.Sender).Must(sender => sender is { UserId: > 0 } && sender.ChatId != 0).WithMessage("The Telegram sender is required.").OverridePropertyName("sender");
+    }
+}
+
+/// <summary>Validates <see cref="ReviewAccessRequestCommand"/> on the server (decisions §1b rule 3); malformed input is a 400.</summary>
+public sealed class ReviewAccessRequestCommandValidator : AbstractValidator<ReviewAccessRequestCommand>
+{
+    /// <summary>Builds the rules.</summary>
+    public ReviewAccessRequestCommandValidator()
+    {
+        RuleFor(r => r.ReviewerTelegramId).ValidTelegramId().OverridePropertyName("reviewerTelegramId");
+        RuleFor(r => r.UserId).ValidId().OverridePropertyName("userId");
+        RuleFor(r => r.Decision).IsInEnum().OverridePropertyName("decision");
+    }
+}
+
+/// <summary>Validates <see cref="StartBotCommand"/> on the server (decisions §1b rule 3); malformed input is a 400.</summary>
+public sealed class StartBotCommandValidator : AbstractValidator<StartBotCommand>
+{
+    /// <summary>Builds the rules.</summary>
+    public StartBotCommandValidator()
+    {
+        RuleFor(r => r.Sender).Must(sender => sender is { UserId: > 0 } && sender.ChatId != 0).WithMessage("The Telegram sender is required.").OverridePropertyName("sender");
     }
 }

@@ -157,6 +157,7 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | O-7 | Security checklist pass (brief §12) | Both | Checklist signed off |
 | O-8 | Full penetration test before the final production deploy. First map the attack surface with **/graphify** (knowledge graph of the whole codebase: endpoints, auth paths, data flows, sensitive nodes), then test: OWASP Top 10 / ASVS L2 against staging (auth, OTP, personal links, HLS token, IDOR, admin console, bot/Mini App, rate limits, headers/TLS, Docker/VPS hardening), automated (OWASP ZAP, dependency + container scans) plus manual testing; every Critical/High fixed and re-tested | Both | Report signed off, no open Critical/High; production deploy is blocked until then |
 | O-9 | Security baseline (decisions §1b): HTTPS/HSTS, API + web security headers with CSP nonce, rate limiting with suspicious-activity logs, least-privilege DB role. Admin lock, session cookies and CSRF land with A-1 / P-5 | Claude | Tests green |
+| O-10 | Pre-pentest hardening (decisions §1b, 2026-11-13): Admin policy on every `/admin/*` endpoint, mandatory share-link expiry, session lifetimes admin 30 d / viewer 7 d, validators for every input-carrying command/query, CI secret + dependency scans | Claude | Tests green |
 
 ## EPIC 10 — Performance (k6)
 | Key | Task | Assignee | Done when |

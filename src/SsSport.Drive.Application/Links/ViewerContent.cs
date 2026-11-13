@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using Ardalis.Specification;
+using FluentValidation;
 using SsSport.Drive.Application.Abstractions.Messaging;
 using SsSport.Drive.Application.Abstractions.Persistence;
 using SsSport.Drive.Application.Abstractions.Security;
@@ -7,6 +8,7 @@ using SsSport.Drive.Application.Abstractions.Storage;
 using SsSport.Drive.Application.Exceptions;
 using SsSport.Drive.Application.MiniApp;
 using SsSport.Drive.Application.Paging;
+using SsSport.Drive.Application.Validation;
 using SsSport.Drive.Domain.Assets;
 using SsSport.Drive.Domain.Links;
 using SsSport.Drive.Domain.Players;
@@ -295,5 +297,78 @@ public sealed class GetLinkPlayerPhotoQueryHandler(
         }
 
         return await storage.GetAsync(player.Photo.StorageKey, cancellationToken) ?? throw new NotFoundException("Photo");
+    }
+}
+
+/// <summary>Validates <see cref="GetLinkContentQuery"/> on the server (decisions §1b rule 3); malformed input is a 400.</summary>
+public sealed class GetLinkContentQueryValidator : AbstractValidator<GetLinkContentQuery>
+{
+    /// <summary>Builds the rules.</summary>
+    public GetLinkContentQueryValidator()
+    {
+        RuleFor(r => r.Code).BoundedCode().OverridePropertyName("code");
+        RuleFor(r => r.SessionToken).BoundedToken().OverridePropertyName("sessionToken");
+    }
+}
+
+/// <summary>Validates <see cref="GetLinkPlayerDocumentsQuery"/> on the server (decisions §1b rule 3); malformed input is a 400.</summary>
+public sealed class GetLinkPlayerDocumentsQueryValidator : AbstractValidator<GetLinkPlayerDocumentsQuery>
+{
+    /// <summary>Builds the rules.</summary>
+    public GetLinkPlayerDocumentsQueryValidator()
+    {
+        RuleFor(r => r.Code).BoundedCode().OverridePropertyName("code");
+        RuleFor(r => r.SessionToken).BoundedToken().OverridePropertyName("sessionToken");
+        RuleFor(r => r.PlayerId).ValidId().OverridePropertyName("playerId");
+        RuleFor(r => r.Paging).ValidPaging();
+    }
+}
+
+/// <summary>Validates <see cref="GetLinkPlayerPhotoQuery"/> on the server (decisions §1b rule 3); malformed input is a 400.</summary>
+public sealed class GetLinkPlayerPhotoQueryValidator : AbstractValidator<GetLinkPlayerPhotoQuery>
+{
+    /// <summary>Builds the rules.</summary>
+    public GetLinkPlayerPhotoQueryValidator()
+    {
+        RuleFor(r => r.Code).BoundedCode().OverridePropertyName("code");
+        RuleFor(r => r.SessionToken).BoundedToken().OverridePropertyName("sessionToken");
+        RuleFor(r => r.PlayerId).ValidId().OverridePropertyName("playerId");
+    }
+}
+
+/// <summary>Validates <see cref="GetLinkPlayerQuery"/> on the server (decisions §1b rule 3); malformed input is a 400.</summary>
+public sealed class GetLinkPlayerQueryValidator : AbstractValidator<GetLinkPlayerQuery>
+{
+    /// <summary>Builds the rules.</summary>
+    public GetLinkPlayerQueryValidator()
+    {
+        RuleFor(r => r.Code).BoundedCode().OverridePropertyName("code");
+        RuleFor(r => r.SessionToken).BoundedToken().OverridePropertyName("sessionToken");
+        RuleFor(r => r.PlayerId).ValidId().OverridePropertyName("playerId");
+    }
+}
+
+/// <summary>Validates <see cref="GetLinkPlayerVideosQuery"/> on the server (decisions §1b rule 3); malformed input is a 400.</summary>
+public sealed class GetLinkPlayerVideosQueryValidator : AbstractValidator<GetLinkPlayerVideosQuery>
+{
+    /// <summary>Builds the rules.</summary>
+    public GetLinkPlayerVideosQueryValidator()
+    {
+        RuleFor(r => r.Code).BoundedCode().OverridePropertyName("code");
+        RuleFor(r => r.SessionToken).BoundedToken().OverridePropertyName("sessionToken");
+        RuleFor(r => r.PlayerId).ValidId().OverridePropertyName("playerId");
+        RuleFor(r => r.Paging).ValidPaging();
+    }
+}
+
+/// <summary>Validates <see cref="GetLinkPlayersQuery"/> on the server (decisions §1b rule 3); malformed input is a 400.</summary>
+public sealed class GetLinkPlayersQueryValidator : AbstractValidator<GetLinkPlayersQuery>
+{
+    /// <summary>Builds the rules.</summary>
+    public GetLinkPlayersQueryValidator()
+    {
+        RuleFor(r => r.Code).BoundedCode().OverridePropertyName("code");
+        RuleFor(r => r.SessionToken).BoundedToken().OverridePropertyName("sessionToken");
+        RuleFor(r => r.Paging).ValidPaging();
     }
 }

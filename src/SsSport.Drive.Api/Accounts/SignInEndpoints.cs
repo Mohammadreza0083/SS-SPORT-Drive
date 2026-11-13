@@ -86,7 +86,7 @@ public static class SignInEndpoints
             .WithName($"Start{name}Session")
             .WithSummary($"Use a {segment} sign-in link")
             .WithDescription(
-                $"Public. Turns the token of an emailed link into a session ({(audience == SignInAudience.Admin ? "7 days" : "1 day")}). The web app keeps the " +
+                $"Public. Turns the token of an emailed link into a session ({(audience == SignInAudience.Admin ? "30 days" : "7 days")}). The web app keeps the " +
                 $"`sessionToken` in a `__Host-` cookie and sends it in the `{header}` header. 401 `sign_in.invalid` for a token that is unknown, used, " +
                 "expired or for the other audience. 400 for a missing token; 415 for a body that is not JSON.")
             .Accepts<SignInSessionFormDto>("application/json")

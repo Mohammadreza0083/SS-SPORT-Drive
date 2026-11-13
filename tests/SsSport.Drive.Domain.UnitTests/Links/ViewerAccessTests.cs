@@ -98,9 +98,9 @@ public sealed class ViewerAccessTests
         device.LastSeenAt.Should().Be(_now.AddDays(11));
     }
 
-    /// <summary>A session lasts one day and remembers the link, the email and the device.</summary>
+    /// <summary>A session lasts seven days (owner, 2026-11-13) and remembers the link, the email and the device.</summary>
     [Fact]
-    public void A_session_lasts_one_day()
+    public void A_session_lasts_seven_days()
     {
         var linkId = Guid.CreateVersion7();
         var deviceId = Guid.CreateVersion7();
@@ -111,9 +111,9 @@ public sealed class ViewerAccessTests
         session.ShareLinkId.Should().Be(linkId);
         session.Email.Value.Should().Be("marco@lube.it");
         session.DeviceId.Should().Be(deviceId);
-        session.ExpiresAt.Should().Be(_now.AddDays(1));
-        session.IsActiveAt(_now.AddHours(23)).Should().BeTrue();
-        session.IsActiveAt(_now.AddDays(1)).Should().BeFalse();
+        session.ExpiresAt.Should().Be(_now.AddDays(7));
+        session.IsActiveAt(_now.AddDays(7).AddMinutes(-1)).Should().BeTrue();
+        session.IsActiveAt(_now.AddDays(7)).Should().BeFalse();
     }
 
     /// <summary>Blank token hashes are a programming error.</summary>
@@ -139,6 +139,6 @@ public sealed class ViewerAccessTests
         player.ChangePhoto(PlayerPhoto.Create($"players/{player.Id}/photo.webp"));
         player.LinkVolleybox(VolleyboxProfile.Create("https://volleybox.net/arash-tehrani-p70001"));
         player.Publish(_now);
-        return ShareLink.Create(ShareLinkCode.Create("Ab3xYz"), _recipient, [player], null, null, settings, null, _now);
+        return ShareLink.Create(ShareLinkCode.Create("Ab3xYz"), _recipient, [player], null, _now.AddDays(30), settings, null, _now);
     }
 }

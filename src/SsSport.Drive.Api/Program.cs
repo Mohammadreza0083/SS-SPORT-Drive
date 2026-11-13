@@ -45,6 +45,8 @@ builder.Services.AddAuthentication("Combined")
             : TelegramMiniAppAuthenticationHandler.SchemeName)
     .AddScheme<AuthenticationSchemeOptions, TelegramMiniAppAuthenticationHandler>(TelegramMiniAppAuthenticationHandler.SchemeName, configureOptions: null)
     .AddScheme<AuthenticationSchemeOptions, AdminSessionAuthenticationHandler>(AdminSessionAuthenticationHandler.SchemeName, configureOptions: null);
+// Admin area deny-by-default at the HTTP layer (decisions §1b, 2026-11-13).
+builder.Services.AddAdminAuthorization();
 builder.Services.AddWebCors();
 // Security baseline (decisions §1b): HTTPS + HSTS behind the trusted proxy, and per-client rate limits.
 builder.Services.AddHttpsEnforcement();
@@ -84,6 +86,7 @@ app.UseCors(WebCors.PolicyName);
 // Before authentication, so floods of bad sign-ins are refused cheaply.
 app.UseRateLimiter();
 app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapApiDocumentation();
 app.MapHealthEndpoints();

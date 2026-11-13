@@ -108,3 +108,7 @@ __pycache__/
 
 # Background-removal model (large; supplied through Media__CutoutModelPath)
 *.onnx
+
+# Security scans (O-10): local reports
+gitleaks-report*.json
+vulnerable.txt

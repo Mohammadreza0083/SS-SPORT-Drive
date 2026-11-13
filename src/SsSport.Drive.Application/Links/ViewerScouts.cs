@@ -1,5 +1,6 @@
 using System.Text;
 using Ardalis.Specification;
+using FluentValidation;
 using Riok.Mapperly.Abstractions;
 using SsSport.Drive.Application.Abstractions.Messaging;
 using SsSport.Drive.Application.Abstractions.Persistence;
@@ -9,6 +10,7 @@ using SsSport.Drive.Application.Exceptions;
 using SsSport.Drive.Application.MiniApp;
 using SsSport.Drive.Application.Paging;
 using SsSport.Drive.Application.Scouting;
+using SsSport.Drive.Application.Validation;
 using SsSport.Drive.Domain.Assets;
 using SsSport.Drive.Domain.Links;
 using SsSport.Drive.Domain.Players;
@@ -316,5 +318,31 @@ public sealed class GetScoutReportQueryHandler(
         {
             return Encoding.Latin1.GetString(bytes);
         }
+    }
+}
+
+/// <summary>Validates <see cref="GetLinkPlayerScoutsQuery"/> on the server (decisions §1b rule 3); malformed input is a 400.</summary>
+public sealed class GetLinkPlayerScoutsQueryValidator : AbstractValidator<GetLinkPlayerScoutsQuery>
+{
+    /// <summary>Builds the rules.</summary>
+    public GetLinkPlayerScoutsQueryValidator()
+    {
+        RuleFor(r => r.Code).BoundedCode().OverridePropertyName("code");
+        RuleFor(r => r.SessionToken).BoundedToken().OverridePropertyName("sessionToken");
+        RuleFor(r => r.PlayerId).ValidId().OverridePropertyName("playerId");
+        RuleFor(r => r.Paging).ValidPaging();
+    }
+}
+
+/// <summary>Validates <see cref="GetScoutReportQuery"/> on the server (decisions §1b rule 3); malformed input is a 400.</summary>
+public sealed class GetScoutReportQueryValidator : AbstractValidator<GetScoutReportQuery>
+{
+    /// <summary>Builds the rules.</summary>
+    public GetScoutReportQueryValidator()
+    {
+        RuleFor(r => r.Code).BoundedCode().OverridePropertyName("code");
+        RuleFor(r => r.SessionToken).BoundedToken().OverridePropertyName("sessionToken");
+        RuleFor(r => r.PlayerId).ValidId().OverridePropertyName("playerId");
+        RuleFor(r => r.ScoutId).ValidId().OverridePropertyName("scoutId");
     }
 }

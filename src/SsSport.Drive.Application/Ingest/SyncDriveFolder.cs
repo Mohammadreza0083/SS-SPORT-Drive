@@ -43,6 +43,7 @@ public sealed record FolderSyncResult(FolderSyncOutcome Outcome, int Added, int 
 /// background job, every 10 minutes and when a folder is linked.
 /// </summary>
 /// <param name="FolderId">The linked folder.</param>
+[InternalRequest("Sent only by the folder-sync job, with the id of a linked folder.")]
 public sealed record SyncDriveFolderCommand(Guid FolderId) : ICommand<FolderSyncResult>;
 
 /// <summary>A player's assets, tracked, for a folder sync.</summary>

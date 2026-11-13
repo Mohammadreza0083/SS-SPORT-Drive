@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Ardalis.Specification;
+using FluentValidation;
 using Microsoft.Extensions.Logging;
 using Riok.Mapperly.Abstractions;
 using SsSport.Drive.Application.Abstractions.Authorization;
@@ -9,6 +10,7 @@ using SsSport.Drive.Application.Abstractions.Messaging;
 using SsSport.Drive.Application.Abstractions.Persistence;
 using SsSport.Drive.Application.Links;
 using SsSport.Drive.Application.Paging;
+using SsSport.Drive.Application.Validation;
 using SsSport.Drive.Domain.Emails;
 
 namespace SsSport.Drive.Application.Emails;
@@ -232,4 +234,15 @@ public sealed class ListOutgoingEmailsQueryHandler(IPagedReader reader) : IQuery
             request.Paging,
             email => email.ToDto(),
             cancellationToken);
+}
+
+/// <summary>Validates <see cref="ListOutgoingEmailsQuery"/> on the server (decisions §1b rule 3); malformed input is a 400.</summary>
+public sealed class ListOutgoingEmailsQueryValidator : AbstractValidator<ListOutgoingEmailsQuery>
+{
+    /// <summary>Builds the rules.</summary>
+    public ListOutgoingEmailsQueryValidator()
+    {
+        RuleFor(r => r.Status).IsInEnum().OverridePropertyName("status");
+        RuleFor(r => r.Paging).ValidCursorPaging();
+    }
 }

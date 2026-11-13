@@ -6,6 +6,7 @@ using SsSport.Drive.Application.Abstractions.Persistence;
 using SsSport.Drive.Application.Abstractions.Security;
 using SsSport.Drive.Application.Emails;
 using SsSport.Drive.Application.Exceptions;
+using SsSport.Drive.Application.Validation;
 using SsSport.Drive.Domain.Emails;
 using SsSport.Drive.Domain.Links;
 using SsSport.Drive.Domain.Primitives;
@@ -581,5 +582,27 @@ public sealed class GetViewerSessionQueryHandler(
         var link = await links.OpenLinkAsync(request.Code, now, cancellationToken);
         var session = await sessions.RequireSessionAsync(secrets, link, request.SessionToken, now, cancellationToken);
         return new ViewerSessionDto { Email = session.Email.Value, IsForward = session.IsForward, ExpiresAt = session.ExpiresAt };
+    }
+}
+
+/// <summary>Validates <see cref="GetViewerSessionQuery"/> on the server (decisions §1b rule 3); malformed input is a 400.</summary>
+public sealed class GetViewerSessionQueryValidator : AbstractValidator<GetViewerSessionQuery>
+{
+    /// <summary>Builds the rules.</summary>
+    public GetViewerSessionQueryValidator()
+    {
+        RuleFor(r => r.Code).BoundedCode().OverridePropertyName("code");
+        RuleFor(r => r.SessionToken).BoundedToken().OverridePropertyName("sessionToken");
+    }
+}
+
+/// <summary>Validates <see cref="OpenWithDeviceCommand"/> on the server (decisions §1b rule 3); malformed input is a 400.</summary>
+public sealed class OpenWithDeviceCommandValidator : AbstractValidator<OpenWithDeviceCommand>
+{
+    /// <summary>Builds the rules.</summary>
+    public OpenWithDeviceCommandValidator()
+    {
+        RuleFor(r => r.Code).BoundedCode().OverridePropertyName("code");
+        RuleFor(r => r.DeviceToken).BoundedToken().OverridePropertyName("deviceToken");
     }
 }

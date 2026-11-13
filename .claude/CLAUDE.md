@@ -42,9 +42,9 @@ Branded, trackable volleyball player video pages built from Google Drive folders
 Every change is checked against these before it is committed. Full text in [decisions.md](decisions.md) §1b.
 - **No secrets in code.** Keys, tokens, passwords and connection strings come only from environment variables or secret stores. Never in commits, logs, images or front-end bundles.
 - **Database locked down:** never publicly reachable, least-privilege app role, TLS in production, encrypted backups.
-- **Server-side validation** of every input (FluentValidation in the MediatR pipeline). Client checks are UX only.
+- **Server-side validation** of every input (FluentValidation in the MediatR pipeline). Every command/query with input has a validator (architecture test); a system-only request carries `[InternalRequest(reason)]`. Link codes, tokens and slugs are only length-bounded there: handlers answer malformed and unknown alike (404/401) so nothing can be probed. Client checks are UX only.
 - **XSS:** encode all output, no raw HTML from user data, CSP on every response (web CSP is static with `'unsafe-inline'` scripts, owner 2026-11-01; see decisions §1b).
-- **Admin area locked:** admin pages and APIs require the Admin role policy on the server, deny by default.
+- **Admin area locked:** admin pages and APIs require the Admin role policy on the server, deny by default. Every `/admin/*` endpoint calls `.RequireAdmin()` (a test enumerates them), on top of the MediatR role check.
 - **HTTPS forced:** HTTPS redirection and HSTS in production.
 - **Hash with salt:** passwords (if ever added) with a slow salted hash; OTP codes hashed with salt; magic-link and session tokens stored only as keyed hashes. Compare in constant time.
 - **Log suspicious activity** (failed sign-ins/OTPs, bad secrets, rate-limit hits, CSRF failures, admin denials) as structured warnings, with no secrets.
@@ -52,8 +52,10 @@ Every change is checked against these before it is committed. Full text in [deci
 - **Rate limiting** on auth, OTP, magic-link, access-request, webhook and public endpoints.
 - **CORS:** explicit origin allow-list only.
 - **Security headers** on the API and the web app: CSP, HSTS, X-Content-Type-Options, frame-ancestors, Referrer-Policy, Permissions-Policy.
-- **Session cookies:** `HttpOnly`, `Secure`, `SameSite`, `__Host-` prefix, short lifetime.
+- **Session cookies:** `HttpOnly`, `Secure`, `SameSite`, `__Host-` prefix; admin 30 days, viewer 7 days (owner, 2026-11-13). Sessions are opaque random tokens stored as keyed hashes: **no JWT, no passwords, no ASP.NET Identity** (owner, 2026-11-13).
+- **Every link expires** (owner, 2026-11-13): share links 7/30/90 days, never "no expiry"; sign-in links, codes and HLS tokens are short-lived.
 - **CSRF protection** on every cookie-authenticated state-changing request.
+- **Before every security or penetration-test phase, run `/graphify`** to map the attack surface first (owner, 2026-11-13). CI scans every PR for secrets (gitleaks, whole history) and vulnerable .NET/npm packages.
 
 ## API documentation (Scalar)
 - Every API is documented with an **OpenAPI** document (`Microsoft.AspNetCore.OpenApi`) and rendered with **Scalar** (`Scalar.AspNetCore`) at `/scalar`.

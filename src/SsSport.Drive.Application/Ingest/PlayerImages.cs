@@ -10,6 +10,7 @@ namespace SsSport.Drive.Application.Ingest;
 
 /// <summary>Makes a published player's QR code (I-8): it opens the home search filled with the player's name.</summary>
 /// <param name="PlayerId">The player.</param>
+[InternalRequest("Sent only by the QR-code job, with the id of a player.")]
 public sealed record RenderPlayerQrCodeCommand(Guid PlayerId) : ICommand;
 
 /// <summary>Handles <see cref="RenderPlayerQrCodeCommand"/>.</summary>
@@ -41,6 +42,7 @@ public sealed class RenderPlayerQrCodeCommandHandler(IRepository<Player, Guid> p
 
 /// <summary>Removes the background of a player's photo (I-7) and, for a published player, queues a new card.</summary>
 /// <param name="PlayerId">The player.</param>
+[InternalRequest("Sent only by the cut-out job, with the id of a player.")]
 public sealed record CutOutPlayerPhotoCommand(Guid PlayerId) : ICommand;
 
 /// <summary>Handles <see cref="CutOutPlayerPhotoCommand"/>.</summary>
@@ -96,6 +98,7 @@ public sealed class CutOutPlayerPhotoCommandHandler(IRepository<Player, Guid> pl
 
 /// <summary>Makes a published player's card image (I-5).</summary>
 /// <param name="PlayerId">The player.</param>
+[InternalRequest("Sent only by the card job, with the id of a player.")]
 public sealed record RenderPlayerCardCommand(Guid PlayerId) : ICommand;
 
 /// <summary>Handles <see cref="RenderPlayerCardCommand"/>.</summary>

@@ -346,7 +346,7 @@ public sealed partial class PublicAccessEndpointTests : IAsyncLifetime
     public async Task A_dead_account_session_is_refused()
     {
         var ended = await SignInAsync("scout@aurora-volley.example");
-        _clock.Advance(TimeSpan.FromDays(1).Add(TimeSpan.FromSeconds(1)));
+        _clock.Advance(TimeSpan.FromDays(7).Add(TimeSpan.FromSeconds(1)));
         var signedOut = await SignInAsync("other@aurora-volley.example");
         await EndSessionAsync(signedOut);
 

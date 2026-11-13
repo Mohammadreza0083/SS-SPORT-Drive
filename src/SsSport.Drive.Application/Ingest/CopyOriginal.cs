@@ -14,6 +14,7 @@ namespace SsSport.Drive.Application.Ingest;
 /// the md5 Drive listed.
 /// </summary>
 /// <param name="AssetId">The asset.</param>
+[InternalRequest("Sent only by the copy job, with the id of an asset.")]
 public sealed record CopyOriginalCommand(Guid AssetId) : ICommand;
 
 /// <summary>Handles <see cref="CopyOriginalCommand"/>.</summary>

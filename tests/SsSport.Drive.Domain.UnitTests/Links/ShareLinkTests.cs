@@ -59,7 +59,7 @@ public sealed class ShareLinkTests
     {
         var settings = new ShareLinkSettings(VerifyOnNewDevice: false, AllowForwarding: false, ForwardingScope.SameDomain, NotifyOnOpen: true);
 
-        var link = ShareLink.Create(ShareLinkCode.Generate(), _recipient, [PublishedPlayer("Arash Tehrani")], null, null, settings, _adminId, _now);
+        var link = ShareLink.Create(ShareLinkCode.Generate(), _recipient, [PublishedPlayer("Arash Tehrani")], null, _now.AddDays(30), settings, _adminId, _now);
 
         link.VerifyOnNewDevice.Should().BeFalse();
         link.AllowForwarding.Should().BeFalse();
@@ -74,12 +74,12 @@ public sealed class ShareLinkTests
         var first = PublishedPlayer("Arash Tehrani");
         var second = PublishedPlayer("Kian Moradi");
 
-        var link = ShareLink.Create(ShareLinkCode.Generate(), _recipient, [first, second, first], "  ", null, ShareLinkSettings.Default, _adminId, _now);
+        var link = ShareLink.Create(ShareLinkCode.Generate(), _recipient, [first, second, first], "  ", _now.AddDays(30), ShareLinkSettings.Default, _adminId, _now);
 
         link.Type.Should().Be(ShareLinkType.Roster);
         link.PlayerIds.Should().Equal(first.Id, second.Id);
         link.Note.Should().BeNull();
-        link.ExpiresAt.Should().BeNull();
+        link.ExpiresAt.Should().Be(_now.AddDays(30));
     }
 
     /// <summary>Links are only made for published players (decisions §4).</summary>
@@ -88,7 +88,7 @@ public sealed class ShareLinkTests
     {
         var waiting = Player.Create(PlayerCategory.Men, _now);
 
-        var create = () => ShareLink.Create(ShareLinkCode.Generate(), _recipient, [PublishedPlayer("Arash Tehrani"), waiting], null, null, ShareLinkSettings.Default, _adminId, _now);
+        var create = () => ShareLink.Create(ShareLinkCode.Generate(), _recipient, [PublishedPlayer("Arash Tehrani"), waiting], null, _now.AddDays(30), ShareLinkSettings.Default, _adminId, _now);
 
         create.Should().Throw<DomainException>().Which.Code.Should().Be("share_link.player_not_published");
     }
@@ -103,7 +103,7 @@ public sealed class ShareLinkTests
     {
         var players = Enumerable.Range(0, count).Select(n => PublishedPlayer($"Player {(char)('A' + n)}")).ToList();
 
-        var create = () => ShareLink.Create(ShareLinkCode.Generate(), _recipient, players, null, null, ShareLinkSettings.Default, _adminId, _now);
+        var create = () => ShareLink.Create(ShareLinkCode.Generate(), _recipient, players, null, _now.AddDays(30), ShareLinkSettings.Default, _adminId, _now);
 
         create.Should().Throw<DomainException>().Which.Code.Should().Be(code);
     }
@@ -112,7 +112,7 @@ public sealed class ShareLinkTests
     [Fact]
     public void The_note_is_short()
     {
-        var create = () => ShareLink.Create(ShareLinkCode.Generate(), _recipient, [PublishedPlayer("Arash Tehrani")], new string('n', 501), null, ShareLinkSettings.Default, _adminId, _now);
+        var create = () => ShareLink.Create(ShareLinkCode.Generate(), _recipient, [PublishedPlayer("Arash Tehrani")], new string('n', 501), _now.AddDays(30), ShareLinkSettings.Default, _adminId, _now);
 
         create.Should().Throw<DomainException>().Which.Code.Should().Be("share_link.note_too_long");
     }
@@ -124,6 +124,19 @@ public sealed class ShareLinkTests
         var create = () => ShareLink.Create(ShareLinkCode.Generate(), _recipient, [PublishedPlayer("Arash Tehrani")], null, _now, ShareLinkSettings.Default, _adminId, _now);
 
         create.Should().Throw<DomainException>().Which.Code.Should().Be("share_link.expiry_in_past");
+    }
+
+    /// <summary>Every link expires (owner, 2026-11-13): a link cannot be made, or changed, to never expire.</summary>
+    [Fact]
+    public void A_link_must_expire()
+    {
+        var create = () => ShareLink.Create(ShareLinkCode.Generate(), _recipient, [PublishedPlayer("Arash Tehrani")], null, null, ShareLinkSettings.Default, _adminId, _now);
+        create.Should().Throw<DomainException>().Which.Code.Should().Be("share_link.expiry_required");
+
+        var link = NewLink();
+        var remove = () => link.ChangeExpiry(null, _now);
+        remove.Should().Throw<DomainException>().Which.Code.Should().Be("share_link.expiry_required");
+        link.ExpiresAt.Should().Be(_now.AddDays(30));
     }
 
     /// <summary>After its expiry a link no longer opens.</summary>
@@ -166,13 +179,13 @@ public sealed class ShareLinkTests
         link.Status.Should().Be(ShareLinkStatus.Revoked);
         link.RevokedAt.Should().Be(_now.AddHours(1));
         link.AccessAt(_now.AddHours(3)).Should().Be(ShareLinkAccess.Revoked);
-        foreach (var change in new Action[] { () => link.Pause(), () => link.Resume(), () => link.ChangeExpiry(null, _now) })
+        foreach (var change in new Action[] { () => link.Pause(), () => link.Resume(), () => link.ChangeExpiry(_now.AddDays(90), _now) })
         {
             change.Should().Throw<DomainException>().Which.Code.Should().Be("share_link.revoked");
         }
     }
 
-    /// <summary>The expiry can be moved later or removed, which opens an expired link again; a past expiry is refused.</summary>
+    /// <summary>The expiry can be moved later, which opens an expired link again; a past expiry is refused.</summary>
     [Fact]
     public void Changing_the_expiry()
     {
@@ -183,17 +196,15 @@ public sealed class ShareLinkTests
         link.AccessAt(later).Should().Be(ShareLinkAccess.Open);
         link.ChangeExpiry(later.AddDays(30), later).Should().BeFalse();
 
-        link.ChangeExpiry(null, later).Should().BeTrue();
-        link.ExpiresAt.Should().BeNull();
 
         var past = () => link.ChangeExpiry(later.AddMinutes(-1), later);
         past.Should().Throw<DomainException>().Which.Code.Should().Be("share_link.expiry_in_past");
     }
 
-    /// <summary>Builds an active link to one published player, without expiry.</summary>
+    /// <summary>Builds an active link to one published player, expiring in 30 days.</summary>
     /// <returns>The link.</returns>
     private ShareLink NewLink() =>
-        ShareLink.Create(ShareLinkCode.Generate(), _recipient, [PublishedPlayer("Arash Tehrani")], null, null, ShareLinkSettings.Default, _adminId, _now);
+        ShareLink.Create(ShareLinkCode.Generate(), _recipient, [PublishedPlayer("Arash Tehrani")], null, _now.AddDays(30), ShareLinkSettings.Default, _adminId, _now);
 
     /// <summary>Builds a complete, published player.</summary>
     /// <param name="fullName">The player's name.</param>

@@ -13,6 +13,7 @@ namespace SsSport.Drive.Application.Ingest;
 /// document becomes page images and a thumbnail; a scout file needs nothing. A media error fails the asset with its reason.
 /// </summary>
 /// <param name="AssetId">The asset.</param>
+[InternalRequest("Sent only by the processing job, with the id of an asset.")]
 public sealed record ProcessAssetCommand(Guid AssetId) : ICommand;
 
 /// <summary>Handles <see cref="ProcessAssetCommand"/>.</summary>
