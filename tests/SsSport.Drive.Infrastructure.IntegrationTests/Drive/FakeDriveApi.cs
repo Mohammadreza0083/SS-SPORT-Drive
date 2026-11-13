@@ -21,6 +21,23 @@ internal sealed class FakeDriveApi : IDriveApi
     /// <summary>Gets how many pages were listed.</summary>
     public int ListCalls { get; private set; }
 
+    /// <summary>Gets the bytes of each file, by id, for downloads (I-2).</summary>
+    public Dictionary<string, byte[]> Contents { get; } = [];
+
+    /// <summary>Downloads a file's bytes.</summary>
+    /// <param name="fileId">The Drive file id.</param>
+    /// <param name="cancellationToken">Unused.</param>
+    /// <returns>The bytes, or <see langword="null"/> when there is no such file.</returns>
+    public Task<Stream?> DownloadAsync(string fileId, CancellationToken cancellationToken)
+    {
+        if (Failure is not null)
+        {
+            throw Failure;
+        }
+
+        return Task.FromResult<Stream?>(Contents.TryGetValue(fileId, out var bytes) ? new MemoryStream(bytes, writable: false) : null);
+    }
+
     /// <summary>Adds an item under a parent.</summary>
     /// <param name="item">The item.</param>
     /// <param name="parent">The parent folder id, or <see langword="null"/> for a top-level item.</param>

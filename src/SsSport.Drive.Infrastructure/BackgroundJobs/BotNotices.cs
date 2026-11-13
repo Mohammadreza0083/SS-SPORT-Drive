@@ -70,6 +70,11 @@ public static class HangfireStorage
             BotNoticeJob.Queue,
             job => job.RunAsync(CancellationToken.None),
             Cron.Daily(5, 30));
+        manager.AddOrUpdate<IngestJob>(
+            IngestJobs.FolderSyncRecurringJobId,
+            IngestJobs.DriveQueue,
+            job => job.ScheduleFolderSyncsAsync(CancellationToken.None),
+            "*/10 * * * *");
     }
 
     /// <summary>Installs or upgrades Hangfire's schema; safe to run on every deploy.</summary>

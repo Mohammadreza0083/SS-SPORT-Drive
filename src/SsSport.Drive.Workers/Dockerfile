@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # Workers image (Hangfire jobs). Build context is the repository root:
 #   docker build -f src/SsSport.Drive.Workers/Dockerfile .
-# ffmpeg is added to the runtime stage when transcoding lands (EPIC 3).
+# The runtime stage ships ffmpeg and ffprobe for transcoding (Epic 3).
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
@@ -19,6 +19,7 @@ RUN dotnet publish src/SsSport.Drive.Workers/SsSport.Drive.Workers.csproj \
     --configuration Release --no-restore --output /app
 
 FROM mcr.microsoft.com/dotnet/runtime:10.0 AS runtime
+RUN apt-get update     && apt-get install -y --no-install-recommends ffmpeg     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=build /app ./
 USER $APP_UID

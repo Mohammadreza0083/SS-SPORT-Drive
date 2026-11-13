@@ -11,7 +11,8 @@ var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure();
 
-// Hangfire servers and background jobs are registered here as their features land (EPIC 3, EPIC 5).
+// The ingest servers (Epic 3): Drive sync and copies on the ingest queue, ffmpeg and rendering on the media queue.
+builder.Services.AddIngestServer();
 
 var host = builder.Build();
 

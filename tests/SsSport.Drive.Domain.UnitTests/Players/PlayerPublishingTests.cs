@@ -53,7 +53,10 @@ public sealed class PlayerPublishingTests
         player.IsComplete.Should().BeTrue();
     }
 
-    /// <summary>Setting the photo stores it and raises a details-changed event; the same photo again raises nothing.</summary>
+    /// <summary>
+    /// Setting the photo stores it and raises a details-changed event and a photo-changed event (I-7: the cut-out is made
+    /// again); the same photo again raises nothing.
+    /// </summary>
     [Fact]
     public void Changing_the_photo_raises_an_event_once()
     {
@@ -64,7 +67,7 @@ public sealed class PlayerPublishingTests
         player.ChangePhoto(PlayerPhoto.Create("players/p1/photo.webp"));
 
         player.Photo!.StorageKey.Should().Be("players/p1/photo.webp");
-        player.DomainEvents.Should().ContainSingle().Which.Should().Be(new PlayerDetailsChanged(player.Id));
+        player.DomainEvents.Should().BeEquivalentTo<object>([new PlayerPhotoChanged(player.Id), new PlayerDetailsChanged(player.Id)]);
     }
 
     /// <summary>Publishing an incomplete player fails, names what is missing and changes nothing.</summary>

@@ -250,7 +250,7 @@ SS-SPORT Drive/
 | 0 | Setup & accounts | 🚧 In progress |
 | 1 | Core domain & persistence | ✅ Done |
 | 2 | Telegram bot & Mini App | 🚧 In progress |
-| 3 | Ingest, transcode & sync | 🚧 In progress (I-1 Drive reader done) |
+| 3 | Ingest, transcode & sync | 🚧 In progress (I-1 Drive reader and the ingest pipeline I-2…I-9 implemented; I-5 card design awaits approval) |
 | 4 | Viewer site & media protection | ✅ Done |
 | 5 | Personal links, OTP & tracking | 🚧 In progress (L-1–L-6 done; L-7 alerts and digest done except the digest's watching numbers) |
 | 6 | Public search & access requests | 🚧 In progress (home, locked player page and request-access dialog built on sample data; backend P-8 next) |

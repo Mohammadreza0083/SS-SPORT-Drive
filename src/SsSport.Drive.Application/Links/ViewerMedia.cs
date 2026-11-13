@@ -19,21 +19,35 @@ public static class MediaFolders
     /// <summary>The master playlist's file name inside a video's HLS folder.</summary>
     public const string MasterPlaylist = "master.m3u8";
 
+    /// <summary>The folder of one version of a video: its HLS folder and its previews.</summary>
+    /// <param name="playerId">The player.</param>
+    /// <param name="videoId">The video.</param>
+    /// <param name="version">The video's content version.</param>
+    /// <returns>The folder, e.g. <c>players/{player}/videos/{video}/v1</c> (no slash at either end).</returns>
+    public static string VideoRoot(Guid playerId, Guid videoId, int version) =>
+        $"players/{playerId}/videos/{videoId}/v{version.ToString(CultureInfo.InvariantCulture)}";
+
     /// <summary>The folder of a video's HLS renditions.</summary>
     /// <param name="playerId">The player.</param>
     /// <param name="videoId">The video.</param>
     /// <param name="version">The video's content version.</param>
     /// <returns>The folder, e.g. <c>players/{player}/videos/{video}/v1/hls</c> (no slash at either end).</returns>
-    public static string VideoHls(Guid playerId, Guid videoId, int version) =>
-        $"players/{playerId}/videos/{videoId}/v{version.ToString(CultureInfo.InvariantCulture)}/hls";
+    public static string VideoHls(Guid playerId, Guid videoId, int version) => $"{VideoRoot(playerId, videoId, version)}/hls";
+
+    /// <summary>The folder of one version of a document: its page images and its thumbnail.</summary>
+    /// <param name="playerId">The player.</param>
+    /// <param name="documentId">The document.</param>
+    /// <param name="version">The document's content version.</param>
+    /// <returns>The folder, e.g. <c>players/{player}/documents/{document}/v1</c> (no slash at either end).</returns>
+    public static string DocumentRoot(Guid playerId, Guid documentId, int version) =>
+        $"players/{playerId}/documents/{documentId}/v{version.ToString(CultureInfo.InvariantCulture)}";
 
     /// <summary>The folder of a document's page images, named <c>1.webp</c>, <c>2.webp</c>, and so on.</summary>
     /// <param name="playerId">The player.</param>
     /// <param name="documentId">The document.</param>
     /// <param name="version">The document's content version.</param>
     /// <returns>The folder, e.g. <c>players/{player}/documents/{document}/v1/pages</c> (no slash at either end).</returns>
-    public static string DocumentPages(Guid playerId, Guid documentId, int version) =>
-        $"players/{playerId}/documents/{documentId}/v{version.ToString(CultureInfo.InvariantCulture)}/pages";
+    public static string DocumentPages(Guid playerId, Guid documentId, int version) => $"{DocumentRoot(playerId, documentId, version)}/pages";
 }
 
 /// <summary>A video's signed stream.</summary>
