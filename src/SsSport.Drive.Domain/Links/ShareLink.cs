@@ -113,7 +113,7 @@ public sealed class ShareLink : AggregateRoot<Guid>
     /// <summary>Gets the personal note shown on the page, or <see langword="null"/>.</summary>
     public string? Note { get; private set; }
 
-    /// <summary>Gets when the link stops opening (UTC), or <see langword="null"/> for never.</summary>
+    /// <summary>Gets when the link stops opening (UTC). New links always have one; only links made before 2026-11-13 may have none.</summary>
     public DateTimeOffset? ExpiresAt { get; private set; }
 
     /// <summary>Gets whether the link is active, paused or revoked.</summary>
@@ -145,14 +145,14 @@ public sealed class ShareLink : AggregateRoot<Guid>
     /// <param name="recipient">The recipient.</param>
     /// <param name="players">One to twenty published players, in page order; repeats are dropped.</param>
     /// <param name="note">The personal note (at most 500 characters), or blank.</param>
-    /// <param name="expiresAt">When it stops opening, or <see langword="null"/> for never.</param>
+    /// <param name="expiresAt">When it stops opening; required (owner, 2026-11-13).</param>
     /// <param name="settings">The switches.</param>
     /// <param name="createdByUserId">The admin, or <see langword="null"/> for the system.</param>
     /// <param name="now">The current time (UTC); also seeds the time-ordered id.</param>
     /// <returns>The link.</returns>
     /// <exception cref="DomainException">
     /// <c>share_link.no_players</c>, <c>share_link.too_many_players</c>, <c>share_link.player_not_published</c>,
-    /// <c>share_link.note_too_long</c> or <c>share_link.expiry_in_past</c>.
+    /// <c>share_link.note_too_long</c>, <c>share_link.expiry_required</c> or <c>share_link.expiry_in_past</c>.
     /// </exception>
     public static ShareLink Create(
         ShareLinkCode code,
@@ -297,11 +297,11 @@ public sealed class ShareLink : AggregateRoot<Guid>
         return true;
     }
 
-    /// <summary>Moves or removes the expiry; a later expiry opens an expired link again.</summary>
-    /// <param name="expiresAt">The new expiry, or <see langword="null"/> for never.</param>
+    /// <summary>Moves the expiry; a later expiry opens an expired link again. It cannot be removed (owner, 2026-11-13).</summary>
+    /// <param name="expiresAt">The new expiry; required.</param>
     /// <param name="now">The current time (UTC).</param>
     /// <returns><see langword="true"/> when the expiry changed.</returns>
-    /// <exception cref="DomainException"><c>share_link.revoked</c> or <c>share_link.expiry_in_past</c>.</exception>
+    /// <exception cref="DomainException"><c>share_link.revoked</c>, <c>share_link.expiry_required</c> or <c>share_link.expiry_in_past</c>.</exception>
     public bool ChangeExpiry(DateTimeOffset? expiresAt, DateTimeOffset now)
     {
         EnsureNotRevoked();
@@ -321,11 +321,16 @@ public sealed class ShareLink : AggregateRoot<Guid>
     private static string DomainOf(EmailAddress email) => email.Value[(email.Value.LastIndexOf('@') + 1)..];
 
     /// <summary>Refuses an expiry that is not in the future.</summary>
-    /// <param name="expiresAt">The expiry, or <see langword="null"/>.</param>
+    /// <param name="expiresAt">The expiry; every link must have one (owner, 2026-11-13).</param>
     /// <param name="now">The current time (UTC).</param>
-    /// <exception cref="DomainException"><c>share_link.expiry_in_past</c>.</exception>
+    /// <exception cref="DomainException"><c>share_link.expiry_required</c> or <c>share_link.expiry_in_past</c>.</exception>
     private static void EnsureFuture(DateTimeOffset? expiresAt, DateTimeOffset now)
     {
+        if (expiresAt is null)
+        {
+            throw new DomainException("share_link.expiry_required", "Every link needs an expiry: 7, 30 or 90 days.");
+        }
+
         if (expiresAt <= now)
         {
             throw new DomainException("share_link.expiry_in_past", "Choose an expiry in the future.");

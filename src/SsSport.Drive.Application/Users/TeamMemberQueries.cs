@@ -1,6 +1,8 @@
 using Ardalis.Specification;
+using FluentValidation;
 using SsSport.Drive.Application.Abstractions.Messaging;
 using SsSport.Drive.Application.Abstractions.Persistence;
+using SsSport.Drive.Application.Validation;
 using SsSport.Drive.Domain.Users;
 
 namespace SsSport.Drive.Application.Users;
@@ -42,5 +44,15 @@ public sealed class GetTeamMemberByTelegramIdQueryHandler(IRepository<User, Guid
     {
         var user = await users.FirstOrDefaultAsync(new TeamMemberByTelegramIdSpec(request.TelegramId), cancellationToken);
         return user?.ToTeamMemberDto();
+    }
+}
+
+/// <summary>Validates <see cref="GetTeamMemberByTelegramIdQuery"/> on the server (decisions §1b rule 3); malformed input is a 400.</summary>
+public sealed class GetTeamMemberByTelegramIdQueryValidator : AbstractValidator<GetTeamMemberByTelegramIdQuery>
+{
+    /// <summary>Builds the rules.</summary>
+    public GetTeamMemberByTelegramIdQueryValidator()
+    {
+        RuleFor(r => r.TelegramId).ValidTelegramId().OverridePropertyName("telegramId");
     }
 }

@@ -7,6 +7,7 @@ using SsSport.Drive.Application.Abstractions.Persistence;
 using SsSport.Drive.Application.Assets;
 using SsSport.Drive.Application.Exceptions;
 using SsSport.Drive.Application.Paging;
+using SsSport.Drive.Application.Validation;
 using SsSport.Drive.Domain.Assets;
 using SsSport.Drive.Domain.Players;
 using SsSport.Drive.Domain.Users;
@@ -227,5 +228,16 @@ public sealed class GetPlayerFilesQueryHandler(IRepository<Player, Guid> players
             request.Paging,
             asset => asset.ToFileDto() with { IsHero = asset.Id == player.HeroAssetId },
             cancellationToken);
+    }
+}
+
+/// <summary>Validates <see cref="GetPlayerFilesQuery"/> on the server (decisions §1b rule 3); malformed input is a 400.</summary>
+public sealed class GetPlayerFilesQueryValidator : AbstractValidator<GetPlayerFilesQuery>
+{
+    /// <summary>Builds the rules.</summary>
+    public GetPlayerFilesQueryValidator()
+    {
+        RuleFor(r => r.PlayerId).ValidId().OverridePropertyName("playerId");
+        RuleFor(r => r.Paging).ValidPaging();
     }
 }

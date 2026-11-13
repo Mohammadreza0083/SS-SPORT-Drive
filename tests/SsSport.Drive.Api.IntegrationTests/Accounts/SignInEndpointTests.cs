@@ -9,7 +9,7 @@ using SsSport.Drive.Domain.Users;
 namespace SsSport.Drive.Api.IntegrationTests.Accounts;
 
 /// <summary>
-/// Email magic-link sign-in (A-1 admin console, 7 days; P-5 viewers, 1 day; decisions §7a). Asking for a link always
+/// Email magic-link sign-in (A-1 admin console, 30 days; P-5 viewers, 7 days; decisions §7a). Asking for a link always
 /// answers 202, so nobody can probe who is an admin; only an active admin's email gets an admin link, any email gets a
 /// viewer link. The link works once, for 15 minutes, and becomes a session token the web app keeps in a cookie and
 /// forwards in <c>X-Admin-Session</c> / <c>X-Viewer-Account</c> (the API never reads cookies). An admin session opens
@@ -101,7 +101,7 @@ public sealed class SignInEndpointTests : IAsyncLifetime
         var session = body.RootElement.GetProperty("sessionToken").GetString()!;
         session.Should().NotBe(token);
         body.RootElement.GetProperty("email").GetString().Should().Be(BackendTestHost.AdminEmail);
-        body.RootElement.GetProperty("expiresAt").GetDateTimeOffset().Should().BeCloseTo(DateTimeOffset.UtcNow.AddDays(7), TimeSpan.FromMinutes(1));
+        body.RootElement.GetProperty("expiresAt").GetDateTimeOffset().Should().BeCloseTo(DateTimeOffset.UtcNow.AddDays(30), TimeSpan.FromMinutes(1));
 
         using var me = await _host.SendAsync(HttpMethod.Get, "/auth/admin/me", headers: Header(AdminHeader, session));
         me.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -204,7 +204,7 @@ public sealed class SignInEndpointTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         using var body = await BackendTestHost.ReadJsonAsync(response);
         var session = body.RootElement.GetProperty("sessionToken").GetString()!;
-        body.RootElement.GetProperty("expiresAt").GetDateTimeOffset().Should().BeCloseTo(DateTimeOffset.UtcNow.AddDays(1), TimeSpan.FromMinutes(1));
+        body.RootElement.GetProperty("expiresAt").GetDateTimeOffset().Should().BeCloseTo(DateTimeOffset.UtcNow.AddDays(7), TimeSpan.FromMinutes(1));
 
         using var me = await _host.SendAsync(HttpMethod.Get, "/auth/viewer/me", headers: Header(ViewerHeader, session));
         me.StatusCode.Should().Be(HttpStatusCode.OK);

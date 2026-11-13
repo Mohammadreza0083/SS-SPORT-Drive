@@ -133,7 +133,7 @@ public sealed class ShareLinkEndpointTests : IAsyncLifetime
         (await AuditActionsAsync(link.GetProperty("id").GetGuid())).Should().Equal("share_link.created");
     }
 
-    /// <summary>A link to several players is a Roster; a link can reuse an existing recipient; "never" leaves no expiry.</summary>
+    /// <summary>A link to several players is a Roster and can reuse an existing recipient; a link without an expiry is refused.</summary>
     [Fact]
     public async Task A_roster_link_reuses_a_recipient()
     {
@@ -141,11 +141,19 @@ public sealed class ShareLinkEndpointTests : IAsyncLifetime
         var (second, _) = await AddPlayerAsync(published: true);
         var recipientId = await CreateLinkAsync(first);
 
-        using var response = await SendAsync(AdminTelegramId, HttpMethod.Post, "/admin/links", new
+        using var never = await SendAsync(AdminTelegramId, HttpMethod.Post, "/admin/links", new
         {
             recipientId,
             playerIds = new[] { first, second },
             expiresInDays = (int?)null,
+        });
+        never.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        using var response = await SendAsync(AdminTelegramId, HttpMethod.Post, "/admin/links", new
+        {
+            recipientId,
+            playerIds = new[] { first, second },
+            expiresInDays = 90,
             allowForwarding = false,
         });
 
@@ -154,7 +162,7 @@ public sealed class ShareLinkEndpointTests : IAsyncLifetime
         body.RootElement.GetProperty("type").GetString().Should().Be("Roster");
         body.RootElement.GetProperty("recipient").GetProperty("id").GetGuid().Should().Be(recipientId);
         body.RootElement.GetProperty("players").EnumerateArray().Select(player => player.GetProperty("id").GetGuid()).Should().Equal(first, second);
-        body.RootElement.GetProperty("expiresAt").ValueKind.Should().Be(JsonValueKind.Null);
+        body.RootElement.GetProperty("expiresAt").GetDateTimeOffset().Should().BeCloseTo(DateTimeOffset.UtcNow.AddDays(90), TimeSpan.FromMinutes(1));
         body.RootElement.GetProperty("allowForwarding").GetBoolean().Should().BeFalse();
     }
 
@@ -178,7 +186,7 @@ public sealed class ShareLinkEndpointTests : IAsyncLifetime
         var (playerId, _) = await AddPlayerAsync(published: true);
 
         using var unknownPlayer = await SendAsync(AdminTelegramId, HttpMethod.Post, "/admin/links", NewLinkForm(Guid.NewGuid()));
-        using var unknownRecipient = await SendAsync(AdminTelegramId, HttpMethod.Post, "/admin/links", new { recipientId = Guid.NewGuid(), playerIds = new[] { playerId } });
+        using var unknownRecipient = await SendAsync(AdminTelegramId, HttpMethod.Post, "/admin/links", new { recipientId = Guid.NewGuid(), playerIds = new[] { playerId }, expiresInDays = 30 });
 
         unknownPlayer.StatusCode.Should().Be(HttpStatusCode.NotFound);
         unknownRecipient.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -191,6 +199,7 @@ public sealed class ShareLinkEndpointTests : IAsyncLifetime
     [InlineData("no-recipient", "recipient")]
     [InlineData("both-recipients", "recipient")]
     [InlineData("bad-expiry", "expiresInDays")]
+    [InlineData("no-expiry", "expiresInDays")]
     [InlineData("no-players", "playerIds")]
     [InlineData("bad-scope", "forwardingScope")]
     public async Task Malformed_forms_are_400(string form, string field)
@@ -199,11 +208,12 @@ public sealed class ShareLinkEndpointTests : IAsyncLifetime
         var recipient = new { name = "Marco Rossi", emails = new[] { "marco@lube.it" } };
         object body = form switch
         {
-            "no-recipient" => new { playerIds = new[] { playerId } },
-            "both-recipients" => new { recipientId = Guid.NewGuid(), recipient, playerIds = new[] { playerId } },
+            "no-recipient" => new { playerIds = new[] { playerId }, expiresInDays = 30 },
+            "both-recipients" => new { recipientId = Guid.NewGuid(), recipient, playerIds = new[] { playerId }, expiresInDays = 30 },
             "bad-expiry" => new { recipient, playerIds = new[] { playerId }, expiresInDays = 45 },
-            "no-players" => new { recipient, playerIds = Array.Empty<Guid>() },
-            _ => new { recipient, playerIds = new[] { playerId }, forwardingScope = "Everyone" },
+            "no-players" => new { recipient, playerIds = Array.Empty<Guid>(), expiresInDays = 30 },
+            "no-expiry" => new { recipient, playerIds = new[] { playerId } },
+            _ => new { recipient, playerIds = new[] { playerId }, expiresInDays = 30, forwardingScope = "Everyone" },
         };
 
         using var response = await SendAsync(AdminTelegramId, HttpMethod.Post, "/admin/links", body);

@@ -67,8 +67,8 @@ public sealed class GatePurgeTests : IAsyncLifetime
         var email = EmailAddress.Create("marco@lube.it");
         var oldCode = EmailChallenge.Request(link, email, false, _now.AddDays(-2));
         var newCode = EmailChallenge.Request(link, email, false, _now.AddHours(-12));
-        var oldSession = ViewerSession.Start("old-session", link, email, false, null, _now.AddDays(-9));
-        var newSession = ViewerSession.Start("new-session", link, email, false, null, _now.AddDays(-7));
+        var oldSession = ViewerSession.Start("old-session", link, email, false, null, _now.AddDays(-15));
+        var newSession = ViewerSession.Start("new-session", link, email, false, null, _now.AddDays(-13));
         var oldDevice = TrustedDevice.Trust("old-device", link, email, false, _now.AddDays(-98));
         var newDevice = TrustedDevice.Trust("new-device", link, email, false, _now.AddDays(-96));
         var forward = LinkForward.Record(link, EmailAddress.Create("scout@other.com"), _now.AddDays(-400));
@@ -95,8 +95,8 @@ public sealed class GatePurgeTests : IAsyncLifetime
         var email = EmailAddress.Create("j.demir@gmail.com");
         var oldCode = AccessCodeChallenge.Request(email, _now.AddDays(-2));
         var newCode = AccessCodeChallenge.Request(email, _now.AddHours(-12));
-        var oldSession = AccountSession.Start(SignInAudience.Viewer, Guid.CreateVersion7(), email, "old-account", _now.AddDays(-9));
-        var newSession = AccountSession.Start(SignInAudience.Viewer, Guid.CreateVersion7(), email, "new-account", _now.AddDays(-7));
+        var oldSession = AccountSession.Start(SignInAudience.Viewer, Guid.CreateVersion7(), email, "old-account", _now.AddDays(-15));
+        var newSession = AccountSession.Start(SignInAudience.Viewer, Guid.CreateVersion7(), email, "new-account", _now.AddDays(-13));
         await SeedAsync(db =>
         {
             db.AddRange(oldCode, newCode, oldSession, newSession);

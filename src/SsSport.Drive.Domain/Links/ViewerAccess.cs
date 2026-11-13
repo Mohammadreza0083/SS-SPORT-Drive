@@ -102,13 +102,13 @@ public sealed class TrustedDevice : AggregateRoot<Guid>
 }
 
 /// <summary>
-/// A viewer's session on one link (L-2): one day long (decisions §7a), carried by the <c>__Host-ssd_vs</c> cookie that
+/// A viewer's session on one link (L-2): seven days long (decisions §7a), carried by the <c>__Host-ssd_vs</c> cookie that
 /// the HLS edge tokens are bound to. It remembers the email shown over the videos. Only the token's keyed hash is stored.
 /// </summary>
 public sealed class ViewerSession : AggregateRoot<Guid>
 {
     /// <summary>How long a session lasts.</summary>
-    public static readonly TimeSpan Lifetime = TimeSpan.FromDays(1);
+    public static readonly TimeSpan Lifetime = TimeSpan.FromDays(7);
 
     /// <summary>Initializes a session; use <see cref="Start"/>.</summary>
     /// <param name="id">The identifier.</param>

@@ -7,6 +7,7 @@ using SsSport.Drive.Application.Abstractions.Security;
 using SsSport.Drive.Application.Exceptions;
 using SsSport.Drive.Application.Links;
 using SsSport.Drive.Application.Paging;
+using SsSport.Drive.Application.Validation;
 using SsSport.Drive.Domain.Assets;
 using SsSport.Drive.Domain.Links;
 using SsSport.Drive.Domain.Primitives;
@@ -317,5 +318,43 @@ public sealed class GetLinkViewingQueryHandler(IRepository<ShareLink, Guid> link
         ArgumentNullException.ThrowIfNull(request);
         _ = await links.GetByIdAsync(request.ShareLinkId, cancellationToken) ?? throw new NotFoundException("Share link");
         return await reader.PageAsync(request.ShareLinkId, request.Paging, cancellationToken);
+    }
+}
+
+/// <summary>Validates <see cref="GetLinkViewingQuery"/> on the server (decisions §1b rule 3); malformed input is a 400.</summary>
+public sealed class GetLinkViewingQueryValidator : AbstractValidator<GetLinkViewingQuery>
+{
+    /// <summary>Builds the rules.</summary>
+    public GetLinkViewingQueryValidator()
+    {
+        RuleFor(r => r.ShareLinkId).ValidId().OverridePropertyName("shareLinkId");
+        RuleFor(r => r.Paging).ValidPaging();
+    }
+}
+
+/// <summary>Validates <see cref="RecordHeartbeatCommand"/> on the server (decisions §1b rule 3); malformed input is a 400.</summary>
+public sealed class RecordHeartbeatCommandValidator : AbstractValidator<RecordHeartbeatCommand>
+{
+    /// <summary>Builds the rules.</summary>
+    public RecordHeartbeatCommandValidator()
+    {
+        RuleFor(r => r.Code).BoundedCode().OverridePropertyName("code");
+        RuleFor(r => r.SessionToken).BoundedToken().OverridePropertyName("sessionToken");
+        RuleFor(r => r.WatchId).ValidId().OverridePropertyName("watchId");
+        RuleFor(r => r.From).Must(double.IsFinite).WithMessage("Send a finite time.").OverridePropertyName("from");
+        RuleFor(r => r.To).Must(double.IsFinite).WithMessage("Send a finite time.").OverridePropertyName("to");
+    }
+}
+
+/// <summary>Validates <see cref="StartWatchCommand"/> on the server (decisions §1b rule 3); malformed input is a 400.</summary>
+public sealed class StartWatchCommandValidator : AbstractValidator<StartWatchCommand>
+{
+    /// <summary>Builds the rules.</summary>
+    public StartWatchCommandValidator()
+    {
+        RuleFor(r => r.Code).BoundedCode().OverridePropertyName("code");
+        RuleFor(r => r.SessionToken).BoundedToken().OverridePropertyName("sessionToken");
+        RuleFor(r => r.PlayerId).ValidId().OverridePropertyName("playerId");
+        RuleFor(r => r.AssetId).ValidId().OverridePropertyName("assetId");
     }
 }

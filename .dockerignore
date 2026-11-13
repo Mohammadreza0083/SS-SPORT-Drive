@@ -12,6 +12,9 @@
 .idea
 graphify-out
 .mail
+.gitleaks.toml
+gitleaks-report*.json
+vulnerable.txt
 
 # Secrets & local env
 .env

@@ -60,7 +60,7 @@ public sealed class ForwardKeptEmailTests
         _users.GetByIdAsync(admin.Id, Arg.Any<CancellationToken>()).Returns(admin);
 
         var recipient = Recipient.Create("Marco Rossi", "Lube Volley", null, [EmailAddress.Create("marco@lube.it")], _now);
-        _link = ShareLink.Create(ShareLinkCode.Generate(), recipient, [PublishedPlayer()], null, null, ShareLinkSettings.Default, admin.Id, _now);
+        _link = ShareLink.Create(ShareLinkCode.Generate(), recipient, [PublishedPlayer()], null, _now.AddDays(30), ShareLinkSettings.Default, admin.Id, _now);
         _links.GetByIdAsync(_link.Id, Arg.Any<CancellationToken>()).Returns(_link);
 
         _forward = LinkForward.Record(_link.Id, EmailAddress.Create("scout@other.com"), _now);

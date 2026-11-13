@@ -74,8 +74,17 @@ Standing rules for every feature. Each control gets tests, and nothing is commit
 10. **Rate limiting** (ASP.NET Core rate limiter, partitioned by IP and identity) on sign-in, OTP, magic-link, access-request, webhook and other public endpoints. Rejections return 429 with `Retry-After`.
 11. **CORS** allows only the explicit origin list (`Cors__AllowedOrigins`); never a wildcard with credentials.
 12. **Security headers** on the API and the Next.js app: CSP, HSTS, `X-Content-Type-Options: nosniff`, `frame-ancestors`/`X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`.
-13. **Session cookies are secure:** `HttpOnly`, `Secure`, `SameSite=Lax` (or `Strict`), `__Host-` prefix, lifetimes per §7a (admin 7 days, viewer 1 day).
+13. **Session cookies are secure:** `HttpOnly`, `Secure`, `SameSite=Lax` (or `Strict`), `__Host-` prefix, lifetimes per §7a (admin 30 days, viewer 7 days; owner, 2026-11-13).
 14. **CSRF protection** (anti-forgery tokens) on every cookie-authenticated state-changing request. Header-authenticated calls (Mini App initData, Telegram webhook secret) are exempt.
+
+**Pre-pentest pass (owner, 2026-11-13; O-10 / SSD-136):**
+- **Run `/graphify` before every security or penetration-test phase.** The graph of the codebase is the attack-surface map the audit starts from.
+- **Sessions stay opaque.** Session tokens remain random values stored only as keyed hashes. There is **no JWT**, no passwords and no ASP.NET Identity `UserManager`. Sign-in stays magic-link (§7a). An opaque session can be revoked at once (a demoted admin loses access immediately); a JWT could not.
+- **Session lifetimes:** admin **30 days**, viewer **7 days** (account session and per-link session alike). This replaces 7 days / 1 day.
+- **Every link expires.** A share link must have an expiry; the "never expires" choice is removed. Sign-in links (15 min), email codes (10 min) and HLS tokens (30 min) already expire.
+- **Admin deny-by-default at the HTTP layer too:** every `/admin/*` endpoint carries the `Admin` authorization policy, on top of the MediatR `AuthorizationBehavior`, and a test enumerates them.
+- **Every command and query that carries input has a FluentValidation validator.**
+- **CI scans:** secret scanning (gitleaks) and dependency vulnerability scans (.NET and npm) on every PR.
 
 **How the first pass is built (O-9 / SSD-123, 2026-11-01):**
 - **API (`src/SsSport.Drive.Api/Security`):**
@@ -734,7 +743,7 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
     - In development without provider keys, `Email__PickupDirectory` writes the mail as an `.eml` file instead. Production refuses the pickup directory.
   - **Device and session:**
     - **Device:** the browser gets `__Host-ssd_dev`, remembered **90 days** (canvas). It is trusted per link: one row per device and link (`trusted_devices`), with the verified email and whether it was a forward.
-    - **Session:** `__Host-ssd_vs` lasts **1 day** (§7a) and belongs to one link and one email. When it runs out, a trusted device gets a new session silently, with no new code.
+    - **Session:** `__Host-ssd_vs` lasts **7 days** (§7a; was 1 day until 2026-11-13) and belongs to one link and one email. When it runs out, a trusted device gets a new session silently, with no new code.
     - **Edge cookie:** the edge Worker's cookie is renamed from `ssd_vs` to `__Host-ssd_vs` to meet the cookie rule in §1b.
     - **Storage and cookie flags:** tokens are stored only as HMAC-SHA256 hashes. Cookies are `HttpOnly`, `Secure`, `SameSite=Lax` and `Path=/`.
   - **Links with "verify on new device" off** open without the gate. Their session carries the recipient's first email for the overlay.
@@ -795,11 +804,11 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
 
 - **Admin console login:**
   - Email **magic link**: the admin enters their email and receives a one-time sign-in link.
-  - The session lasts **7 days**, then the admin must sign in again.
+  - The session lasts **30 days** (owner, 2026-11-13; was 7 days), then the admin must sign in again.
   - *(Replaces the brief's Telegram Login for the console. The bot still identifies users by Telegram ID.)*
 - **Viewer accounts:**
   - Viewers (clubs, scouts, agents) can sign in with an email magic link from a login page.
-  - The session lasts **1 day**.
+  - The session lasts **7 days** (owner, 2026-11-13; was 1 day). The per-link viewer session (`__Host-ssd_vs`) follows the same 7 days.
   - Signing in only serves to skip the email/OTP step when requesting access (confirmed by the owner after the CEO dropped the dashboard).
 - **No viewer (user) dashboard (CEO decision):**
   - Viewers get no dashboard.
@@ -853,7 +862,7 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
 
 - **Email queue (L-4):** every email is an `outgoing_emails` row (kind `Code` or `General`, a template key, safe JSON data with no address, code or token) sent by a Hangfire job on its own `emails` queue with 2 workers, 4 attempts in all. The job composes the mail from its template, so a code or token is drawn inside the job and stored only as a keyed hash. `Code` mail goes Resend then Brevo; `General` mail goes through Google SMTP only (`Email__GoogleSmtp__*`, built-in `System.Net.Mail`, STARTTLS 587). The development pickup folder takes everything. Failures store only the exception type. Admins read the queue at `GET /admin/emails` (cursor-paged, newest first, masked recipients). Retention of the rows is still open.
 - **Kept forward (L-3b):** Keep queues one `forward.kept` mail with the `/r/{code}` link; Block and a second press send nothing.
-- **Magic-link sign-in (A-1, P-5):** `POST /auth/{admin|viewer}/link` always answers 202 (nobody can probe for admins); only an active admin's address gets an admin link; at most 5 links per address and audience per hour; the link works once for 15 minutes and is sent as `Code` mail. `POST …/session` turns the token into a session (admin 7 days, viewer 1 day; viewers get a `viewer_accounts` row on first sign-in); `GET …/me`; `POST …/sign-out`. The API reads the session only from `X-Admin-Session` / `X-Viewer-Account`, never cookies; every POST must be JSON (415 otherwise, the CSRF check). An admin session gives the same claims as the Mini App signature, so `/admin/*` accepts either; a demoted admin's session stops working at once. `/auth/*` has its own budget `RateLimiting__AuthPermitsPerMinute` (10). The console pages, cookies and home-page buttons are a web follow-up; purging old sign-in rows is still open.
+- **Magic-link sign-in (A-1, P-5):** `POST /auth/{admin|viewer}/link` always answers 202 (nobody can probe for admins); only an active admin's address gets an admin link; at most 5 links per address and audience per hour; the link works once for 15 minutes and is sent as `Code` mail. `POST …/session` turns the token into a session (admin 30 days, viewer 7 days since 2026-11-13; viewers get a `viewer_accounts` row on first sign-in); `GET …/me`; `POST …/sign-out`. The API reads the session only from `X-Admin-Session` / `X-Viewer-Account`, never cookies; every POST must be JSON (415 otherwise, the CSRF check). An admin session gives the same claims as the Mini App signature, so `/admin/*` accepts either; a demoted admin's session stops working at once. `/auth/*` has its own budget `RateLimiting__AuthPermitsPerMinute` (10). The console pages, cookies and home-page buttons are a web follow-up; purging old sign-in rows is still open.
 - **Public address:** `Web__PublicBaseUrl` builds emailed links.
 - **Watch tracking (L-5):** `POST /links/{code}/players/{id}/videos/{id}/watch` (201, one play), `POST /links/{code}/watch/{id}/heartbeat` (range played, every 10 s, at most 30 s, within 1 s of the end, ranges within 0.5 s join, at most 2000 ranges) and `…/events` (`Play`, `Pause`, `Seek`, `Ended`; playing again after `Ended` is a new play). All need the viewer session of the link; they share the viewer rate budget.
 - **Metrics (L-6):** per viewer email and video, summed over watches: plays, watch time (every second played), unique seconds (ranges merged), completion (unique share, complete from 90 %), hotspots in 5-second buckets (per watch). Admins read them, paged in SQL, at `GET /admin/links/{id}/viewing`, with full viewer emails.
@@ -888,7 +897,7 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
   - **Locked page:** the photo is public (`Cache-Control: public`). Videos are `title, tag, durationSeconds`, documents `title, pageCount`: no id, address or key. Unknown and unpublished players are the same 404.
   - **Request access:** the visitor's code is its own aggregate (`AccessCodeChallenge`) with the gate's exact limits. The code is checked inside `POST /public/access-requests`. Order: input (400), player (404), signed-in session (401 `sign_in.required`) or Turnstile (422 `turnstile.failed`, before the code so bots cannot burn tries), code (422 `email_code.*`), repeat while pending (201, nothing stored), limits (429 `access_request.too_many`), store. **Limits (owner): 5 requests per email in 24 hours and 20 per player in an hour.** A signed-in viewer skips the code and Turnstile and cannot choose another email. `AccessRequested` is raised and waits for P-4.
   - **Turnstile:** `Turnstile__SecretKey` on the API (outside production an empty value uses Cloudflare's always-pass test secret; in production an empty value refuses every signed-out access request and logs an error, so the API still starts), `NEXT_PUBLIC_TURNSTILE_SITE_KEY` in the web build. The web CSP now allows `https://challenges.cloudflare.com` for scripts and frames (site pages only, not the Mini App). The server fails closed.
-  - **Signed-in viewers:** P-8 reuses P-5's `AccountSession` (audience Viewer, one day, keyed token hash), header `X-Viewer-Account`, web cookie `__Host-ssd_acct`; it reads who is signed in from `GET /auth/viewer/me`. There is no second session table.
+  - **Signed-in viewers:** P-8 reuses P-5's `AccountSession` (audience Viewer, 7 days, keyed token hash), header `X-Viewer-Account`, web cookie `__Host-ssd_acct`; it reads who is signed in from `GET /auth/viewer/me`. There is no second session table.
   - **Budgets:** `RateLimiting__PublicPermitsPerMinute` (120) for `/public/*`, `RateLimiting__AccessPermitsPerMinute` (10) for the two writes. The daily gate clean-up also removes visitor codes and ended sign-in sessions. The visitor's code email goes through the email queue (L-4) with the template `access.code`.
 - **V-2 player page (2026-10-30):**
   - Built from the canvas's Main, Tablet and Mobile artboards. Desktop rules come first; tablet (≤1024 px) and phone (≤640 px) restyle the same markup. Pieces that move between breakpoints (the "Prepared for" ribbon, the personal note) are rendered in each place and shown only where they belong.

@@ -11,6 +11,7 @@ using SsSport.Drive.Application.Exceptions;
 using SsSport.Drive.Application.Players;
 using SsSport.Drive.Application.Telegram;
 using SsSport.Drive.Application.Telegram.Notices;
+using SsSport.Drive.Application.Validation;
 using SsSport.Drive.Domain.DriveFolders;
 using SsSport.Drive.Domain.Notifications;
 using SsSport.Drive.Domain.Players;
@@ -358,4 +359,25 @@ public sealed class FolderByIdReadOnlySpec : Specification<DriveFolder>, ISingle
     /// <summary>Initializes the specification.</summary>
     /// <param name="id">The folder id.</param>
     public FolderByIdReadOnlySpec(Guid id) => Query.Where(folder => folder.Id == id).AsNoTracking();
+}
+
+/// <summary>Validates <see cref="AddPlayerFolderCommand"/> on the server (decisions §1b rule 3); malformed input is a 400.</summary>
+public sealed class AddPlayerFolderCommandValidator : AbstractValidator<AddPlayerFolderCommand>
+{
+    /// <summary>Builds the rules.</summary>
+    public AddPlayerFolderCommandValidator()
+    {
+        RuleFor(r => r.PlayerId).ValidId().OverridePropertyName("playerId");
+        RuleFor(r => r.DriveFolderUrl).BoundedUrl().OverridePropertyName("driveFolderUrl");
+    }
+}
+
+/// <summary>Validates <see cref="GetMiniAppPlayerQuery"/> on the server (decisions §1b rule 3); malformed input is a 400.</summary>
+public sealed class GetMiniAppPlayerQueryValidator : AbstractValidator<GetMiniAppPlayerQuery>
+{
+    /// <summary>Builds the rules.</summary>
+    public GetMiniAppPlayerQueryValidator()
+    {
+        RuleFor(r => r.PlayerId).ValidId().OverridePropertyName("playerId");
+    }
 }

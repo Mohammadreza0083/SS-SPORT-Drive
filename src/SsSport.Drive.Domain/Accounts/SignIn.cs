@@ -98,7 +98,7 @@ public sealed class SignInLink : AggregateRoot<Guid>
 }
 
 /// <summary>
-/// A signed-in session (A-1, P-5): 7 days for an admin, 1 day for a viewer. Only the session token's keyed hash is
+/// A signed-in session (A-1, P-5): 30 days for an admin, 7 days for a viewer. Only the session token's keyed hash is
 /// stored; the web app keeps the token in a <c>__Host-</c> cookie and sends it in a header.
 /// </summary>
 public sealed class AccountSession : AggregateRoot<Guid>
@@ -142,11 +142,11 @@ public sealed class AccountSession : AggregateRoot<Guid>
     /// <summary>Gets when the person signed out (UTC), or <see langword="null"/>.</summary>
     public DateTimeOffset? EndedAt { get; private set; }
 
-    /// <summary>Gets how long a session lasts: 7 days for an admin, 1 day for a viewer (decisions §7a).</summary>
+    /// <summary>Gets how long a session lasts: 30 days for an admin, 7 days for a viewer (decisions §7a, owner 2026-11-13).</summary>
     /// <param name="audience">Who it is for.</param>
     /// <returns>The lifetime.</returns>
     public static TimeSpan LifetimeOf(SignInAudience audience) =>
-        audience == SignInAudience.Admin ? TimeSpan.FromDays(7) : TimeSpan.FromDays(1);
+        audience == SignInAudience.Admin ? TimeSpan.FromDays(30) : TimeSpan.FromDays(7);
 
     /// <summary>Starts a session.</summary>
     /// <param name="audience">Who it is for.</param>

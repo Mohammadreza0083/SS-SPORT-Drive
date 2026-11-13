@@ -1,11 +1,13 @@
 using System.Globalization;
 using Ardalis.Specification;
+using FluentValidation;
 using SsSport.Drive.Application.Abstractions.Images;
 using SsSport.Drive.Application.Abstractions.Messaging;
 using SsSport.Drive.Application.Abstractions.Persistence;
 using SsSport.Drive.Application.Abstractions.Storage;
 using SsSport.Drive.Application.MiniApp;
 using SsSport.Drive.Application.Users;
+using SsSport.Drive.Application.Validation;
 using SsSport.Drive.Domain.Notifications;
 using SsSport.Drive.Domain.Players;
 using SsSport.Drive.Domain.Primitives;
@@ -219,5 +221,19 @@ public sealed class ReceiveBotPhotoCommandHandler(
         var current = Math.Min(page, lastPage);
         var onPage = await players.ListAsync(new PlayersAwaitingPhotoSpec(user.Id, current), cancellationToken);
         return new BotPhotoReply(BotTexts.PhotoPickPlayer, PhotoCallbacks.Picker(onPage, current, current < lastPage));
+    }
+}
+
+/// <summary>Validates <see cref="ReceiveBotPhotoCommand"/> on the server (decisions §1b rule 3); malformed input is a 400.</summary>
+public sealed class ReceiveBotPhotoCommandValidator : AbstractValidator<ReceiveBotPhotoCommand>
+{
+    /// <summary>Builds the rules.</summary>
+    public ReceiveBotPhotoCommandValidator()
+    {
+        RuleFor(r => r.From).Must(sender => sender is { UserId: > 0 } && sender.ChatId != 0).WithMessage("The Telegram sender is required.").OverridePropertyName("from");
+        RuleFor(r => r.Photo).Must(photo => photo is not null && !string.IsNullOrWhiteSpace(photo.FileId) && photo.FileId.Length <= 256).WithMessage("The photo is required.").OverridePropertyName("photo");
+        RuleFor(r => r.ReplyToMessageId).GreaterThan(0).When(r => r.ReplyToMessageId is not null).OverridePropertyName("replyToMessageId");
+        RuleFor(r => r.PlayerId).NotEqual(Guid.Empty).When(r => r.PlayerId is not null).OverridePropertyName("playerId");
+        RuleFor(r => r.Page).GreaterThanOrEqualTo(1).OverridePropertyName("page");
     }
 }
