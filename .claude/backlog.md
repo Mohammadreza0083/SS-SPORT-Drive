@@ -106,6 +106,8 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | L-5 | Tracking events + heartbeats + sessions | Claude | Tests green |
 | L-6 | Metrics: unique watched (range merge), watch time, plays, hotspots, completion | Claude | Unit test per metric |
 | L-7 | Admin bot alerts + daily digest 09:00 Tehran | Claude | Part done (2026-11-12): first-open alert and the digest with sessions, forwards and the waiting list; plays, minutes, top players and failed emails (7b) wait for L-4/L-5/L-6 |
+| W-2 | Player sends the watch start, a heartbeat every 10 s and play/pause/seek/ended to the tracking API (L-5 client part, in the V-3 player) | Claude | Tests green |
+| W-3 | Retention and clean-up for `outgoing_emails`, `tracking_events`, `sign_in_links` and `account_sessions` (owner to decide the periods) | Both | Tests green |
 
 ## EPIC 6 — Public search & access requests
 | Key | Task | Assignee | Done when |
@@ -117,6 +119,7 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | P-5 | Viewer login by email magic link (1-day session) | Claude | Tests green |
 | P-7 | Home page login button; signed-in viewers request access without email/OTP | Claude | Tests green |
 | P-8 | Backend half of P-1, P-2, P-3 and P-7: public player search + locked player API, request-access API (OTP, Turnstile, rate limits), `/api/public/*` and sign-out routes, real `/players/{slug}` page, real Turnstile widget + CSP. The front-end of all four is done on sample data (`/design/home`, `/design/locked`) | Claude | Tests green; the public pages run on real data |
+| W-1 | Web part of sign-in: `/admin/sign-in` and `/sign-in` pages, same-origin routes that set `__Host-ssd_as` / `__Host-ssd_va` and forward `X-Admin-Session` / `X-Viewer-Account`, home page Sign in / Sign out (A-1 and P-5 web part, needed by P-7) | Claude | Tests green |
 
 ## EPIC 7 — Admin console
 | Key | Task | Assignee | Done when |
@@ -169,6 +172,3 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | K-9 | Benchmark My players, the player files and the edit-video sheet (same script, opt-in scenarios); fix the Volleybox id window and the run recipe | Both | Report reviewed |
 | K-10 | Email-code requests slow the whole API under load: with about 1 code request a second next to ~100 viewer reads a second, every request goes from tens of milliseconds to seconds and single-row lookups log as slow SQL (found by the V-2b k6 run, `perf/k6/viewer-links.js`). Find the cause (blocking Hangfire enqueue, thread-pool starvation, locks) and fix it | Claude | Done (2026-11-12): did not reproduce on a clean re-run; peak 20 and peak 50 with `SEND_CODES=1` pass every threshold (`perf/k6/README.md`) |
 | K-11 | Telegram Bot API stand-in for k6 runs, so the webhook benchmark measures our own code (found by the T-8 benchmark: webhook `new_updates` p95 364 ms because each `/start` waits on a real api.telegram.org call); bench-only setting, refused in production; rerun webhook + Mini App load on a quiet machine | Claude | Tests green; webhook load passes its thresholds against the stand-in; results in `perf/k6/README.md` |
-| W-1 | Web part of sign-in: `/admin/sign-in` and `/sign-in` pages, same-origin routes that set `__Host-ssd_as` / `__Host-ssd_va` and forward `X-Admin-Session` / `X-Viewer-Account`, home page Sign in / Sign out (A-1 and P-5 web part, needed by P-7) | Claude | Tests green |
-| W-2 | Player sends the watch start, a heartbeat every 10 s and play/pause/seek/ended to the tracking API (L-5 client part, in the V-3 player) | Claude | Tests green |
-| W-3 | Retention and clean-up for `outgoing_emails`, `tracking_events`, `sign_in_links` and `account_sessions` (owner to decide the periods) | Both | Tests green |
