@@ -168,6 +168,83 @@ public static class BotTexts
     /// <summary>Gets the "ProgressPublished" text (T-6a progress message).</summary>
     public static string ProgressPublished => Get(nameof(ProgressPublished));
 
+    /// <summary>Formats the "ProgressCopy" text (T-6b build progress).</summary>
+    /// <param name="args">The values to insert.</param>
+    /// <returns>The text.</returns>
+    public static string FormatProgressCopy(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("ProgressCopy"), args);
+
+    /// <summary>Formats the "ProgressTranscode" text (T-6b build progress).</summary>
+    /// <param name="args">The values to insert.</param>
+    /// <returns>The text.</returns>
+    public static string FormatProgressTranscode(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("ProgressTranscode"), args);
+
+    /// <summary>Formats the "ProgressPages" text (T-6b build progress).</summary>
+    /// <param name="args">The values to insert.</param>
+    /// <returns>The text.</returns>
+    public static string FormatProgressPages(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("ProgressPages"), args);
+
+    /// <summary>Gets the "ProgressFailedOne" text (T-6b build progress).</summary>
+    public static string ProgressFailedOne => Get(nameof(ProgressFailedOne));
+
+    /// <summary>Formats the "ProgressFailedMany" text (T-6b build progress).</summary>
+    /// <param name="args">The values to insert.</param>
+    /// <returns>The text.</returns>
+    public static string FormatProgressFailedMany(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("ProgressFailedMany"), args);
+
+    /// <summary>Formats the "ProgressBar" text (T-6b build progress).</summary>
+    /// <param name="args">The values to insert.</param>
+    /// <returns>The text.</returns>
+    public static string FormatProgressBar(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("ProgressBar"), args);
+
+    /// <summary>Gets the "ProgressEstimating" text (T-6b build progress).</summary>
+    public static string ProgressEstimating => Get(nameof(ProgressEstimating));
+
+    /// <summary>Formats the "ProgressTimeLeftMinutes" text (T-6b build progress).</summary>
+    /// <param name="args">The values to insert.</param>
+    /// <returns>The text.</returns>
+    public static string FormatProgressTimeLeftMinutes(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("ProgressTimeLeftMinutes"), args);
+
+    /// <summary>Formats the "ProgressTimeLeftHours" text (T-6b build progress).</summary>
+    /// <param name="args">The values to insert.</param>
+    /// <returns>The text.</returns>
+    public static string FormatProgressTimeLeftHours(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("ProgressTimeLeftHours"), args);
+
+    /// <summary>Formats the "ProgressTimeLeftHoursMinutes" text (T-6b build progress).</summary>
+    /// <param name="args">The values to insert.</param>
+    /// <returns>The text.</returns>
+    public static string FormatProgressTimeLeftHoursMinutes(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("ProgressTimeLeftHoursMinutes"), args);
+
+    /// <summary>Formats the "ProgressLive" text (T-6b build progress).</summary>
+    /// <param name="args">The values to insert.</param>
+    /// <returns>The text.</returns>
+    public static string FormatProgressLive(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("ProgressLive"), args);
+
+    /// <summary>Gets the "ProgressLiveVideoOne" text (T-6b build progress).</summary>
+    public static string ProgressLiveVideoOne => Get(nameof(ProgressLiveVideoOne));
+
+    /// <summary>Formats the "ProgressLiveVideoMany" text (T-6b build progress).</summary>
+    /// <param name="args">The values to insert.</param>
+    /// <returns>The text.</returns>
+    public static string FormatProgressLiveVideoMany(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("ProgressLiveVideoMany"), args);
+
+    /// <summary>Gets the "ProgressLiveDocumentOne" text (T-6b build progress).</summary>
+    public static string ProgressLiveDocumentOne => Get(nameof(ProgressLiveDocumentOne));
+
+    /// <summary>Formats the "ProgressLiveDocumentMany" text (T-6b build progress).</summary>
+    /// <param name="args">The values to insert.</param>
+    /// <returns>The text.</returns>
+    public static string FormatProgressLiveDocumentMany(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("ProgressLiveDocumentMany"), args);
+
+    /// <summary>Formats the "ProgressLink" text (T-6b build progress).</summary>
+    /// <param name="args">The values to insert.</param>
+    /// <returns>The text.</returns>
+    public static string FormatProgressLink(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("ProgressLink"), args);
+
+    /// <summary>Formats the "ProgressQrCaption" text (T-6b build progress).</summary>
+    /// <param name="args">The values to insert.</param>
+    /// <returns>The text.</returns>
+    public static string FormatProgressQrCaption(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("ProgressQrCaption"), args);
+
     /// <summary>Formats the "ProgressHeaderWaiting" text.</summary>
     /// <param name="args">The values for its placeholders.</param>
     /// <returns>The text.</returns>

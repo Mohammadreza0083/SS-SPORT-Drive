@@ -92,6 +92,7 @@ public static class DependencyInjection
         services.AddScoped(typeof(IRepository<,>), typeof(Repository<,>));
         services.AddScoped<IPagedReader, PagedReader>();
         services.AddScoped<IPlayerListReader, PlayerListReader>();
+        services.AddScoped<IPlayerBuildReader, PlayerBuildReader>();
         services.AddScoped<ILinkPlayerReader, LinkPlayerReader>();
         services.AddScoped<IPublicPlayerReader, PublicPlayerReader>();
         services.AddScoped<IDigestFactsReader, DigestFactsReader>();

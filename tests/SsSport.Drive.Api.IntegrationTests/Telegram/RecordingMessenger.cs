@@ -4,10 +4,10 @@ using SsSport.Drive.Application.Telegram;
 namespace SsSport.Drive.Api.IntegrationTests.Telegram;
 
 /// <summary>One call the bot made to Telegram.</summary>
-/// <param name="Kind">Send, Edit or Answer.</param>
+/// <param name="Kind">Send, Edit, Answer or Photo.</param>
 /// <param name="ChatId">The chat, for Send and Edit.</param>
 /// <param name="MessageId">The edited message, for Edit.</param>
-/// <param name="Text">The text (or the callback answer text).</param>
+/// <param name="Text">The text (the callback answer text, or the photo caption).</param>
 /// <param name="Keyboard">The buttons, if any.</param>
 /// <param name="ShowAlert">For Answer: shown as a pop-up.</param>
 internal sealed record BotCall(string Kind, long? ChatId, int? MessageId, string? Text, BotKeyboard? Keyboard, bool ShowAlert)
@@ -15,8 +15,11 @@ internal sealed record BotCall(string Kind, long? ChatId, int? MessageId, string
     /// <summary>Gets every button's callback data, row by row.</summary>
     public IEnumerable<string> ButtonData => Keyboard?.Rows.SelectMany(row => row).Select(button => button.CallbackData) ?? [];
 
-    /// <summary>Gets the message a Send replies to, or <see langword="null"/>.</summary>
+    /// <summary>Gets the message a Send or Photo replies to, or <see langword="null"/>.</summary>
     public int? ReplyTo { get; init; }
+
+    /// <summary>Gets the image bytes of a Photo call (T-6b), or <see langword="null"/>.</summary>
+    public byte[]? Photo { get; init; }
 }
 
 /// <summary>Stands in for Telegram: records every message the bot sends, edits or answers, and serves files.</summary>
@@ -86,6 +89,19 @@ internal sealed class RecordingMessenger : ITelegramMessenger
         var id = Interlocked.Increment(ref _nextMessageId);
         Calls.Enqueue(new BotCall("Send", chatId, id, text, keyboard, false) { ReplyTo = replyToMessageId });
         return id;
+    }
+
+    /// <inheritdoc />
+    public Task<int> SendPhotoAsync(long chatId, int? replyToMessageId, byte[] photo, string caption, CancellationToken cancellationToken)
+    {
+        if (FailSends)
+        {
+            throw new HttpRequestException("Telegram is unreachable.");
+        }
+
+        var id = Interlocked.Increment(ref _nextMessageId);
+        Calls.Enqueue(new BotCall("Photo", chatId, id, caption, null, false) { ReplyTo = replyToMessageId, Photo = photo });
+        return Task.FromResult(id);
     }
 
     /// <inheritdoc />

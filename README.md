@@ -249,7 +249,7 @@ SS-SPORT Drive/
 |---|---|---|
 | 0 | Setup & accounts | 🚧 In progress |
 | 1 | Core domain & persistence | ✅ Done |
-| 2 | Telegram bot & Mini App | 🚧 In progress |
+| 2 | Telegram bot & Mini App | ✅ Done (T-6b demo waits for Epic 3) |
 | 3 | Ingest, transcode & sync | 🚧 In progress (I-1 Drive reader done) |
 | 4 | Viewer site & media protection | ✅ Done |
 | 5 | Personal links, OTP & tracking | 🚧 In progress (L-1–L-6 done; L-7 alerts and digest done except the digest's watching numbers) |

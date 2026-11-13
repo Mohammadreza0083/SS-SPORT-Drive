@@ -23,6 +23,22 @@ internal sealed class TelegramMessenger(ITelegramBotClient client) : ITelegramMe
         return message.MessageId;
     }
 
+    /// <summary>Sends a photo with a caption, as a reply when a message id is given (T-6b).</summary>
+    /// <param name="chatId">The chat.</param>
+    /// <param name="replyToMessageId">The message to reply to, or <see langword="null"/>.</param>
+    /// <param name="photo">The image bytes.</param>
+    /// <param name="caption">The caption.</param>
+    /// <param name="cancellationToken">Cancels the call.</param>
+    /// <returns>The message id.</returns>
+    public async Task<int> SendPhotoAsync(long chatId, int? replyToMessageId, byte[] photo, string caption, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(photo);
+        var replyTo = replyToMessageId is { } id ? new ReplyParameters { MessageId = id, AllowSendingWithoutReply = true } : null;
+        using var stream = new MemoryStream(photo);
+        var message = await client.SendPhoto(chatId, InputFile.FromStream(stream, "qr.png"), caption, replyParameters: replyTo, cancellationToken: cancellationToken);
+        return message.MessageId;
+    }
+
     /// <summary>Edits a message; an edit that changes nothing is ignored.</summary>
     /// <param name="chatId">The chat.</param>
     /// <param name="messageId">The message.</param>
