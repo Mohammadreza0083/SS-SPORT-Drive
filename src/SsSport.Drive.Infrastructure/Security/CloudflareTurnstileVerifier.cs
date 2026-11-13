@@ -20,8 +20,8 @@ public sealed class TurnstileOptions
 
 /// <summary>
 /// Checks Turnstile tokens at Cloudflare's <c>siteverify</c> (P-8): the token, the secret and the visitor's address are
-/// posted as a form; only <c>"success": true</c> passes. A missing or oversized token, a Cloudflare error and an
-/// unreachable Cloudflare all fail closed. Neither the secret nor the token is logged.
+/// posted as a form; only <c>"success": true</c> passes. A missing or oversized token, a missing secret, a Cloudflare error
+/// and an unreachable Cloudflare all fail closed. Neither the secret nor the token is logged.
 /// </summary>
 /// <param name="http">The HTTP client.</param>
 /// <param name="options">The settings.</param>
@@ -40,6 +40,12 @@ public sealed partial class CloudflareTurnstileVerifier(HttpClient http, IOption
         }
 
         var settings = options.Value;
+        if (string.IsNullOrWhiteSpace(settings.SecretKey))
+        {
+            LogNotConfigured(logger);
+            return false;
+        }
+
         var form = new Dictionary<string, string> { ["secret"] = settings.SecretKey, ["response"] = token };
         if (!string.IsNullOrWhiteSpace(clientIp))
         {
@@ -64,6 +70,11 @@ public sealed partial class CloudflareTurnstileVerifier(HttpClient http, IOption
             return false;
         }
     }
+
+    /// <summary>Logs that no secret is set, so every check is refused.</summary>
+    /// <param name="logger">The logger.</param>
+    [LoggerMessage(Level = LogLevel.Error, Message = "Turnstile__SecretKey is not set; every Turnstile check is refused until it is")]
+    private static partial void LogNotConfigured(ILogger logger);
 
     /// <summary>Logs that Cloudflare could not be asked or gave an answer that cannot be read.</summary>
     /// <param name="logger">The logger.</param>

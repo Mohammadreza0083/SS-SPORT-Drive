@@ -158,7 +158,8 @@ public static class DependencyInjection
         services.AddSingleton<IWebLinks, WebLinks>();
 
         // Cloudflare Turnstile (P-8): the secret comes only from Turnstile__SecretKey. Outside production an empty secret
-        // falls back to Cloudflare's published always-pass test secret; production refuses to start without one.
+        // falls back to Cloudflare's published always-pass test secret. In production an empty secret turns the check into
+        // a refusal (fail closed): every signed-out access request is refused until the secret is set, and a warning is logged.
         services.AddOptions<TurnstileOptions>()
             .BindConfiguration(TurnstileOptions.SectionName)
             .PostConfigure<IHostEnvironment>((options, environment) =>
@@ -167,9 +168,7 @@ public static class DependencyInjection
                 {
                     options.SecretKey = TurnstileTestSecret;
                 }
-            })
-            .Validate(options => options.SecretKey.Length > 0, "Turnstile__SecretKey is required in production.")
-            .ValidateOnStart();
+            });
         services.AddSingleton<ITurnstileVerifier>(provider => new CloudflareTurnstileVerifier(
             new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(5) }) { Timeout = TimeSpan.FromSeconds(5) },
             provider.GetRequiredService<IOptions<TurnstileOptions>>(),

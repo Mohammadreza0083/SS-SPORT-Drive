@@ -74,6 +74,17 @@ public sealed class CloudflareTurnstileVerifierTests
         (await Verifier(new RecordingHandler(throws: true)).VerifyAsync("t", null, TestContext.Current.CancellationToken)).Should().BeFalse();
     }
 
+    /// <summary>Without a secret key every check is refused and Cloudflare is never called (fail closed).</summary>
+    [Fact]
+    public async Task No_secret_fails_closed_without_a_call()
+    {
+        var http = new RecordingHandler(HttpStatusCode.OK, """{ "success": true }""");
+        var verifier = new CloudflareTurnstileVerifier(new HttpClient(http), Options.Create(new TurnstileOptions()), NullLogger<CloudflareTurnstileVerifier>.Instance);
+
+        (await verifier.VerifyAsync("token-1", "203.0.113.9", TestContext.Current.CancellationToken)).Should().BeFalse();
+        http.Calls.Should().BeEmpty();
+    }
+
     /// <summary>Builds the verifier over a stub handler.</summary>
     /// <param name="handler">The handler.</param>
     /// <returns>The verifier.</returns>
