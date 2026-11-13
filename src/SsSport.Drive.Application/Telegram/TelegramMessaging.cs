@@ -66,6 +66,15 @@ public interface ITelegramMessenger
     /// <returns>The sent message's id.</returns>
     Task<int> SendReplyAsync(long chatId, int? replyToMessageId, string text, BotKeyboard? keyboard, CancellationToken cancellationToken);
 
+    /// <summary>Sends a photo with a caption, as a reply to another message (T-6b: the player's QR code under its progress message).</summary>
+    /// <param name="chatId">The chat.</param>
+    /// <param name="replyToMessageId">The message to reply to, or <see langword="null"/> for a plain photo.</param>
+    /// <param name="photo">The image bytes (PNG or JPEG).</param>
+    /// <param name="caption">The caption.</param>
+    /// <param name="cancellationToken">Cancels the call.</param>
+    /// <returns>The sent message's id.</returns>
+    Task<int> SendPhotoAsync(long chatId, int? replyToMessageId, byte[] photo, string caption, CancellationToken cancellationToken);
+
     /// <summary>Downloads a file a user sent to the bot (the Bot API serves files up to 20 MB).</summary>
     /// <param name="fileId">The Telegram file id.</param>
     /// <param name="cancellationToken">Cancels the download.</param>

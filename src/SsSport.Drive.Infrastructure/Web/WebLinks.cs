@@ -44,6 +44,13 @@ public sealed class WebLinks(IOptions<WebOptions> options) : IWebLinks
         return Build($"/sign-in?token={Uri.EscapeDataString(token)}");
     }
 
+    /// <inheritdoc />
+    public Uri PlayerPage(string slug)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(slug);
+        return Build($"/players/{Uri.EscapeDataString(slug)}");
+    }
+
     /// <summary>Joins the public address and a path.</summary>
     /// <param name="pathAndQuery">The path and query, starting with a slash.</param>
     /// <returns>The absolute address.</returns>

@@ -60,7 +60,7 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | T-5 | Update-player mode for a known Volleybox ID | Claude | Tests green |
 | T-6a | One progress message per player, edited in place: links, folders, photo, missing details, waiting for an admin / published | Claude | Tests green |
 | T-6c | Send progress messages after the response, not inside the request (found by K-9: player edit p95 929 ms, about 1 s per Telegram round trip) | Claude | Tests green; player edit p95 < 300 ms in k6 |
-| T-6b | Build steps in the same message (copy, transcode, thumbnails, % and ETA) + result card + QR (needs Epic 3, admin Publish, short links) | Claude | Demo |
+| T-6b | Build steps in the same message (copy, transcode, thumbnails, % and ETA) + result card + QR (needs Epic 3, admin Publish, short links) | Claude | Done (2026-11-13): build lines, bar with time left, result card and the QR sent once, driven by the asset events; the demo on real files waits for Epic 3 (I-2/I-3/I-4) and the QR for I-8 |
 | T-7a | My players list (search, All / Live / Processing / Needs attention, paged) + player detail (card, folders, files in page order) + bot My players button | Claude | Demo |
 | T-7b | Edit video bottom sheet: title, tags, set as hero; Hide/Show for admins only | Claude | Demo |
 | T-8 | Notification rules: grouping, 10-min throttle, quiet hours 23:00–08:00 Tehran | Claude | Tests green |

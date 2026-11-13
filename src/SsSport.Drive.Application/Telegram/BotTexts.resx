@@ -66,6 +66,23 @@ Questions? info@ss-sport.co</value></data>
   <data name="ProgressWaitingDetails" xml:space="preserve"><value>⬜ Waiting for the details above</value></data>
   <data name="ProgressWaitingAdmin" xml:space="preserve"><value>⏳ Waiting for an admin to publish</value></data>
   <data name="ProgressPublished" xml:space="preserve"><value>✅ Published by an admin</value></data>
+  <data name="ProgressCopy" xml:space="preserve"><value>{0} Copy: {1}/{2} files</value></data>
+  <data name="ProgressTranscode" xml:space="preserve"><value>{0} Transcode &amp; thumbnails: {1}/{2} videos</value></data>
+  <data name="ProgressPages" xml:space="preserve"><value>{0} Pages: {1}/{2} documents</value></data>
+  <data name="ProgressFailedOne" xml:space="preserve"><value>⚠️ 1 file failed; an admin will retry it</value></data>
+  <data name="ProgressFailedMany" xml:space="preserve"><value>⚠️ {0} files failed; an admin will retry them</value></data>
+  <data name="ProgressBar" xml:space="preserve"><value>{0} {1}% · {2}</value></data>
+  <data name="ProgressEstimating" xml:space="preserve"><value>estimating the time left</value></data>
+  <data name="ProgressTimeLeftMinutes" xml:space="preserve"><value>about {0} min left</value></data>
+  <data name="ProgressTimeLeftHours" xml:space="preserve"><value>about {0} h left</value></data>
+  <data name="ProgressTimeLeftHoursMinutes" xml:space="preserve"><value>about {0} h {1} min left</value></data>
+  <data name="ProgressLive" xml:space="preserve"><value>🎉 Live: {0}</value></data>
+  <data name="ProgressLiveVideoOne" xml:space="preserve"><value>1 video</value></data>
+  <data name="ProgressLiveVideoMany" xml:space="preserve"><value>{0} videos</value></data>
+  <data name="ProgressLiveDocumentOne" xml:space="preserve"><value>1 document</value></data>
+  <data name="ProgressLiveDocumentMany" xml:space="preserve"><value>{0} documents</value></data>
+  <data name="ProgressLink" xml:space="preserve"><value>🔗 {0}</value></data>
+  <data name="ProgressQrCaption" xml:space="preserve"><value>QR code for {0}</value></data>
   <data name="PhotoSaved" xml:space="preserve"><value>✅ Photo saved for {0}.</value></data>
   <data name="PhotoPickPlayer" xml:space="preserve"><value>Which player is this photo for?</value></data>
   <data name="PhotoNoPlayers" xml:space="preserve"><value>No player of yours is waiting for a photo. To change a photo, reply to the player's progress message with the new one.</value></data>
