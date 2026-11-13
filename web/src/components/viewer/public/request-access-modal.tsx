@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { codeDigits, CODE_LENGTH, formatCountdown } from "@/lib/viewer/gate";
 import { accessCopy } from "./copy";
+import { TurnstileWidget } from "./turnstile";
 import type { PublicViewer, RequestAccessClient } from "./types";
 
 /** Which step of the dialog is showing. */
@@ -22,6 +23,9 @@ type RequestAccessModalProps = {
   /** Returns the Cloudflare Turnstile token of the page, or null while the widget is not wired in. */
   getTurnstileToken?: () => string | null;
 };
+
+/** The public Turnstile site key; without one (local preview, tests) the canvas's static "human check" row is shown instead. */
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || undefined;
 
 /** A simple email shape check; the server validates for real. */
 const EMAIL_SHAPE = /.+@.+\..+/;
@@ -42,6 +46,8 @@ export function RequestAccessModal({ player, viewer, client, onClose, getTurnsti
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [captcha, setCaptcha] = useState<string | null>(null);
+  const [captchaRun, setCaptchaRun] = useState(0);
   const [resendAt, setResendAt] = useState(0);
   const [now, setNow] = useState(() => Date.now());
   const email = viewer ? viewer.email : typedEmail.trim();
@@ -115,11 +121,14 @@ export function RequestAccessModal({ player, viewer, client, onClose, getTurnsti
     setError(null);
     setBusy(true);
     try {
-      const result = await client.submit({ playerSlug: player.slug, about: about.trim(), email, code, turnstileToken: getTurnstileToken() });
+      const result = await client.submit({ playerSlug: player.slug, about: about.trim(), email, code, turnstileToken: captcha ?? getTurnstileToken() });
       if (result.kind === "sent") {
         setStep("sent");
       } else {
         setError(result.message ?? accessCopy.genericError);
+        // A Turnstile token works once; ask the widget for a new one before the next try.
+        setCaptcha(null);
+        setCaptchaRun((run) => run + 1);
       }
     } finally {
       setBusy(false);
@@ -211,11 +220,13 @@ export function RequestAccessModal({ player, viewer, client, onClose, getTurnsti
                   {error}
                 </div>
               ) : null}
-              <div className="pm-human">
-                <span className="pm-tick" aria-hidden="true" />
-                {accessCopy.humanCheck}
-                <span>{accessCopy.humanCheckBy}</span>
-              </div>
+              {TURNSTILE_SITE_KEY ? null : (
+                <div className="pm-human">
+                  <span className="pm-tick" aria-hidden="true" />
+                  {accessCopy.humanCheck}
+                  <span>{accessCopy.humanCheckBy}</span>
+                </div>
+              )}
               <button type="button" className="ss-btn ss-btn-red pm-submit" disabled={busy} onClick={sendForm}>
                 {viewer ? accessCopy.send : accessCopy.sendCode}
               </button>
@@ -300,6 +311,7 @@ export function RequestAccessModal({ player, viewer, client, onClose, getTurnsti
               </Link>
             </div>
           ) : null}
+          {viewer ? null : <TurnstileWidget key={captchaRun} siteKey={TURNSTILE_SITE_KEY} onToken={setCaptcha} />}
         </div>
       </div>
     </>

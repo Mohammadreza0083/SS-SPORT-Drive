@@ -31,7 +31,7 @@ type ViewerAccess = {
  * @param title - A short summary.
  * @returns The response.
  */
-function problem(status: number, title: string): Response {
+export function problem(status: number, title: string): Response {
   return Response.json({ status, title }, { status, headers: { "Content-Type": "application/problem+json" } });
 }
 
@@ -75,7 +75,7 @@ export function clientAddress(headers: Headers): string | null {
  * @param request - The incoming request.
  * @returns True when the request comes from this site.
  */
-function isSameOrigin(request: Request): boolean {
+export function isSameOrigin(request: Request): boolean {
   const origin = request.headers.get("Origin");
   const host = request.headers.get("X-Forwarded-Host") ?? request.headers.get("Host");
   if (!origin || !host) {

@@ -19,6 +19,9 @@ public static class EmailTemplates
     /// <summary>The gate code of a personal link (L-2).</summary>
     public const string GateCode = "gate.code";
 
+    /// <summary>The code a visitor asks for before requesting access to a locked player (P-8).</summary>
+    public const string AccessCode = "access.code";
+
     /// <summary>The "your link is open" email of a kept forward (L-3b).</summary>
     public const string ForwardKept = "forward.kept";
 

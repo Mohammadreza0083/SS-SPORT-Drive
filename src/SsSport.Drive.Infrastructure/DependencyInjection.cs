@@ -31,6 +31,7 @@ using SsSport.Drive.Infrastructure.Images;
 using SsSport.Drive.Infrastructure.Links;
 using SsSport.Drive.Infrastructure.Persistence;
 using SsSport.Drive.Infrastructure.Scouting;
+using SsSport.Drive.Infrastructure.Security;
 using SsSport.Drive.Infrastructure.Storage;
 using SsSport.Drive.Infrastructure.Telegram;
 using SsSport.Drive.Infrastructure.Web;
@@ -43,6 +44,9 @@ namespace SsSport.Drive.Infrastructure;
 /// </summary>
 public static class DependencyInjection
 {
+    /// <summary>Cloudflare's published test secret, which always passes; used outside production when no secret is set.</summary>
+    private const string TurnstileTestSecret = "1x0000000000000000000000000000000AA";
+
     /// <summary>Name of the PostgreSQL connection string (<c>ConnectionStrings__DefaultConnection</c> in .env).</summary>
     public const string ConnectionStringName = "DefaultConnection";
 
@@ -89,6 +93,7 @@ public static class DependencyInjection
         services.AddScoped<IPagedReader, PagedReader>();
         services.AddScoped<IPlayerListReader, PlayerListReader>();
         services.AddScoped<ILinkPlayerReader, LinkPlayerReader>();
+        services.AddScoped<IPublicPlayerReader, PublicPlayerReader>();
         services.AddScoped<IDigestFactsReader, DigestFactsReader>();
         services.AddScoped<IShareLinkListReader, ShareLinkListReader>();
         services.AddScoped<IViewingReader, ViewingReader>();
@@ -151,6 +156,23 @@ public static class DependencyInjection
             .Validate(options => options.IsValid(), "Web__PublicBaseUrl must be empty or an absolute http(s) address, e.g. https://drive.ss-sport.co.")
             .ValidateOnStart();
         services.AddSingleton<IWebLinks, WebLinks>();
+
+        // Cloudflare Turnstile (P-8): the secret comes only from Turnstile__SecretKey. Outside production an empty secret
+        // falls back to Cloudflare's published always-pass test secret. In production an empty secret turns the check into
+        // a refusal (fail closed): every signed-out access request is refused until the secret is set, and a warning is logged.
+        services.AddOptions<TurnstileOptions>()
+            .BindConfiguration(TurnstileOptions.SectionName)
+            .PostConfigure<IHostEnvironment>((options, environment) =>
+            {
+                if (options.SecretKey.Length == 0 && !environment.IsProduction())
+                {
+                    options.SecretKey = TurnstileTestSecret;
+                }
+            });
+        services.AddSingleton<ITurnstileVerifier>(provider => new CloudflareTurnstileVerifier(
+            new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(5) }) { Timeout = TimeSpan.FromSeconds(5) },
+            provider.GetRequiredService<IOptions<TurnstileOptions>>(),
+            provider.GetRequiredService<ILogger<CloudflareTurnstileVerifier>>()));
 
         services.AddTelegram();
         return services;

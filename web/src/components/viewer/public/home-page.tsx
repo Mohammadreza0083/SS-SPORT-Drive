@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, type CSSProperties } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { DriftMark, Glow } from "@/components/viewer/backdrop";
 import { Chip } from "@/components/viewer/chip";
 import { viewerCopy } from "@/components/viewer/copy";
@@ -8,7 +9,7 @@ import { NavLink, SiteNav } from "@/components/viewer/site-nav";
 import { SiteFooter } from "@/components/viewer/site-footer";
 import { publicCopy } from "./copy";
 import { LockIcon, PlayerPhoto } from "./player-silhouette";
-import { POSITION_FILTERS, filterPlayers, resultCountLabel } from "./search";
+import { POSITION_FILTERS, filterPlayers, homeHref, resultCountLabel } from "./search";
 import type { HomeData, PublicPlayer, PublicViewer } from "./types";
 
 /** Props of {@link HomePage}. */
@@ -17,10 +18,12 @@ type HomePageProps = {
   data: HomeData;
 };
 
+/** How long to wait after the last keystroke before the search runs on the server. */
+const SEARCH_DEBOUNCE_MS = 300;
+
 /**
- * The public home page (backlog P-1, P-7), built from the design canvas's `Home` artboard: the hero, the player
- * search with position chips, one card per player leading to the locked player page, and "How access works".
- * The nav shows Sign in, or the signed-in viewer's email with Sign out.
+ * The public home page on a fixed list of players (the design preview and the tests): typing and the chips filter the
+ * list in the browser. The real page uses {@link RemoteHomePage}.
  *
  * @param props - See {@link HomePageProps}.
  * @returns The page content inside the viewer shell.
@@ -30,6 +33,77 @@ export function HomePage({ data }: HomePageProps) {
   const [position, setPosition] = useState<string>("All");
   const shown = useMemo(() => filterPlayers(data.players, query, position), [data.players, query, position]);
 
+  return <HomeView data={data} players={shown} total={shown.length} query={query} onQuery={setQuery} position={position} onPosition={setPosition} />;
+}
+
+/**
+ * The public home page on real data (backlog P-1, P-7, P-8): the API searches and filters in SQL, one page at a time.
+ * Typing (after a short pause) and the chips replace the address, so the server renders the new page; the pager is
+ * plain links.
+ *
+ * @param props - See {@link HomePageProps}; the data holds the page of the search.
+ * @returns The page content inside the viewer shell.
+ */
+export function RemoteHomePage({ data }: HomePageProps) {
+  const router = useRouter();
+  const position = data.position ?? "All";
+  const current = data.query ?? "";
+  const [query, setQuery] = useState(current);
+
+  useEffect(() => {
+    if (query.trim() === current) {
+      return;
+    }
+
+    const timer = setTimeout(() => router.replace(homeHref(query, position, 1)), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [query, current, position, router]);
+
+  const page = data.page ?? 1;
+  const pages = data.totalPages ?? 1;
+  return (
+    <HomeView
+      data={data}
+      players={data.players}
+      total={data.totalCount ?? data.players.length}
+      query={query}
+      onQuery={setQuery}
+      position={position}
+      onPosition={(next) => router.replace(homeHref(query, next, 1))}
+      pager={{ page, pages, href: (target) => homeHref(current, position, target) }}
+    />
+  );
+}
+
+/** Props of {@link HomeView}. */
+type HomeViewProps = {
+  /** The page's data (for the signed-in viewer). */
+  data: HomeData;
+  /** The players to show. */
+  players: PublicPlayer[];
+  /** How many players match in all, for the count next to the search box. */
+  total: number;
+  /** The text in the search box. */
+  query: string;
+  /** Called when the visitor types. */
+  onQuery: (query: string) => void;
+  /** The pressed position chip. */
+  position: string;
+  /** Called when a chip is pressed. */
+  onPosition: (position: string) => void;
+  /** The pager, when the results span pages. */
+  pager?: { page: number; pages: number; href: (page: number) => string };
+};
+
+/**
+ * The look of the public home page, built from the design canvas's `Home` artboard: the hero, the player search with
+ * position chips, one card per player leading to the locked player page, and "How access works". The nav shows Sign in,
+ * or the signed-in viewer's email with Sign out.
+ *
+ * @param props - See {@link HomeViewProps}.
+ * @returns The page content inside the viewer shell.
+ */
+function HomeView({ data, players, total, query, onQuery, position, onPosition, pager }: HomeViewProps) {
   return (
     <div className="ph-page">
       <Glow style={{ left: "50%", top: "-420px", width: "1100px", height: "900px", marginLeft: "-550px" }} />
@@ -64,17 +138,17 @@ export function HomePage({ data }: HomePageProps) {
               id="ph-q"
               type="search"
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => onQuery(event.target.value)}
               placeholder={publicCopy.searchPlaceholder}
               autoComplete="off"
               // Playwright's caret hiding adds a style to the input before React hydrates it; nothing else differs.
               suppressHydrationWarning
             />
-            <span className="ph-count">{resultCountLabel(shown.length)}</span>
+            <span className="ph-count">{resultCountLabel(total)}</span>
           </div>
           <div className="ss-fu ph-chips" role="group" aria-label={publicCopy.filterLabel} style={{ animationDelay: ".75s" }}>
             {POSITION_FILTERS.map((label) => (
-              <Chip key={label} pressed={label === position} onClick={() => setPosition(label)}>
+              <Chip key={label} pressed={label === position} onClick={() => onPosition(label)}>
                 {label}
               </Chip>
             ))}
@@ -82,9 +156,9 @@ export function HomePage({ data }: HomePageProps) {
         </section>
 
         <section aria-live="polite" className="ph-results">
-          {shown.length > 0 ? (
+          {players.length > 0 ? (
             <div className="ph-grid">
-              {shown.map((player, index) => (
+              {players.map((player, index) => (
                 <PlayerCard key={player.slug} player={player} delay={0.1 + index * 0.07} />
               ))}
             </div>
@@ -96,6 +170,7 @@ export function HomePage({ data }: HomePageProps) {
               </p>
             </div>
           )}
+          {pager && pager.pages > 1 ? <Pager page={pager.page} pages={pager.pages} href={pager.href} /> : null}
         </section>
 
         <section id="how" className="ph-how">
@@ -192,5 +267,43 @@ function PlayerCard({ player, delay }: PlayerCardProps) {
         </span>
       </span>
     </a>
+  );
+}
+
+/** Props of {@link Pager}. */
+type PagerProps = {
+  /** The current page, from 1. */
+  page: number;
+  /** How many pages there are. */
+  pages: number;
+  /** The address of a page. */
+  href: (page: number) => string;
+};
+
+/**
+ * Previous and next links under the results. They are plain links, so every page is its own address.
+ *
+ * @param props - See {@link PagerProps}.
+ * @returns The pager.
+ */
+function Pager({ page, pages, href }: PagerProps) {
+  return (
+    <nav className="ph-pager" aria-label={publicCopy.pagerLabel}>
+      {page > 1 ? (
+        <a href={href(page - 1)} rel="prev">
+          {publicCopy.previous}
+        </a>
+      ) : (
+        <span aria-hidden="true" />
+      )}
+      <span>{publicCopy.pageOf(page, pages)}</span>
+      {page < pages ? (
+        <a href={href(page + 1)} rel="next">
+          {publicCopy.next}
+        </a>
+      ) : (
+        <span aria-hidden="true" />
+      )}
+    </nav>
   );
 }

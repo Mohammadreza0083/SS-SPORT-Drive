@@ -10,6 +10,7 @@ using SsSport.Drive.Api.Endpoints;
 using SsSport.Drive.Api.ErrorHandling;
 using SsSport.Drive.Api.Links;
 using SsSport.Drive.Api.MiniApp;
+using SsSport.Drive.Api.Public;
 using SsSport.Drive.Api.Security;
 using SsSport.Drive.Api.Telegram;
 using SsSport.Drive.Api.Tracking;
@@ -93,6 +94,8 @@ app.MapEmailQueue();
 app.MapSignIn();
 app.MapViewerGate();
 app.MapViewerContent();
+app.MapPublicPlayers();
+app.MapPublicAccess();
 app.MapViewerMedia();
 app.MapTracking();
 

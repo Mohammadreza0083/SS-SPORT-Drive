@@ -9,6 +9,8 @@ using Npgsql;
 using SsSport.Drive.Api.IntegrationTests.Telegram;
 using SsSport.Drive.Application.Links;
 using SsSport.Drive.Application.Telegram;
+using SsSport.Drive.Domain.AccessRequests;
+using SsSport.Drive.Domain.Accounts;
 using SsSport.Drive.Domain.Links;
 using SsSport.Drive.Domain.Primitives;
 using SsSport.Drive.Infrastructure.Persistence;
@@ -86,6 +88,29 @@ public sealed class GatePurgeTests : IAsyncLifetime
     }
 
     /// <summary>A backlog bigger than one batch is cleared in one run.</summary>
+    /// <summary>The public site's visitor codes and sign-in sessions (P-8) are cleaned up on the same schedule.</summary>
+    [Fact]
+    public async Task Public_access_rows_past_their_retention_are_deleted()
+    {
+        var email = EmailAddress.Create("j.demir@gmail.com");
+        var oldCode = AccessCodeChallenge.Request(email, _now.AddDays(-2));
+        var newCode = AccessCodeChallenge.Request(email, _now.AddHours(-12));
+        var oldSession = AccountSession.Start(SignInAudience.Viewer, Guid.CreateVersion7(), email, "old-account", _now.AddDays(-9));
+        var newSession = AccountSession.Start(SignInAudience.Viewer, Guid.CreateVersion7(), email, "new-account", _now.AddDays(-7));
+        await SeedAsync(db =>
+        {
+            db.AddRange(oldCode, newCode, oldSession, newSession);
+            return Task.CompletedTask;
+        });
+
+        var result = await PurgeAsync();
+
+        result.Should().Be(new GatePurgeResult(EmailCodes: 0, Sessions: 0, Devices: 0, VisitorCodes: 1, AccountSessions: 1));
+        (await QueryAsync(db => db.Set<AccessCodeChallenge>().Select(row => row.Id).ToListAsync(TestContext.Current.CancellationToken))).Should().Equal(newCode.Id);
+        (await QueryAsync(db => db.Set<AccountSession>().Select(row => row.Id).ToListAsync(TestContext.Current.CancellationToken))).Should().Equal(newSession.Id);
+    }
+
+    /// <inheritdoc/>
     [Fact]
     public async Task A_large_backlog_is_cleared_in_batches()
     {

@@ -1,5 +1,7 @@
 /** UI copy of the public home and locked player pages (English; kept out of the components). */
 export const publicCopy = {
+  pageTitle: "SS-SPORT Drive · Find your next player",
+  lockedPageTitle: "Player · SS-SPORT Drive",
   howLink: "How access works",
   signIn: "Sign in",
   signOut: "Sign out",
@@ -14,6 +16,10 @@ export const publicCopy = {
   private: "Private",
   viewPlayer: (name: string) => `View ${name}`,
   go: "View →",
+  pagerLabel: "Pages of players",
+  previous: "← Previous",
+  next: "Next →",
+  pageOf: (page: number, pages: number) => `Page ${page} of ${pages}`,
   counts: (videos: number, documents: number) => `${videos} videos · ${documents} docs`,
   noMatch: (query: string) => `No players match "${query}"`,
   noMatchHelp: "Check the spelling, or tell us who you're looking for at",
