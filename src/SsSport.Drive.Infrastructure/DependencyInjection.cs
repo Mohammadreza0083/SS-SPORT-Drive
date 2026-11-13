@@ -13,6 +13,7 @@ using SsSport.Drive.Application.Abstractions.Drive;
 using SsSport.Drive.Application.Abstractions.Email;
 using SsSport.Drive.Application.Abstractions.Events;
 using SsSport.Drive.Application.Abstractions.Images;
+using SsSport.Drive.Application.Abstractions.Ingest;
 using SsSport.Drive.Application.Abstractions.Media;
 using SsSport.Drive.Application.Abstractions.Persistence;
 using SsSport.Drive.Application.Abstractions.Security;
@@ -29,6 +30,7 @@ using SsSport.Drive.Infrastructure.Edge;
 using SsSport.Drive.Infrastructure.Email;
 using SsSport.Drive.Infrastructure.Images;
 using SsSport.Drive.Infrastructure.Links;
+using SsSport.Drive.Infrastructure.Media;
 using SsSport.Drive.Infrastructure.Persistence;
 using SsSport.Drive.Infrastructure.Scouting;
 using SsSport.Drive.Infrastructure.Security;
@@ -115,6 +117,7 @@ public static class DependencyInjection
         services.AddOptions<StorageOptions>().BindConfiguration(StorageOptions.SectionName);
         services.AddSingleton<IObjectStorage, S3ObjectStorage>();
         services.AddSingleton<IPhotoProcessor, MagickPhotoProcessor>();
+        services.AddIngest();
 
         services.AddOptions<GoogleDriveOptions>()
             .BindConfiguration(GoogleDriveOptions.SectionName)
@@ -217,6 +220,40 @@ public static class DependencyInjection
 
             return new TelegramBotClient(options.BotToken, new HttpClient(handler));
         });
+    }
+
+    /// <summary>
+    /// Registers the ingest adapters (Epic 3): the backup bucket, Drive downloads, ffmpeg, PDF, QR, cut-out and card
+    /// renderers, the work folders and the Hangfire scheduler of the ingest steps. Tools are only started when a job runs.
+    /// </summary>
+    /// <param name="services">The service collection to add to.</param>
+    private static void AddIngest(this IServiceCollection services)
+    {
+        services.AddOptions<MediaOptions>()
+            .BindConfiguration(MediaOptions.SectionName)
+            .Validate(options => options.Workers is >= 1 and <= 2, "Media__Workers must be 1 or 2.")
+            .ValidateOnStart();
+        services.AddSingleton<IBackupArchive, S3BackupArchive>();
+        services.AddSingleton<IDriveFileDownloader, GoogleDriveFileDownloader>();
+        services.AddSingleton<IWorkspace, TempWorkspace>();
+        services.AddSingleton<IVideoTranscoder, FfmpegVideoTranscoder>();
+        services.AddSingleton<IDocumentRenderer, PdfDocumentRenderer>();
+        services.AddSingleton<IQrCodeRenderer, QrCoderQrCodeRenderer>();
+        services.AddSingleton<IBackgroundRemover, OnnxBackgroundRemover>();
+        services.AddSingleton<IPlayerCardRenderer, MagickPlayerCardRenderer>();
+        services.AddSingleton<IIngestScheduler, HangfireIngestScheduler>();
+    }
+
+    /// <summary>
+    /// Runs the Hangfire servers of ingest (<c>ingest</c> and <c>media</c> queues) inside this host. The Workers host calls
+    /// it; they do not start without a database.
+    /// </summary>
+    /// <param name="services">The service collection to add to.</param>
+    /// <returns>The same collection, for chaining.</returns>
+    public static IServiceCollection AddIngestServer(this IServiceCollection services)
+    {
+        services.AddHostedService<IngestServer>();
+        return services;
     }
 
     /// <summary>

@@ -42,6 +42,10 @@
     <PackageVersion Include="DotNetEnv" Version="3.2.0" />
     <!-- Player photos (T-4b): Magick.NET (Apache-2.0) reads HEIC/JPEG/PNG/WebP and writes WebP; S3 client for RustFS / R2. -->
     <PackageVersion Include="Magick.NET-Q8-AnyCPU" Version="14.17.2" />
+    <!-- Ingest (Epic 3): QR codes (MIT), PDF pages through PDFium (MIT; Ghostscript is AGPL), background removal on ONNX Runtime (MIT). -->
+    <PackageVersion Include="QRCoder" Version="1.8.1" />
+    <PackageVersion Include="PDFtoImage" Version="5.4.0" />
+    <PackageVersion Include="Microsoft.ML.OnnxRuntime" Version="1.32.0" />
     <PackageVersion Include="AWSSDK.S3" Version="4.0.104.4" />
     <!-- Live Drive folder check (T-4c): the Google Drive API with the service account, read-only. -->
     <PackageVersion Include="Google.Apis.Drive.v3" Version="1.77.0.4276" />

@@ -49,6 +49,10 @@ public sealed record PlayerCreated(Guid PlayerId) : IDomainEvent;
 /// <param name="PlayerId">The changed player.</param>
 public sealed record PlayerDetailsChanged(Guid PlayerId) : IDomainEvent;
 
+/// <summary>Raised when a player gets a different photo; the cut-out is made again.</summary>
+/// <param name="PlayerId">The player.</param>
+public sealed record PlayerPhotoChanged(Guid PlayerId) : IDomainEvent;
+
 /// <summary>Raised when an admin publishes a complete player; starts transcoding and notifies the analyst.</summary>
 /// <param name="PlayerId">The published player.</param>
 public sealed record PlayerPublished(Guid PlayerId) : IDomainEvent;
@@ -99,6 +103,12 @@ public sealed class Player : AggregateRoot<Guid>
 
     /// <summary>Gets the storage key of the player's QR code image (I-8), or <see langword="null"/> before it is generated.</summary>
     public StorageKey? QrCode { get; private set; }
+
+    /// <summary>Gets the key of the photo with its background removed (I-7), or <see langword="null"/> until it is made.</summary>
+    public StorageKey? PhotoCutout { get; private set; }
+
+    /// <summary>Gets the key of the player card image (I-5), or <see langword="null"/> until it is made.</summary>
+    public StorageKey? Card { get; private set; }
 
     /// <summary>Gets the hero video that autoplays at the top of the page, or <see langword="null"/> when none is chosen.</summary>
     public Guid? HeroAssetId { get; private set; }
@@ -197,7 +207,25 @@ public sealed class Player : AggregateRoot<Guid>
         }
 
         Photo = photo;
+        PhotoCutout = null;
+        RaiseDomainEvent(new PlayerPhotoChanged(Id));
         DetailsChanged();
+    }
+
+    /// <summary>Stores where the photo with its background removed is. It is derived output, so no event is raised.</summary>
+    /// <param name="cutout">The key of the cut-out WebP.</param>
+    public void SetPhotoCutout(StorageKey cutout)
+    {
+        ArgumentNullException.ThrowIfNull(cutout);
+        PhotoCutout = cutout;
+    }
+
+    /// <summary>Stores where the player card image is. It is derived output, so no event is raised.</summary>
+    /// <param name="card">The key of the card PNG.</param>
+    public void SetCard(StorageKey card)
+    {
+        ArgumentNullException.ThrowIfNull(card);
+        Card = card;
     }
 
     /// <summary>Assigns the player to an analyst, or reassigns it (e.g. to an admin when the analyst is removed).</summary>

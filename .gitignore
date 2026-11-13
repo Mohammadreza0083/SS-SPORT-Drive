@@ -20,6 +20,8 @@ appsettings.Local.json
 .claude/settings.local.json
 # Per-machine dev-server config for the desktop app's browser preview.
 .claude/launch.json
+# Working plan for the implementing model (Epic 3 ingest); kept local, never committed.
+.claude/plan-ingest.md
 
 # --- .NET ---------------------------------------------------------
 [Bb]in/
@@ -103,6 +105,9 @@ __pycache__/
 
 # Local execution plans written by Claude (not part of the product)
 .claude/plans/
+
+# Background-removal model (large; supplied through Media__CutoutModelPath)
+*.onnx
 
 # Security scans (O-10): local reports
 gitleaks-report*.json

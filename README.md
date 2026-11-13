@@ -253,7 +253,7 @@ SS-SPORT Drive/
 | 0 | Setup & accounts | 12 / 15 | 🚧 In progress (open: VPS, branch protection, watermark sample) |
 | 1 | Core domain & persistence | 17 / 17 | ✅ Done |
 | 2 | Telegram bot & Mini App | 17 / 17 | ✅ Done (T-6b build steps are in; its demo on real files waits for ingest) |
-| 3 | Ingest, transcode & sync | 1 / 9 | 🚧 In progress (I-1 Drive reader done; copy, ffmpeg HLS, thumbnails, sync next) |
+| 3 | Ingest, transcode & sync | 8 / 9 | 🚧 In progress (I-1…I-4, I-6…I-9 built; I-5 card design awaits approval; I-9 check on a real link left) |
 | 4 | Viewer site & media protection | 10 / 10 | ✅ Done |
 | 5 | Personal links, OTP & tracking | 8 / 11 | 🚧 In progress (L-7 digest numbers, W-2 player heartbeats, W-3 retention left) |
 | 6 | Public search & access requests | 5 / 8 | 🚧 In progress (public home, locked page and request access live on real data; P-4 inbox, P-7 and W-1 sign-in pages left) |

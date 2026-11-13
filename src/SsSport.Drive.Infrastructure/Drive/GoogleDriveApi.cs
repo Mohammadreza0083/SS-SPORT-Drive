@@ -65,6 +65,21 @@ public sealed class GoogleDriveApi : IDriveApi, IDisposable
         return new DrivePage([.. (result.Files ?? []).Select(ToItem)], result.NextPageToken);
     }
 
+    /// <inheritdoc/>
+    public async Task<Stream?> DownloadAsync(string fileId, CancellationToken cancellationToken)
+    {
+        var request = _service.Value.Files.Get(fileId);
+        request.SupportsAllDrives = true;
+        try
+        {
+            return await request.ExecuteAsStreamAsync(cancellationToken);
+        }
+        catch (GoogleApiException exception) when (exception.HttpStatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+    }
+
     /// <summary>Disposes the client if it was created.</summary>
     public void Dispose()
     {

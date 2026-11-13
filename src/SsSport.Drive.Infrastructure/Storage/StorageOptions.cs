@@ -20,4 +20,7 @@ public sealed record StorageOptions
 
     /// <summary>Gets the signing region; R2 maps <c>us-east-1</c> to its own <c>auto</c>.</summary>
     public string Region { get; init; } = "us-east-1";
+
+    /// <summary>Gets the bucket of the read-only rclone backup of the Drive (<c>Storage__BackupBucket</c>); empty turns backup reuse off.</summary>
+    public string BackupBucket { get; init; } = string.Empty;
 }

@@ -45,6 +45,13 @@ public sealed class WebLinks(IOptions<WebOptions> options) : IWebLinks
     }
 
     /// <inheritdoc />
+    public Uri PlayerSearch(string name)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        return Build($"/?q={Uri.EscapeDataString(name)}");
+    }
+
+    /// <inheritdoc />
     public Uri PlayerPage(string slug)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(slug);

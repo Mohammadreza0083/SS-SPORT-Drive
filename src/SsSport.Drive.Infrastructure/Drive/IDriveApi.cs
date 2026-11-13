@@ -18,6 +18,12 @@ public interface IDriveApi
     /// <param name="cancellationToken">Cancels the call.</param>
     /// <returns>The page.</returns>
     Task<DrivePage> ListChildrenAsync(string folderId, string? pageToken, CancellationToken cancellationToken);
+
+    /// <summary>Opens a file's bytes for reading (I-2).</summary>
+    /// <param name="fileId">The Drive file id.</param>
+    /// <param name="cancellationToken">Cancels the download.</param>
+    /// <returns>The content, or <see langword="null"/> when Drive says the file does not exist; the caller disposes it.</returns>
+    Task<Stream?> DownloadAsync(string fileId, CancellationToken cancellationToken);
 }
 
 /// <summary>A Drive file or folder.</summary>

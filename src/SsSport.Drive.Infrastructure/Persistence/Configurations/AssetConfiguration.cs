@@ -39,6 +39,9 @@ internal sealed class AssetConfiguration : IEntityTypeConfiguration<Asset>
         builder.Property(asset => asset.State).HasConversion<string>().HasMaxLength(20);
         builder.Property(asset => asset.FailureReason).HasMaxLength(1000);
         builder.Property(asset => asset.OriginalKey).HasConversion(ValueConverters.StorageKey).HasMaxLength(1024);
+        builder.Property(asset => asset.PosterKey).HasConversion(ValueConverters.StorageKey).HasMaxLength(1024);
+        builder.Property(asset => asset.ThumbnailKey).HasConversion(ValueConverters.StorageKey).HasMaxLength(1024);
+        builder.Property(asset => asset.SpriteKey).HasConversion(ValueConverters.StorageKey).HasMaxLength(1024);
 
         builder.HasMany(asset => asset.Renditions)
             .WithOne()

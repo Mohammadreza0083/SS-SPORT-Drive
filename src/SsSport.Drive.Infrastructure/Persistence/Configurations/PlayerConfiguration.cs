@@ -27,6 +27,8 @@ internal sealed class PlayerConfiguration : IEntityTypeConfiguration<Player>
         builder.Property(player => player.Positions).HasConversion(ValueConverters.Positions, ValueConverters.PositionsComparer).HasColumnType("text[]");
         builder.Property(player => player.Photo).HasColumnName("photo_key").HasConversion(ValueConverters.Photo).HasMaxLength(512);
         builder.Property(player => player.QrCode).HasColumnName("qr_code_key").HasConversion(ValueConverters.StorageKey).HasMaxLength(1024);
+        builder.Property(player => player.PhotoCutout).HasColumnName("photo_cutout_key").HasConversion(ValueConverters.StorageKey).HasMaxLength(1024);
+        builder.Property(player => player.Card).HasColumnName("card_key").HasConversion(ValueConverters.StorageKey).HasMaxLength(1024);
         builder.Property(player => player.Status).HasConversion<string>().HasMaxLength(20);
 
         builder.OwnsOne(player => player.Volleybox, volleybox =>

@@ -18,6 +18,11 @@ public interface IWebLinks
     /// <returns>The address.</returns>
     Uri ViewerSignIn(string token);
 
+    /// <summary>Gets the home page with the search filled in, which a player's QR code opens (I-8).</summary>
+    /// <param name="name">The player's name.</param>
+    /// <returns>The address of <c>/?q={name}</c>.</returns>
+    Uri PlayerSearch(string name);
+
     /// <summary>Gets a player's public page (T-6b result card).</summary>
     /// <param name="slug">The player's slug.</param>
     /// <returns>The address of <c>/players/{slug}</c>.</returns>

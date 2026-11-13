@@ -224,5 +224,11 @@ public sealed class GoogleDriveFolderListingTests
         /// <inheritdoc/>
         public Task<DrivePage> ListChildrenAsync(string folderId, string? pageToken, CancellationToken cancellationToken) =>
             throw new HttpRequestException("Connection reset");
+
+        /// <summary>Downloads through the wrapped Drive (I-2's member of <see cref="IDriveApi"/>).</summary>
+        /// <param name="fileId">The Drive file id.</param>
+        /// <param name="cancellationToken">Cancels the call.</param>
+        /// <returns>The bytes, or <see langword="null"/>.</returns>
+        public Task<Stream?> DownloadAsync(string fileId, CancellationToken cancellationToken) => inner.DownloadAsync(fileId, cancellationToken);
     }
 }

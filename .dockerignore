@@ -62,3 +62,4 @@ minio-data
 # Brand tooling & previews (not needed in images)
 tools
 brand/previews
+*.onnx

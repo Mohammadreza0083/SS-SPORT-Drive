@@ -124,6 +124,10 @@ services:
       dockerfile: src/SsSport.Drive.Workers/Dockerfile
     environment:
       <<: *app-environment
+      Media__WorkPath: /work
+    volumes:
+      # Scratch space for downloaded originals and encodes (Media__WorkPath); cleaned by each job.
+      - workers-work:/work
 
   web:
     build:
@@ -143,5 +147,6 @@ services:
         condition: service_healthy
 
 volumes:
+  workers-work:
   postgres-data:
   storage-data:

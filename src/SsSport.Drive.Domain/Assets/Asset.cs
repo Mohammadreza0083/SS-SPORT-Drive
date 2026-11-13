@@ -192,6 +192,15 @@ public sealed class Asset : AggregateRoot<Guid>
     /// <summary>Gets a document's page count, or <see langword="null"/>.</summary>
     public int? PageCount { get; private set; }
 
+    /// <summary>Gets the key of a video's poster image, or <see langword="null"/> until it is made.</summary>
+    public StorageKey? PosterKey { get; private set; }
+
+    /// <summary>Gets the key of the thumbnail of a video or a document, or <see langword="null"/> until it is made.</summary>
+    public StorageKey? ThumbnailKey { get; private set; }
+
+    /// <summary>Gets the key of a video's scrub sprite, or <see langword="null"/> until it is made.</summary>
+    public StorageKey? SpriteKey { get; private set; }
+
     /// <summary>Gets when the asset was added (UTC).</summary>
     public DateTimeOffset CreatedAt { get; }
 
@@ -308,6 +317,21 @@ public sealed class Asset : AggregateRoot<Guid>
         RaiseDomainEvent(new AssetReplaced(Id, PlayerId, Version));
     }
 
+    /// <summary>
+    /// Records that a file removed from Drive is back: the removal mark is cleared and the file is shown again. A file
+    /// an admin hid by hand stays hidden.
+    /// </summary>
+    public void ReturnToSource()
+    {
+        if (RemovedFromSourceAt is null)
+        {
+            return;
+        }
+
+        RemovedFromSourceAt = null;
+        Show();
+    }
+
     /// <summary>Records that the file was removed from Drive: it is hidden, never deleted.</summary>
     /// <param name="removedAt">When the removal was detected (UTC).</param>
     public void MarkRemovedFromSource(DateTimeOffset removedAt)
@@ -376,6 +400,34 @@ public sealed class Asset : AggregateRoot<Guid>
         {
             RaiseDomainEvent(new AssetProgressed(Id, PlayerId));
         }
+    }
+
+    /// <summary>Records a video's poster, thumbnail and scrub sprite while it is processing.</summary>
+    /// <param name="poster">The key of the poster.</param>
+    /// <param name="thumbnail">The key of the thumbnail.</param>
+    /// <param name="sprite">The key of the scrub sprite.</param>
+    /// <exception cref="DomainException"><c>asset.not_a_video</c> or <c>asset.invalid_state</c>.</exception>
+    public void AttachVideoPreviews(StorageKey poster, StorageKey thumbnail, StorageKey sprite)
+    {
+        ArgumentNullException.ThrowIfNull(poster);
+        ArgumentNullException.ThrowIfNull(thumbnail);
+        ArgumentNullException.ThrowIfNull(sprite);
+        EnsureKind(AssetKind.Video, "asset.not_a_video", "Only videos have a poster and a sprite.");
+        EnsureState(ProcessingState.Processing);
+        PosterKey = poster;
+        ThumbnailKey = thumbnail;
+        SpriteKey = sprite;
+    }
+
+    /// <summary>Records a document's thumbnail while it is processing.</summary>
+    /// <param name="thumbnail">The key of the thumbnail.</param>
+    /// <exception cref="DomainException"><c>asset.not_a_document</c> or <c>asset.invalid_state</c>.</exception>
+    public void AttachDocumentThumbnail(StorageKey thumbnail)
+    {
+        ArgumentNullException.ThrowIfNull(thumbnail);
+        EnsureKind(AssetKind.Document, "asset.not_a_document", "Only documents have a page thumbnail.");
+        EnsureState(ProcessingState.Processing);
+        ThumbnailKey = thumbnail;
     }
 
     /// <summary>Finishes a document or scout file and raises <see cref="AssetReady"/>.</summary>
@@ -477,6 +529,9 @@ public sealed class Asset : AggregateRoot<Guid>
         OriginalKey = null;
         DurationSeconds = null;
         PageCount = null;
+        PosterKey = null;
+        ThumbnailKey = null;
+        SpriteKey = null;
         _renditions.Clear();
     }
 }

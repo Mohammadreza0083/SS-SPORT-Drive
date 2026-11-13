@@ -323,6 +323,11 @@ namespace SsSport.Drive.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("player_id");
 
+                    b.Property<string>("PosterKey")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
+                        .HasColumnName("poster_key");
+
                     b.Property<DateTimeOffset?>("RemovedFromSourceAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("removed_from_source_at");
@@ -343,6 +348,11 @@ namespace SsSport.Drive.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(10)")
                         .HasColumnName("source");
 
+                    b.Property<string>("SpriteKey")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
+                        .HasColumnName("sprite_key");
+
                     b.Property<string>("State")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -352,6 +362,11 @@ namespace SsSport.Drive.Infrastructure.Persistence.Migrations
                     b.Property<int>("Tags")
                         .HasColumnType("integer")
                         .HasColumnName("tags");
+
+                    b.Property<string>("ThumbnailKey")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
+                        .HasColumnName("thumbnail_key");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -2465,6 +2480,11 @@ namespace SsSport.Drive.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("analyst_id");
 
+                    b.Property<string>("Card")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
+                        .HasColumnName("card_key");
+
                     b.Property<string>("Category")
                         .IsRequired()
                         .HasMaxLength(10)
@@ -2493,6 +2513,11 @@ namespace SsSport.Drive.Infrastructure.Persistence.Migrations
                         .HasMaxLength(512)
                         .HasColumnType("character varying(512)")
                         .HasColumnName("photo_key");
+
+                    b.Property<string>("PhotoCutout")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
+                        .HasColumnName("photo_cutout_key");
 
                     b.Property<string[]>("Positions")
                         .HasColumnType("text[]")

@@ -18,8 +18,15 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
     <PackageReference Include="Ardalis.Specification.EntityFrameworkCore" />
     <PackageReference Include="Magick.NET-Q8-AnyCPU" />
+    <PackageReference Include="QRCoder" />
+    <PackageReference Include="PDFtoImage" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" />
     <PackageReference Include="AWSSDK.S3" />
     <PackageReference Include="Google.Apis.Drive.v3" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Brand images and the watermark / card font, read at run time by the media adapters. -->
+    <EmbeddedResource Include="Media\Assets\*" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SsSport.Drive.Application\SsSport.Drive.Application.csproj" />

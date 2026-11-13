@@ -19,6 +19,27 @@ public interface IObjectStorage
     /// <param name="cancellationToken">Cancels the download.</param>
     /// <returns>The object, or <see langword="null"/> when there is none with that key.</returns>
     Task<StoredObject?> GetAsync(string key, CancellationToken cancellationToken = default);
+
+    /// <summary>Tells whether an object exists, without reading it.</summary>
+    /// <param name="key">The object key.</param>
+    /// <param name="cancellationToken">Cancels the check.</param>
+    /// <returns><see langword="true"/> when there is an object with that key.</returns>
+    Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default);
+
+    /// <summary>Writes an object to a local file (large originals never sit in memory).</summary>
+    /// <param name="key">The object key.</param>
+    /// <param name="filePath">The file to write.</param>
+    /// <param name="cancellationToken">Cancels the download.</param>
+    /// <returns>A task that completes when the file is written.</returns>
+    Task DownloadToFileAsync(string key, string filePath, CancellationToken cancellationToken = default);
+
+    /// <summary>Stores a local file as an object, in parts when it is large.</summary>
+    /// <param name="filePath">The file to read.</param>
+    /// <param name="key">The object key.</param>
+    /// <param name="contentType">The MIME type to store with it.</param>
+    /// <param name="cancellationToken">Cancels the upload.</param>
+    /// <returns>A task that completes when the object is stored.</returns>
+    Task UploadFileAsync(string filePath, string key, string contentType, CancellationToken cancellationToken = default);
 }
 
 /// <summary>An object read from storage; the caller disposes <see cref="Content"/>.</summary>

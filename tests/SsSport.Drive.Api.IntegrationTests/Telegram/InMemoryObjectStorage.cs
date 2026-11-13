@@ -30,4 +30,27 @@ public sealed class InMemoryObjectStorage : IObjectStorage
         Task.FromResult(_objects.TryGetValue(key, out var stored)
             ? new StoredObject(new MemoryStream(stored.Bytes), stored.ContentType, stored.Bytes.Length)
             : null);
+
+    /// <summary>Tells whether an object exists (the ingest members of <see cref="IObjectStorage"/>, I-2).</summary>
+    /// <param name="key">The key.</param>
+    /// <param name="cancellationToken">Unused.</param>
+    /// <returns><see langword="true"/> when stored.</returns>
+    public Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default) => Task.FromResult(_objects.ContainsKey(key));
+
+    /// <summary>Writes an object to a local file.</summary>
+    /// <param name="key">The key.</param>
+    /// <param name="filePath">The file to write.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    /// <returns>A task that completes when the file is written.</returns>
+    public Task DownloadToFileAsync(string key, string filePath, CancellationToken cancellationToken = default) =>
+        File.WriteAllBytesAsync(filePath, _objects[key].Bytes, cancellationToken);
+
+    /// <summary>Stores a local file as an object.</summary>
+    /// <param name="filePath">The file to read.</param>
+    /// <param name="key">The key.</param>
+    /// <param name="contentType">The content type.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <returns>A task that completes when the object is stored.</returns>
+    public async Task UploadFileAsync(string filePath, string key, string contentType, CancellationToken cancellationToken = default) =>
+        _objects[key] = (await File.ReadAllBytesAsync(filePath, cancellationToken), contentType);
 }
