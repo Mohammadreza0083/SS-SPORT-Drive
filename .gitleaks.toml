@@ -1,0 +1,19 @@
+# Secret scanning (decisions §1b rule 1; O-10). CI runs gitleaks over the whole git history on every PR.
+# The default rules apply. The allow-list names only known, non-secret values, never a path or a whole rule,
+# so a real key added anywhere still fails the build.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Made-up OpenAPI/Scalar examples and synthetic test keys"
+regexes = [
+  # Scalar request/response examples for sign-in and the viewer gate (invented, never issued).
+  '''k3Yb0w1sJ2m9QeZxv7oXq5T8nC4hA6uRdL0pFiGyE1s''',
+  '''q8Wc2n0dJ5xTm1RzK7aVhE3yB6uPfLsG9oXiA4tNeUw''',
+  '''pX2bq9ZcR1t0mKvL8wYhN3sD5fG7jA4eU6iO0rT2yQw''',
+  '''Vb7nM2qX9kL4tR8wZ1cY5hJ3gF6dS0aP2eU4iO7rT9y''',
+  # Test keys: base64 of the byte runs 0x00-0x1F, 0x1F-0x3E and 0x20-0x3F (shared HLS token test vectors).
+  '''AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=''',
+  '''HyAhIiMkJSYnKCkqKywtLi8wMTIzNDU2Nzg5Ojs8PT4=''',
+  '''ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8=''',
+]

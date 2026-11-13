@@ -84,6 +84,7 @@ public sealed record GatePurgeResult(int EmailCodes, int Sessions, int Devices, 
 /// site's visitor codes and signed-in sessions (P-8). Forward records stay: they are the audit trail of who a link reached. Run daily by a Hangfire job.
 /// </summary>
 /// <param name="Now">The moment the retention is measured from (UTC).</param>
+[InternalRequest("Sent only by the scheduled gate-purge job with the clock's time.")]
 public sealed record PurgeGateRowsCommand(DateTimeOffset Now) : ICommand<GatePurgeResult>;
 
 /// <summary>Handles <see cref="PurgeGateRowsCommand"/> with batched SQL deletes; nothing is loaded.</summary>

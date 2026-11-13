@@ -6,6 +6,7 @@ using SsSport.Drive.Application.Abstractions.Persistence;
 using SsSport.Drive.Application.Exceptions;
 using SsSport.Drive.Application.MiniApp;
 using SsSport.Drive.Application.Paging;
+using SsSport.Drive.Application.Validation;
 using SsSport.Drive.Domain.Audit;
 using SsSport.Drive.Domain.Links;
 using SsSport.Drive.Domain.Players;
@@ -23,21 +24,21 @@ public static class ShareLinkRules
     /// <summary>Gets the roles allowed to manage links: admins only (brief §12).</summary>
     public static IReadOnlyCollection<string> AdminRoles { get; } = [Role.Admin.Name];
 
-    /// <summary>Gets the expiry choices in days; <see langword="null"/> means never.</summary>
+    /// <summary>Gets the expiry choices in days. Every link expires (owner, 2026-11-13).</summary>
     public static IReadOnlyCollection<int> ExpiryDays { get; } = [7, 30, 90];
 
     /// <summary>The message for an expiry that is not one of the choices.</summary>
-    public const string ExpiryMessage = "Use 7, 30 or 90 days, or null for never.";
+    public const string ExpiryMessage = "Use 7, 30 or 90 days; every link expires.";
 
     /// <summary>Checks an expiry choice.</summary>
-    /// <param name="days">The days, or <see langword="null"/> for never.</param>
+    /// <param name="days">The days; <see langword="null"/> is refused.</param>
     /// <returns><see langword="true"/> when it is one of the choices.</returns>
-    public static bool IsExpiryChoice(int? days) => days is null || ExpiryDays.Contains(days.Value);
+    public static bool IsExpiryChoice(int? days) => days is { } value && ExpiryDays.Contains(value);
 
     /// <summary>Turns an expiry choice into a moment.</summary>
-    /// <param name="days">The days, or <see langword="null"/> for never.</param>
+    /// <param name="days">The days (validated first).</param>
     /// <param name="now">The current time (UTC).</param>
-    /// <returns>The expiry, or <see langword="null"/> for never.</returns>
+    /// <returns>The expiry, or <see langword="null"/> when no days were given (refused by the domain).</returns>
     public static DateTimeOffset? ExpiryFrom(int? days, DateTimeOffset now) => days is { } value ? now.AddDays(value) : null;
 
     /// <summary>Reads the caller's user id for the audit log.</summary>
@@ -122,7 +123,7 @@ public sealed record CreateShareLinkDto
     /// <summary>Gets the personal note (at most 500 characters), or <see langword="null"/>.</summary>
     public string? Note { get; init; }
 
-    /// <summary>Gets 7, 30 or 90 days, or <see langword="null"/> for a link that never expires.</summary>
+    /// <summary>Gets 7, 30 or 90 days; required (owner, 2026-11-13).</summary>
     public int? ExpiresInDays { get; init; }
 
     /// <summary>Gets whether another device must verify an email first (default <see langword="true"/>).</summary>
@@ -148,7 +149,7 @@ public sealed record CreateShareLinkDto
 /// <param name="Recipient">A new recipient, or <see langword="null"/>.</param>
 /// <param name="PlayerIds">The players, in page order.</param>
 /// <param name="Note">The personal note, or <see langword="null"/>.</param>
-/// <param name="ExpiresInDays">7, 30 or 90, or <see langword="null"/> for never.</param>
+/// <param name="ExpiresInDays">7, 30 or 90; required.</param>
 /// <param name="VerifyOnNewDevice">The switch, or <see langword="null"/> for the default.</param>
 /// <param name="AllowForwarding">The switch, or <see langword="null"/> for the default.</param>
 /// <param name="ForwardingScope">The scope name, or <see langword="null"/> for the default.</param>
@@ -472,16 +473,16 @@ public sealed class ChangeShareLinkStatusCommandHandler(
     }
 }
 
-/// <summary>A new expiry: 7, 30 or 90 days from now, or <see langword="null"/> for never.</summary>
+/// <summary>A new expiry: 7, 30 or 90 days from now. It cannot be removed.</summary>
 public sealed record ChangeShareLinkExpiryDto
 {
-    /// <summary>Gets 7, 30 or 90 days from now, or <see langword="null"/> for never.</summary>
+    /// <summary>Gets 7, 30 or 90 days from now; required.</summary>
     public int? ExpiresInDays { get; init; }
 }
 
 /// <summary>Moves or removes a link's expiry (<c>PATCH /admin/links/{id}/expiry</c>), for admins only.</summary>
 /// <param name="Id">The link.</param>
-/// <param name="ExpiresInDays">7, 30 or 90 days from now, or <see langword="null"/> for never.</param>
+/// <param name="ExpiresInDays">7, 30 or 90 days from now; required.</param>
 public sealed record ChangeShareLinkExpiryCommand(Guid Id, int? ExpiresInDays) : ICommand<ShareLinkDto>, IAuthorizedRequest
 {
     /// <summary>The audit action.</summary>
@@ -579,5 +580,36 @@ public sealed class ResolveShareLinkQueryHandler(
                 }
                 : null,
         };
+    }
+}
+
+/// <summary>Validates <see cref="ChangeShareLinkStatusCommand"/> on the server (decisions §1b rule 3); malformed input is a 400.</summary>
+public sealed class ChangeShareLinkStatusCommandValidator : AbstractValidator<ChangeShareLinkStatusCommand>
+{
+    /// <summary>Builds the rules.</summary>
+    public ChangeShareLinkStatusCommandValidator()
+    {
+        RuleFor(r => r.Id).ValidId().OverridePropertyName("id");
+        RuleFor(r => r.Change).IsInEnum().OverridePropertyName("change");
+    }
+}
+
+/// <summary>Validates <see cref="GetShareLinkQuery"/> on the server (decisions §1b rule 3); malformed input is a 400.</summary>
+public sealed class GetShareLinkQueryValidator : AbstractValidator<GetShareLinkQuery>
+{
+    /// <summary>Builds the rules.</summary>
+    public GetShareLinkQueryValidator()
+    {
+        RuleFor(r => r.Id).ValidId().OverridePropertyName("id");
+    }
+}
+
+/// <summary>Validates <see cref="ResolveShareLinkQuery"/> on the server (decisions §1b rule 3); malformed input is a 400.</summary>
+public sealed class ResolveShareLinkQueryValidator : AbstractValidator<ResolveShareLinkQuery>
+{
+    /// <summary>Builds the rules.</summary>
+    public ResolveShareLinkQueryValidator()
+    {
+        RuleFor(r => r.Code).BoundedCode().OverridePropertyName("code");
     }
 }

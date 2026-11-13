@@ -154,6 +154,7 @@ public static class DailyDigestText
 
 /// <summary>Sends the daily digest to every active admin (<c>daily-digest</c> job, 09:00 Tehran).</summary>
 /// <param name="Now">The current time.</param>
+[InternalRequest("Sent only by the scheduled daily-digest job with the clock's time.")]
 public sealed record SendDailyDigestCommand(DateTimeOffset Now) : ICommand<int>;
 
 /// <summary>

@@ -6,7 +6,7 @@ namespace SsSport.Drive.Domain.UnitTests.Accounts;
 /// <summary>
 /// Email magic-link sign-in (A-1 admins, P-5 viewers; decisions §7a). A sign-in link is issued, armed with a token hash
 /// inside the email job (so the token never sits in the request or a job argument), works once for 15 minutes, and
-/// starts a session: 7 days for an admin, 1 day for a viewer. Viewers get an account on their first sign-in.
+/// starts a session: 30 days for an admin, 7 days for a viewer. Viewers get an account on their first sign-in.
 /// </summary>
 public sealed class SignInTests
 {
@@ -101,12 +101,12 @@ public sealed class SignInTests
         ((Action)(() => link.Arm(" ", _now))).Should().Throw<ArgumentException>();
     }
 
-    /// <summary>An admin session lasts 7 days, a viewer session 1 day.</summary>
+    /// <summary>An admin session lasts 30 days, a viewer session 7 days (owner, 2026-11-13).</summary>
     /// <param name="audience">Who signs in.</param>
     /// <param name="days">The lifetime in days.</param>
     [Theory]
-    [InlineData(SignInAudience.Admin, 7)]
-    [InlineData(SignInAudience.Viewer, 1)]
+    [InlineData(SignInAudience.Admin, 30)]
+    [InlineData(SignInAudience.Viewer, 7)]
     public void Sessions_last_by_audience(SignInAudience audience, int days)
     {
         var subject = Guid.CreateVersion7();

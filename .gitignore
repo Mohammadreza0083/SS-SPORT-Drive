@@ -103,3 +103,7 @@ __pycache__/
 
 # Local execution plans written by Claude (not part of the product)
 .claude/plans/
+
+# Security scans (O-10): local reports
+gitleaks-report*.json
+vulnerable.txt

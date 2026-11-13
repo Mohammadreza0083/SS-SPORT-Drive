@@ -9,6 +9,7 @@ using SsSport.Drive.Application.Abstractions.Security;
 using SsSport.Drive.Application.Abstractions.Web;
 using SsSport.Drive.Application.Emails;
 using SsSport.Drive.Application.Exceptions;
+using SsSport.Drive.Application.Validation;
 using SsSport.Drive.Domain.Accounts;
 using SsSport.Drive.Domain.Emails;
 using SsSport.Drive.Domain.Primitives;
@@ -488,5 +489,37 @@ public sealed class SignOutCommandHandler(
         var now = timeProvider.GetUtcNow();
         var session = await SignInRules.FindLiveSessionAsync(sessions, secrets, request.Audience, request.SessionToken, now, cancellationToken);
         session?.End(now);
+    }
+}
+
+/// <summary>Validates <see cref="GetSignedInQuery"/> on the server (decisions §1b rule 3); malformed input is a 400.</summary>
+public sealed class GetSignedInQueryValidator : AbstractValidator<GetSignedInQuery>
+{
+    /// <summary>Builds the rules.</summary>
+    public GetSignedInQueryValidator()
+    {
+        RuleFor(r => r.Audience).IsInEnum().OverridePropertyName("audience");
+        RuleFor(r => r.SessionToken).BoundedToken().OverridePropertyName("sessionToken");
+    }
+}
+
+/// <summary>Validates <see cref="ResolveAdminSessionQuery"/> on the server (decisions §1b rule 3); malformed input is a 400.</summary>
+public sealed class ResolveAdminSessionQueryValidator : AbstractValidator<ResolveAdminSessionQuery>
+{
+    /// <summary>Builds the rules.</summary>
+    public ResolveAdminSessionQueryValidator()
+    {
+        RuleFor(r => r.SessionToken).BoundedToken().OverridePropertyName("sessionToken");
+    }
+}
+
+/// <summary>Validates <see cref="SignOutCommand"/> on the server (decisions §1b rule 3); malformed input is a 400.</summary>
+public sealed class SignOutCommandValidator : AbstractValidator<SignOutCommand>
+{
+    /// <summary>Builds the rules.</summary>
+    public SignOutCommandValidator()
+    {
+        RuleFor(r => r.Audience).IsInEnum().OverridePropertyName("audience");
+        RuleFor(r => r.SessionToken).BoundedToken().OverridePropertyName("sessionToken");
     }
 }

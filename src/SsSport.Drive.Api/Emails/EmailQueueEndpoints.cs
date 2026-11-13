@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using SsSport.Drive.Api.MiniApp;
 using SsSport.Drive.Api.Paging;
+using SsSport.Drive.Api.Security;
 using SsSport.Drive.Application.Emails;
 using SsSport.Drive.Application.Paging;
 using SsSport.Drive.Domain.Emails;
@@ -54,6 +55,7 @@ public static class EmailQueueEndpoints
         app.MapGet("/admin/emails", ListAsync)
             .WithTags(Tag)
             .WithName("ListOutgoingEmails")
+            .RequireAdmin()
             .WithSummary("List the email queue")
             .WithDescription(
                 "Admins only. One cursor page of queued emails, newest first: the kind (`Code` goes Resend then Brevo, `General` goes through Google SMTP), " +

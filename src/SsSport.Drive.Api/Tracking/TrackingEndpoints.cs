@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using SsSport.Drive.Api.Links;
 using SsSport.Drive.Api.MiniApp;
 using SsSport.Drive.Api.Paging;
+using SsSport.Drive.Api.Security;
 using SsSport.Drive.Application.Paging;
 using SsSport.Drive.Application.Tracking;
 
@@ -110,6 +111,7 @@ public static class TrackingEndpoints
         app.MapGet("/admin/links/{id:guid}/viewing", ViewingAsync)
             .WithTags(ShareLinkEndpoints.Tag)
             .WithName("GetLinkViewing")
+            .RequireAdmin()
             .WithSummary("Read how a link was watched")
             .WithDescription(
                 "Admins only. One page of rows, one per viewer email and video, the most recently watched first: plays, watch time (every second played), unique " +

@@ -178,7 +178,7 @@ public sealed partial class ViewerGateEndpointTests : IAsyncLifetime
         access.DeviceToken.Should().MatchRegex("^[A-Za-z0-9_-]{43}$");
         access.SessionToken.Should().MatchRegex("^[A-Za-z0-9_-]{43}$");
         access.DeviceExpiresAt.Should().Be(_clock.GetUtcNow().AddDays(90));
-        access.SessionExpiresAt.Should().Be(_clock.GetUtcNow().AddDays(1));
+        access.SessionExpiresAt.Should().Be(_clock.GetUtcNow().AddDays(7));
 
         using var session = await SessionAsync(code, access.SessionToken);
         session.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -192,13 +192,13 @@ public sealed partial class ViewerGateEndpointTests : IAsyncLifetime
         sessionHashes.Should().ContainSingle().Which.Should().NotBe(access.SessionToken);
     }
 
-    /// <summary>A trusted device gets a new session without a code, even after the first session ran out.</summary>
+    /// <summary>A trusted device gets a new session without a code, even after the first (7-day) session ran out.</summary>
     [Fact]
     public async Task A_trusted_device_opens_without_a_code()
     {
         var code = await CreateLinkAsync();
         var access = await VerifyAsync(code, RecipientEmail);
-        _clock.Advance(TimeSpan.FromDays(2));
+        _clock.Advance(TimeSpan.FromDays(8));
 
         using var expired = await SessionAsync(code, access.SessionToken);
         expired.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -217,7 +217,7 @@ public sealed partial class ViewerGateEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Other_devices_need_the_gate()
     {
-        var code = await CreateLinkAsync(expiresInDays: null);
+        var code = await CreateLinkAsync(expiresInDays: 90);
         var otherCode = await CreateLinkAsync();
         var access = await VerifyAsync(code, RecipientEmail);
 
@@ -243,7 +243,15 @@ public sealed partial class ViewerGateEndpointTests : IAsyncLifetime
             otherSession.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         }
 
-        _clock.Advance(TimeSpan.FromDays(90));
+        // Every link expires (at most 90 days), so the admin extends it before the device's 90 days are up.
+        _clock.Advance(TimeSpan.FromDays(60));
+        var id = await QueryAsync(db => db.Set<ShareLink>().Where(link => link.Code == ShareLinkCode.Create(code)).Select(link => link.Id).SingleAsync(TestContext.Current.CancellationToken));
+        using (var extended = await AdminPostAsync($"/admin/links/{id}/expiry", new { expiresInDays = 90 }, HttpMethod.Patch))
+        {
+            extended.StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+
+        _clock.Advance(TimeSpan.FromDays(30));
         using var old = await OpenAsync(code, access.DeviceToken);
         old.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
@@ -740,15 +748,16 @@ public sealed partial class ViewerGateEndpointTests : IAsyncLifetime
         return await client.SendAsync(request, TestContext.Current.CancellationToken);
     }
 
-    /// <summary>Posts as the admin.</summary>
+    /// <summary>Sends as the admin (POST unless another method is given).</summary>
     /// <param name="path">The path.</param>
     /// <param name="body">The JSON body, or <see langword="null"/>.</param>
+    /// <param name="method">The HTTP method; POST when <see langword="null"/>.</param>
     /// <returns>The response.</returns>
-    private async Task<HttpResponseMessage> AdminPostAsync(string path, object? body = null)
+    private async Task<HttpResponseMessage> AdminPostAsync(string path, object? body = null, HttpMethod? method = null)
     {
         using var client = Client();
-        using var request = new HttpRequestMessage(HttpMethod.Post, new Uri(path, UriKind.Relative)) { Content = body is null ? null : JsonContent.Create(body) };
-        request.Headers.Authorization = new AuthenticationHeaderValue("tma", InitDataSigner.ForUser(BotToken, AdminTelegramId, DateTimeOffset.UtcNow));
+        using var request = new HttpRequestMessage(method ?? HttpMethod.Post, new Uri(path, UriKind.Relative)) { Content = body is null ? null : JsonContent.Create(body) };
+        request.Headers.Authorization = new AuthenticationHeaderValue("tma", InitDataSigner.ForUser(BotToken, AdminTelegramId, _clock.GetUtcNow()));
         return await client.SendAsync(request, TestContext.Current.CancellationToken);
     }
 
@@ -756,7 +765,7 @@ public sealed partial class ViewerGateEndpointTests : IAsyncLifetime
     /// <param name="players">How many players.</param>
     /// <param name="allowForwarding">The forwarding switch.</param>
     /// <param name="verifyOnNewDevice">The device switch.</param>
-    /// <param name="expiresInDays">7, 30 or 90, or <see langword="null"/> for a link that never expires.</param>
+    /// <param name="expiresInDays">7, 30 or 90.</param>
     /// <returns>The code.</returns>
     private async Task<string> CreateLinkAsync(int players = 1, bool allowForwarding = true, bool verifyOnNewDevice = true, int? expiresInDays = 30)
     {

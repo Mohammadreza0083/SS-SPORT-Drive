@@ -6,6 +6,7 @@ using SsSport.Drive.Application.Abstractions.Storage;
 using SsSport.Drive.Application.Exceptions;
 using SsSport.Drive.Application.Links;
 using SsSport.Drive.Application.Paging;
+using SsSport.Drive.Application.Validation;
 using SsSport.Drive.Domain.Assets;
 using SsSport.Drive.Domain.Players;
 using SsSport.Drive.Domain.Primitives;
@@ -233,5 +234,47 @@ public sealed class GetPublicPlayerPhotoQueryHandler(IRepository<Player, Guid> p
         }
 
         return await storage.GetAsync(player.Photo.StorageKey, cancellationToken) ?? throw new NotFoundException("Photo");
+    }
+}
+
+/// <summary>Validates <see cref="GetPublicPlayerDocumentsQuery"/> on the server (decisions §1b rule 3); malformed input is a 400.</summary>
+public sealed class GetPublicPlayerDocumentsQueryValidator : AbstractValidator<GetPublicPlayerDocumentsQuery>
+{
+    /// <summary>Builds the rules.</summary>
+    public GetPublicPlayerDocumentsQueryValidator()
+    {
+        RuleFor(r => r.Slug).BoundedSlug().OverridePropertyName("slug");
+        RuleFor(r => r.Paging).ValidPaging();
+    }
+}
+
+/// <summary>Validates <see cref="GetPublicPlayerPhotoQuery"/> on the server (decisions §1b rule 3); malformed input is a 400.</summary>
+public sealed class GetPublicPlayerPhotoQueryValidator : AbstractValidator<GetPublicPlayerPhotoQuery>
+{
+    /// <summary>Builds the rules.</summary>
+    public GetPublicPlayerPhotoQueryValidator()
+    {
+        RuleFor(r => r.Slug).BoundedSlug().OverridePropertyName("slug");
+    }
+}
+
+/// <summary>Validates <see cref="GetPublicPlayerQuery"/> on the server (decisions §1b rule 3); malformed input is a 400.</summary>
+public sealed class GetPublicPlayerQueryValidator : AbstractValidator<GetPublicPlayerQuery>
+{
+    /// <summary>Builds the rules.</summary>
+    public GetPublicPlayerQueryValidator()
+    {
+        RuleFor(r => r.Slug).BoundedSlug().OverridePropertyName("slug");
+    }
+}
+
+/// <summary>Validates <see cref="GetPublicPlayerVideosQuery"/> on the server (decisions §1b rule 3); malformed input is a 400.</summary>
+public sealed class GetPublicPlayerVideosQueryValidator : AbstractValidator<GetPublicPlayerVideosQuery>
+{
+    /// <summary>Builds the rules.</summary>
+    public GetPublicPlayerVideosQueryValidator()
+    {
+        RuleFor(r => r.Slug).BoundedSlug().OverridePropertyName("slug");
+        RuleFor(r => r.Paging).ValidPaging();
     }
 }

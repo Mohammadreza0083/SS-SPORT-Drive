@@ -113,7 +113,7 @@ Across the whole run, fewer than 1 % of requests may fail and more than 99 % of 
 
 ### Running against the security baseline (O-9, since 2026-11-01)
 
-Outside Development the API redirects plain HTTP to HTTPS (308), and it allows 300 requests per client per minute (1 800 for the webhook). Both scripts therefore send `X-Forwarded-Proto: https`, as the reverse proxy does. The API trusts it from loopback, which includes Docker Desktop's `host.docker.internal`. For a load run, also start the API with higher budgets, for the benchmark only:
+Outside Development the API redirects plain HTTP to HTTPS (308), and it allows 300 requests per client per minute (1 800 for the webhook). Every script therefore sends `X-Forwarded-Proto: https`, as the reverse proxy does. The API trusts it from loopback, which includes Docker Desktop's `host.docker.internal`. For a load run, also start the API with higher budgets, for the benchmark only:
 
 ```bash
 export RateLimiting__PermitsPerMinute=1000000 RateLimiting__WebhookPermitsPerMinute=1000000
@@ -298,3 +298,71 @@ Seed: one published player on one Personal link, made in SQL. Codes went to a pi
 - The rates are lower than V-2b's runs at the same `PEAK_RATE`, because the viewer scenarios (most of the traffic) did not run. The numbers measure the gate alone.
 - A manual pass on the same build confirmed the forward flow: code request 202; verify 200 with `awaitingApproval: true`, a device token and no session; `/session` 403 `share_link.forward_pending`; one `Pending` row in `link_forwards`.
 - **Log noise:** the expected 401/404 answers of `stale_device` and `unknown_link` are logged by `LoggingBehavior` as `fail` (Error) with a stack trace: 2 552 entries in this run. That predates L-3, but it will fill Loki with errors that are not errors.
+
+## `admin.js`: the admin API behind the Admin policy (O-10)
+
+Since O-10 every `/admin/*` endpoint requires the `Admin` policy at the HTTP layer. A caller who is not an authenticated admin is refused before any handler or database work, and the MediatR role check still runs as a second gate. The script signs in as an admin with Mini App `initData` (the same signing as `miniapp.js`). With `ADMIN_SESSION`, it uses the console's magic-link session in `X-Admin-Session` instead.
+
+| Scenario | Endpoint | Expected | Threshold (p95) |
+|---|---|---|---|
+| `links_list` | `GET /admin/links?page=1&pageSize=20` | 200, paged in SQL | < 200 ms (p99 < 400 ms) |
+| `link_get` | `GET /admin/links/{id}` (the newest link) | 200 | < 150 ms (p99 < 300 ms) |
+| `link_viewing` | `GET /admin/links/{id}/viewing?page=1&pageSize=20` (L-6 metrics) | 200 | < 250 ms (p99 < 500 ms) |
+| `emails` | `GET /admin/emails?pageSize=20` (L-4 queue, cursor-paged) | 200 | < 150 ms (p99 < 300 ms) |
+| `anonymous` | `GET /admin/links` with no credentials | 401 ProblemDetails from the Admin policy, no database work | < 50 ms |
+| `analyst` (opt-in, `ANALYST_TELEGRAM_ID`) | `GET /admin/links` signed as an analyst | 403 | < 150 ms |
+| `no_expiry` | `POST /admin/links` without `expiresInDays` | 400 naming `expiresInDays` (every link must expire) | < 150 ms |
+| `create_link` (opt-in, `CREATE_LINKS=1` + `PLAYER_ID`) | `POST /admin/links`, a new recipient, 7-day expiry | 201 | < 400 ms (p99 < 800 ms) |
+
+Fewer than 1 % of requests may fail and more than 99 % of checks must pass. The 400s, 401s and 403s count as expected.
+
+| Profile | Shape |
+|---|---|
+| `smoke` (default) | 30 s: 5 list, 3 link, 2 viewing, 2 emails, 3 anonymous, 1 analyst, 1 no-expiry (and 1 create) requests per second |
+| `load` | Ramps to `PEAK_RATE` list reads/s (default 20) over 1 min, holds 2 min, ramps down 30 s. The others run at their share: link 60 %, anonymous 50 %, viewing 40 %, emails 30 %, analyst 20 %, no-expiry 10 %, create 5 % |
+
+A handful of admins use the console, so the default peak is low. The `anonymous` and `analyst` scenarios stand for an attacker hammering the admin area: they must stay cheap at any rate.
+
+### Run it locally (Docker)
+
+1. Start PostgreSQL and the API as for `miniapp.js` (above), with the same `Telegram__BotToken`. **Raise the rate limit even for `smoke`** (`RateLimiting__PermitsPerMinute=1000000`). The smoke sends about 17 requests/s from one address, above the default 300 per minute. Without the raise, about 45 % of requests get 429 and the run fails.
+2. **Add an active admin.** An admin needs an email (decisions §7b):
+
+   ```bash
+   docker exec ssd-bench-pg psql -U bench -d ss_sport_drive_bench -c "INSERT INTO users (id, telegram_id, username, display_name, email, role, status, requested_at) VALUES (gen_random_uuid(), 777000002, 'k6_admin', 'K6 Admin', 'k6-admin@example.com', 'Admin', 'Active', now());"
+   ```
+
+   For the `analyst` scenario, reuse the analyst from `miniapp.js` step 3 (`777000001`).
+3. **The first run creates a link** when none exists yet. Pass a published player, and the run also benchmarks `create_link` (every link has an expiry: 7, 30 or 90 days):
+
+   ```bash
+   docker run --rm -v "$PWD:/work" -w /work grafana/k6:2.2.0 run -e BASE_URL=http://host.docker.internal:5081 -e BOT_TOKEN=424242:k6-bench-token -e ADMIN_TELEGRAM_ID=777000002 -e CREATE_LINKS=1 -e PLAYER_ID=<published player id> -e PROFILE=smoke perf/k6/admin.js
+   ```
+
+4. **Run it:**
+
+   ```bash
+   docker run --rm -v "$PWD:/work" -w /work grafana/k6:2.2.0 run -e BASE_URL=http://host.docker.internal:5081 -e BOT_TOKEN=424242:k6-bench-token -e ADMIN_TELEGRAM_ID=777000002 -e ANALYST_TELEGRAM_ID=777000001 -e PROFILE=smoke --summary-export k6-results/admin-smoke.json perf/k6/admin.js
+   ```
+
+   For the full run, use `-e PROFILE=load`.
+
+### Notes
+
+- **`create_link` writes data:** one link and one recipient per iteration. Run it on a throwaway database or on staging only, never on production.
+- **Session lifetimes changed in O-10:** admin sessions last 30 days and viewer sessions 7 days. A `SESSION_TOKEN` for `viewer-links.js` or an `ADMIN_SESSION` here therefore stays usable for a week (viewer) or a month (admin) of benchmark runs.
+- **Validators (O-10):** every viewer and admin request now passes a FluentValidation validator in the MediatR pipeline. For link codes, tokens and slugs it only bounds the length, so `viewer-links.js`'s `unknown_link` still gets the same 404 as before. Re-run `viewer-links.js` to compare with the 2026-11-12 numbers above.
+
+### Results (2026-11-14, local Windows machine, API in Release as Production, PostgreSQL 17 in Docker)
+
+Branch `feature/security-pentest-hardening` (PR #67). Seed: one admin, one analyst, one published player made in SQL; links made by the run. Rate limits were raised as above. Another worktree's compose stack was running idle on the same machine.
+
+| Run | Requests | Rate | Failed | p95 list | p95 link | p95 viewing | p95 emails | p95 anonymous (401) | p95 analyst (403) | p95 no-expiry (400) | p95 create |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `smoke` (warm) | 545 | 18/s | 0 | 53.5 ms | 48.6 ms | 56.3 ms | 33.3 ms | 16.1 ms | 30.2 ms | 30.0 ms | 66.5 ms |
+| `load`, peak 20 | 10 633 | 51/s | 0 | 35.4 ms | 34.9 ms | 40.3 ms | 24.4 ms | 10.6 ms | 21.7 ms | 20.2 ms | 48.4 ms |
+
+- Every threshold passed, and all checks passed (12 671 of 12 671).
+- The Admin policy's refusals are the cheapest calls in the API: an anonymous 401 has a p95 of 10.6 ms under load and never touches the database. Each refusal was logged as a structured warning (`Refused GET /admin/links with 401/403`).
+- **Cold start:** the first smoke run right after starting the API missed two p99 limits (`create_link` 1.07 s, `link_get` 377 ms). With about 30 samples, p99 is the first JIT-compiled request. Warm runs stay under 225 ms max. Warm the API (one smoke run) before a run you record.
+- `viewer-links.js` was not re-run for O-10: it needs a live viewer session from the email gate, and Production refuses the pickup directory. Re-run it on staging.

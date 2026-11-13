@@ -1,9 +1,11 @@
 using System.Globalization;
 using Ardalis.Specification;
+using FluentValidation;
 using SsSport.Drive.Application.Abstractions.Messaging;
 using SsSport.Drive.Application.Abstractions.Persistence;
 using SsSport.Drive.Application.Emails;
 using SsSport.Drive.Application.Users;
+using SsSport.Drive.Application.Validation;
 using SsSport.Drive.Domain.Audit;
 using SsSport.Drive.Domain.Emails;
 using SsSport.Drive.Domain.Links;
@@ -167,5 +169,16 @@ public sealed class DecideForwardCommandHandler(
         {
             sessions.Remove(session);
         }
+    }
+}
+
+/// <summary>Validates <see cref="DecideForwardCommand"/> on the server (decisions §1b rule 3); malformed input is a 400.</summary>
+public sealed class DecideForwardCommandValidator : AbstractValidator<DecideForwardCommand>
+{
+    /// <summary>Builds the rules.</summary>
+    public DecideForwardCommandValidator()
+    {
+        RuleFor(r => r.AdminTelegramId).ValidTelegramId().OverridePropertyName("adminTelegramId");
+        RuleFor(r => r.ForwardId).ValidId().OverridePropertyName("forwardId");
     }
 }

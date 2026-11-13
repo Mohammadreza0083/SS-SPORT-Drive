@@ -9,6 +9,7 @@ using SsSport.Drive.Application.Abstractions.Persistence;
 using SsSport.Drive.Application.Exceptions;
 using SsSport.Drive.Application.Paging;
 using SsSport.Drive.Application.Players;
+using SsSport.Drive.Application.Validation;
 using SsSport.Drive.Domain.Countries;
 using SsSport.Drive.Domain.DriveFolders;
 using SsSport.Drive.Domain.Players;
@@ -479,4 +480,24 @@ public sealed class CheckDriveFolderQueryHandler(IRepository<DriveFolder, Guid> 
     /// <exception cref="ServiceUnavailableException">Google Drive cannot be reached.</exception>
     public Task<DriveFolderCheckDto> Handle(CheckDriveFolderQuery request, CancellationToken cancellationToken) =>
         DriveFolderChecks.CheckAsync(folders, players, drive, request.Url, cancellationToken);
+}
+
+/// <summary>Validates <see cref="CheckDriveFolderQuery"/> on the server (decisions §1b rule 3); malformed input is a 400.</summary>
+public sealed class CheckDriveFolderQueryValidator : AbstractValidator<CheckDriveFolderQuery>
+{
+    /// <summary>Builds the rules.</summary>
+    public CheckDriveFolderQueryValidator()
+    {
+        RuleFor(r => r.Url).BoundedUrl().OverridePropertyName("url");
+    }
+}
+
+/// <summary>Validates <see cref="CheckVolleyboxQuery"/> on the server (decisions §1b rule 3); malformed input is a 400.</summary>
+public sealed class CheckVolleyboxQueryValidator : AbstractValidator<CheckVolleyboxQuery>
+{
+    /// <summary>Builds the rules.</summary>
+    public CheckVolleyboxQueryValidator()
+    {
+        RuleFor(r => r.Url).BoundedUrl().OverridePropertyName("url");
+    }
 }
