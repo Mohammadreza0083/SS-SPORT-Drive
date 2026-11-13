@@ -28,6 +28,8 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
+      - name: Install ffmpeg (the ingest transcoder tests run the real tool)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
       - name: Restore
         run: dotnet restore SsSport.Drive.slnx
       - name: Format check
