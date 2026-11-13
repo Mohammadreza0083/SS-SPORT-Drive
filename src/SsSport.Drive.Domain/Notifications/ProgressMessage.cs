@@ -59,6 +59,37 @@ public sealed class ProgressMessage : AggregateRoot<Guid>
     /// <returns><see langword="true"/> when the text is the same.</returns>
     public bool Shows(string text) => string.Equals(Text, text, StringComparison.Ordinal);
 
+    /// <summary>
+    /// Gets when the current build started (T-6b): the first refresh that saw a file still in the pipeline. It is the
+    /// base of the time-left estimate and is cleared when every file is done.
+    /// </summary>
+    public DateTimeOffset? BuildStartedAt { get; private set; }
+
+    /// <summary>Gets when the player's QR code was sent under this message (T-6b), or <see langword="null"/>.</summary>
+    public DateTimeOffset? QrSentAt { get; private set; }
+
+    /// <summary>
+    /// Records whether files are still being built: the first time they are, the build start is set; when none are,
+    /// it is cleared, so the next build measures its own time.
+    /// </summary>
+    /// <param name="building">Whether any file is still in the pipeline.</param>
+    /// <param name="now">The current time (UTC).</param>
+    /// <returns><see langword="true"/> when the build start changed (the caller must save).</returns>
+    public bool TrackBuild(bool building, DateTimeOffset now)
+    {
+        if (building == BuildStartedAt.HasValue)
+        {
+            return false;
+        }
+
+        BuildStartedAt = building ? now : null;
+        return true;
+    }
+
+    /// <summary>Records that the QR code was sent; the first time is kept, so it is sent only once.</summary>
+    /// <param name="sentAt">The current time (UTC).</param>
+    public void QrSent(DateTimeOffset sentAt) => QrSentAt ??= sentAt;
+
     /// <summary>Records an edit in place.</summary>
     /// <param name="text">The new text.</param>
     /// <param name="editedAt">The current time (UTC).</param>

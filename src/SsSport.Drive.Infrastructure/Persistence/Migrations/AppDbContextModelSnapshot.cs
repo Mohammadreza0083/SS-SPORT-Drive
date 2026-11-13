@@ -2424,6 +2424,10 @@ namespace SsSport.Drive.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<DateTimeOffset?>("BuildStartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("build_started_at");
+
                     b.Property<long>("ChatId")
                         .HasColumnType("bigint")
                         .HasColumnName("chat_id");
@@ -2435,6 +2439,10 @@ namespace SsSport.Drive.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("PlayerId")
                         .HasColumnType("uuid")
                         .HasColumnName("player_id");
+
+                    b.Property<DateTimeOffset?>("QrSentAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("qr_sent_at");
 
                     b.Property<uint>("RowVersion")
                         .IsConcurrencyToken()

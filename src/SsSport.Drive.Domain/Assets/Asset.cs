@@ -69,6 +69,15 @@ public sealed record AssetHidden(Guid AssetId, Guid PlayerId) : IDomainEvent;
 public sealed record AssetReplaced(Guid AssetId, Guid PlayerId, int Version) : IDomainEvent;
 
 /// <summary>
+/// Raised when an asset moves one step forward in its pipeline without finishing it (T-6b): copying started, the
+/// original is stored, the renditions were planned, one rendition (not the last) is ready, or a failed asset was queued
+/// again. The analyst's progress message listens to it. Finishing raises <see cref="AssetReady"/> instead.
+/// </summary>
+/// <param name="AssetId">The asset.</param>
+/// <param name="PlayerId">The player.</param>
+public sealed record AssetProgressed(Guid AssetId, Guid PlayerId) : IDomainEvent;
+
+/// <summary>
 /// One file of a player (video, document or scout file) with its processing state and, for videos, its renditions.
 /// Files are never deleted: removed ones are hidden and can be restored.
 /// </summary>
@@ -336,6 +345,7 @@ public sealed class Asset : AggregateRoot<Guid>
     {
         EnsureState(ProcessingState.Queued);
         State = ProcessingState.Copying;
+        RaiseDomainEvent(new AssetProgressed(Id, PlayerId));
     }
 
     /// <summary>Records where the original is stored (copied, or already in the Drive backup) and starts processing.</summary>
@@ -346,6 +356,7 @@ public sealed class Asset : AggregateRoot<Guid>
         EnsureState(ProcessingState.Queued, ProcessingState.Copying);
         OriginalKey = originalKey;
         State = ProcessingState.Processing;
+        RaiseDomainEvent(new AssetProgressed(Id, PlayerId));
     }
 
     /// <summary>Records a video's duration and plans its renditions, never above the source height (360p is always made).</summary>
@@ -365,6 +376,8 @@ public sealed class Asset : AggregateRoot<Guid>
         {
             _renditions.Add(new Rendition(Guid.CreateVersion7(), quality));
         }
+
+        RaiseDomainEvent(new AssetProgressed(Id, PlayerId));
     }
 
     /// <summary>Marks one rendition encoded; when all are, the video is ready and <see cref="AssetReady"/> is raised.</summary>
@@ -382,6 +395,10 @@ public sealed class Asset : AggregateRoot<Guid>
         if (_renditions.TrueForAll(r => r.Status == RenditionStatus.Ready))
         {
             BecomeReady();
+        }
+        else
+        {
+            RaiseDomainEvent(new AssetProgressed(Id, PlayerId));
         }
     }
 
@@ -454,6 +471,7 @@ public sealed class Asset : AggregateRoot<Guid>
     {
         EnsureState(ProcessingState.Failed);
         ResetProcessing();
+        RaiseDomainEvent(new AssetProgressed(Id, PlayerId));
     }
 
     /// <summary>Validates a title.</summary>

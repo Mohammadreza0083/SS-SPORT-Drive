@@ -22,4 +22,9 @@ public interface IWebLinks
     /// <param name="name">The player's name.</param>
     /// <returns>The address of <c>/?q={name}</c>.</returns>
     Uri PlayerSearch(string name);
+
+    /// <summary>Gets a player's public page (T-6b result card).</summary>
+    /// <param name="slug">The player's slug.</param>
+    /// <returns>The address of <c>/players/{slug}</c>.</returns>
+    Uri PlayerPage(string slug);
 }

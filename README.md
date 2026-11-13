@@ -245,21 +245,23 @@ SS-SPORT Drive/
 
 ## Roadmap
 
-| # | Epic | Status |
-|---|---|---|
-| 0 | Setup & accounts | 🚧 In progress |
-| 1 | Core domain & persistence | ✅ Done |
-| 2 | Telegram bot & Mini App | 🚧 In progress |
-| 3 | Ingest, transcode & sync | 🚧 In progress (I-1 Drive reader and the ingest pipeline I-2…I-9 implemented; I-5 card design awaits approval) |
-| 4 | Viewer site & media protection | ✅ Done |
-| 5 | Personal links, OTP & tracking | 🚧 In progress (L-1–L-6 done; L-7 alerts and digest done except the digest's watching numbers) |
-| 6 | Public search & access requests | 🚧 In progress (home, locked player page and request-access dialog built on sample data; backend P-8 next) |
-| 7 | Admin console | ⏳ Planned |
-| 8 | Archive migration | ⏳ Planned |
-| 9 | Deploy & operations | ⏳ Planned |
-| 10 | Performance (k6) | ⏳ Planned |
+| # | Epic | Done | Status |
+|---|---|---|---|
+| 0 | Setup & accounts | 12 / 15 | 🚧 In progress (open: VPS, branch protection, watermark sample) |
+| 1 | Core domain & persistence | 17 / 17 | ✅ Done |
+| 2 | Telegram bot & Mini App | 17 / 17 | ✅ Done (T-6b build steps are in; its demo on real files waits for ingest) |
+| 3 | Ingest, transcode & sync | 8 / 9 | 🚧 In progress (I-1…I-4, I-6…I-9 built; I-5 card design awaits approval; I-9 check on a real link left) |
+| 4 | Viewer site & media protection | 10 / 10 | ✅ Done |
+| 5 | Personal links, OTP & tracking | 8 / 11 | 🚧 In progress (L-7 digest numbers, W-2 player heartbeats, W-3 retention left) |
+| 6 | Public search & access requests | 5 / 8 | 🚧 In progress (public home, locked page and request access live on real data; P-4 inbox, P-7 and W-1 sign-in pages left) |
+| 7 | Admin console | 1 / 11 | 🚧 In progress (A-1 admin sign-in done) |
+| 8 | Archive migration | 0 / 5 | ⏳ Planned |
+| 9 | Deploy & operations | 1 / 9 | 🚧 In progress (O-9 security baseline done; CI runs on every PR) |
+| 10 | Performance (k6) | 5 / 11 | 🚧 In progress (Mini App and viewer-link benchmarks done) |
 
-Work is tracked in Jira (project **SSD**).
+**Overall:** 76 of 123 tasks done (about 62 % by count). The open work is heavier than the done work (ingest, admin console, deploy and the penetration test), so by effort the project is roughly half done.
+
+Work is tracked in Jira (project **SSD**); last synced 2026-11-13.
 
 ---
 

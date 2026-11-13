@@ -105,7 +105,8 @@ public sealed class AssetTests
         asset.State.Should().Be(ProcessingState.Ready);
         asset.IsReady.Should().BeTrue();
         asset.Renditions.Should().OnlyContain(r => r.Status == RenditionStatus.Ready && r.PlaylistKey != null);
-        asset.DomainEvents.Should().ContainSingle().Which.Should().Be(new AssetReady(asset.Id, _playerId));
+        asset.DomainEvents.OfType<AssetReady>().Should().ContainSingle().Which.Should().Be(new AssetReady(asset.Id, _playerId));
+        asset.DomainEvents.Last().Should().Be(new AssetReady(asset.Id, _playerId), "the step events (T-6b) come before it; see AssetProgressEventsTests");
     }
 
     /// <summary>Originals already in the Drive backup are used directly, skipping the copy step.</summary>

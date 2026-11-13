@@ -18,6 +18,9 @@ internal sealed class ProgressMessageConfiguration : IEntityTypeConfiguration<Pr
         builder.Property(message => message.PlayerId);
         builder.Property(message => message.Text).HasMaxLength(ProgressMessage.MaxTextLength);
 
+        builder.Property(message => message.BuildStartedAt);
+        builder.Property(message => message.QrSentAt);
+
         builder.HasIndex(message => message.PlayerId).IsUnique();
     }
 }
