@@ -264,4 +264,11 @@ No files yet.</value></data>
   <data name="DigestAccessRequestsMany" xml:space="preserve"><value>{0} access requests</value></data>
   <data name="DigestFailedEmailsOne" xml:space="preserve"><value>⚠️ {0} email failed after every retry</value></data>
   <data name="DigestFailedEmailsMany" xml:space="preserve"><value>⚠️ {0} emails failed after every retry</value></data>
+  <data name="ProgressReadyToPublish" xml:space="preserve"><value>⏳ Ready to publish: press Publish below</value></data>
+  <data name="PublishButton" xml:space="preserve"><value>🚀 Publish</value></data>
+  <data name="PublishDone" xml:space="preserve"><value>✅ Published.</value></data>
+  <data name="PublishAlready" xml:space="preserve"><value>Already published.</value></data>
+  <data name="PublishIncomplete" xml:space="preserve"><value>Can't publish yet. Still missing: {0}</value></data>
+  <data name="PublishPlayerGone" xml:space="preserve"><value>This player no longer exists.</value></data>
+  <data name="OnlyAdminsPublish" xml:space="preserve"><value>Only admins can publish players.</value></data>
 </root>

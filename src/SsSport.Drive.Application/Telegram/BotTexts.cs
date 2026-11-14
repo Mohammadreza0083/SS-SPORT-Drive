@@ -795,6 +795,29 @@ public static class BotTexts
     /// <returns>The text.</returns>
     public static string FormatDigestFailedEmailsMany(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("DigestFailedEmailsMany"), args);
 
+    /// <summary>Gets the "ProgressReadyToPublish" text (T-11 progress message, admin owner).</summary>
+    public static string ProgressReadyToPublish => Get(nameof(ProgressReadyToPublish));
+
+    /// <summary>Gets the "PublishButton" text (T-11 Publish button).</summary>
+    public static string PublishButton => Get(nameof(PublishButton));
+
+    /// <summary>Gets the "PublishDone" text (T-11 answer to Publish).</summary>
+    public static string PublishDone => Get(nameof(PublishDone));
+
+    /// <summary>Gets the "PublishAlready" text (T-11 answer to Publish).</summary>
+    public static string PublishAlready => Get(nameof(PublishAlready));
+
+    /// <summary>Gets the "PublishPlayerGone" text (T-11 answer to Publish).</summary>
+    public static string PublishPlayerGone => Get(nameof(PublishPlayerGone));
+
+    /// <summary>Gets the "OnlyAdminsPublish" text (T-11 answer to Publish).</summary>
+    public static string OnlyAdminsPublish => Get(nameof(OnlyAdminsPublish));
+
+    /// <summary>Formats the "PublishIncomplete" text (T-11 answer to Publish): the missing details.</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatPublishIncomplete(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("PublishIncomplete"), args);
+
     /// <summary>Reads a text.</summary>
     /// <param name="key">The resource key.</param>
     /// <returns>The text.</returns>
