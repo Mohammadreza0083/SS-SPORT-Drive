@@ -31,6 +31,7 @@ import {
 import { playerCopy } from "./copy";
 import { EmailOverlay } from "./email-overlay";
 import { useHlsRefresh } from "./use-hls-refresh";
+import { useWatchTracking } from "./use-watch-tracking";
 import { swapToken } from "@/lib/viewer/hls-token";
 
 /** Props of {@link VideoPlayer}. */
@@ -51,6 +52,8 @@ type VideoPlayerProps = {
   viewerEmail?: string;
   /** Fetches a freshly signed playlist URL for this video; renews the 30-minute edge token while watching (V-5a). */
   refreshSource?: () => Promise<string>;
+  /** The same-origin route this video's watching is reported to (W-2); nothing is reported without it (the design preview). */
+  watchPath?: string;
 };
 
 /** The media element the player drives: a native `<video>` or the `<hls-video>` custom element. */
@@ -69,7 +72,7 @@ const noSubscription = () => () => {};
  * @param props - See {@link VideoPlayerProps}.
  * @returns The player with its title row.
  */
-export function VideoPlayer({ src, title, tag, poster, fps = DEFAULT_FPS, autoPlay = false, viewerEmail, refreshSource }: VideoPlayerProps) {
+export function VideoPlayer({ src, title, tag, poster, fps = DEFAULT_FPS, autoPlay = false, viewerEmail, refreshSource, watchPath }: VideoPlayerProps) {
   const id = useId();
   const mediaRef = useRef<PlayerMedia | null>(null);
   const frameRef = useRef<HTMLDivElement>(null);
@@ -95,6 +98,7 @@ export function VideoPlayer({ src, title, tag, poster, fps = DEFAULT_FPS, autoPl
 
   const ready = mode === "native" || (mode === "hls" && hlsReady);
   const tokenRef = useHlsRefresh({ mediaRef, mode: ready ? mode : null, src, refreshSource });
+  useWatchTracking({ mediaRef, ready, watchPath });
 
   useEffect(() => {
     // Fullscreen takes the frame (controller + email overlay), not just the controller.

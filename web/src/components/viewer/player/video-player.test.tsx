@@ -255,3 +255,34 @@ describe("VideoPlayer", () => {
     container.remove();
   });
 });
+
+describe("VideoPlayer watch tracking (W-2)", () => {
+  const WATCH_PATH = "/api/links/Ab3xYz/players/p/videos/v1/watch";
+
+  it("reports watching to the video's watch path once it plays", async () => {
+    desktop();
+    const fetchMock = vi.fn<typeof fetch>(async () =>
+      Response.json({ watchId: "019a3e1c-5b2a-7f10-a4c3-8d9e0f1a2b3c", heartbeatSeconds: 10 }, { status: 201 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const { container } = render(<VideoPlayer src="https://example.test/v/master.m3u8" title="Highlights 2026" watchPath={WATCH_PATH} />);
+    const media = await mediaElement(container);
+
+    fireEvent(media, new Event("play"));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(WATCH_PATH, expect.objectContaining({ method: "POST" })));
+  });
+
+  it("reports nothing without a watch path (the design preview)", async () => {
+    desktop();
+    const fetchMock = vi.fn<typeof fetch>();
+    vi.stubGlobal("fetch", fetchMock);
+    const { container } = render(<VideoPlayer src="https://example.test/v/master.m3u8" title="Highlights 2026" />);
+    const media = await mediaElement(container);
+
+    fireEvent(media, new Event("play"));
+    await act(async () => await Promise.resolve());
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});

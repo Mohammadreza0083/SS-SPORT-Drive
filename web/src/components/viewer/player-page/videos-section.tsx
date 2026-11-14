@@ -78,6 +78,7 @@ export function VideosSection({ videos, viewerEmail }: VideosSectionProps) {
               autoPlay={autoPlay}
               viewerEmail={viewerEmail}
               refreshSource={source.refreshSource}
+              watchPath={current.watchPath}
             />
           )}
         </div>
