@@ -137,11 +137,16 @@ internal sealed class WatchSessionConfiguration : IEntityTypeConfiguration<Watch
         builder.Ignore(watch => watch.Ranges);
         builder.Ignore(watch => watch.UniqueSeconds);
         builder.Ignore(watch => watch.WatchSeconds);
-        builder.Ignore(watch => watch.Completion);
+        builder.Property(watch => watch.Completion);
         builder.Ignore(watch => watch.IsComplete);
 
         builder.HasIndex(watch => new { watch.ShareLinkId, watch.Email, watch.AssetId });
         builder.HasIndex(watch => watch.ViewerSessionId);
+
+        // The console reads watches by time (dashboard, activity feed) and by player and viewer.
+        builder.HasIndex(watch => watch.StartedAt);
+        builder.HasIndex(watch => new { watch.LastSeenAt, watch.Id }).IsDescending(true, true);
+        builder.HasIndex(watch => new { watch.PlayerId, watch.Email });
     }
 }
 

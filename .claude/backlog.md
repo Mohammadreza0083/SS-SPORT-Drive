@@ -122,20 +122,22 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | W-1 | Web part of sign-in: `/admin/sign-in` and `/sign-in` pages, same-origin routes that set `__Host-ssd_as` / `__Host-ssd_va` and forward `X-Admin-Session` / `X-Viewer-Account`, home page Sign in / Sign out (A-1 and P-5 web part, needed by P-7) | Claude | Done (2026-11-14): /sign-in and /admin/sign-in with a Continue button, same-origin session and sign-out routes, `__Host-ssd_acct` / `__Host-ssd_as` cookies |
 
 ## EPIC 7 — Admin console
+
+> **2026-11-14:** A-2 to A-11 were built together on `feature/admin-console` from one plan with the red tests already written: `.claude/plan-epic7-admin-console.md` (decisions §12). The admin half of W-1 had already landed on `main` (PR #71), so that phase was dropped.
+
 | Key | Task | Assignee | Done when |
 |---|---|---|---|
 | A-1 | Admin login by email magic link (7-day session) + CSRF | Claude | Tests green |
-| A-2 | Dashboard (KPIs, live activity, needs attention, top players) | Claude | Demo |
-| A-3 | Players list + search + filters in URL + CSV export | Claude | Demo |
-| A-4 | Player detail: files (order, hero, visibility, retry), folders, links | Claude | Demo |
-| A-5 | **Waiting list:** complete-details drawer, Publish disabled until complete | Claude | Matches canvas |
-| A-6 | New share link modal (no download toggle) | Claude | Demo |
-| A-7 | Viewer profile + replay heatmap | Claude | Demo |
-| A-8 | Users & roles + audit log | Claude | Demo |
-| A-9 | Sync & jobs + Email queue pages | Claude | Demo |
-| A-10 | Settings (contact email, digest time, quiet hours, link expiry default) | Claude | Demo |
-| A-11 | Viewer access & watch log: per viewer players accessible, plays, minutes, last seen, expiry, per-video detail | Claude | Matches canvas |
-| A-12 | Access-requests console page on the P-4 API: paged list with status filter, approve with changes (expiry, players, note), decline (found while planning P-4: the console shell does not exist yet) | Claude | Tests green |
+| A-2 | Dashboard (KPIs, live activity, needs attention, top players) | Claude | Done (2026-11-14): API and web tests green; the look still needs the owner's review against the canvas (Playwright baselines not added yet) |
+| A-3 | Players list + search + filters in URL + CSV export | Claude | Done (2026-11-14): API and web tests green; the look still needs the owner's review against the canvas (Playwright baselines not added yet) |
+| A-4 | Player detail: files (order, hero, visibility, retry), folders, links | Claude | Done (2026-11-14): API and web tests green; the look still needs the owner's review against the canvas (Playwright baselines not added yet) |
+| A-5 | **Waiting list:** complete-details drawer, Publish disabled until complete | Claude | Done (2026-11-14): API and web tests green; the look still needs the owner's review against the canvas (Playwright baselines not added yet) |
+| A-6 | New share link modal (no download toggle) | Claude | Done (2026-11-14): API and web tests green; the look still needs the owner's review against the canvas (Playwright baselines not added yet) |
+| A-7 | Viewer profile + replay heatmap | Claude | Done (2026-11-14): API and web tests green; the look still needs the owner's review against the canvas (Playwright baselines not added yet) |
+| A-8 | Users & roles + audit log | Claude | Done (2026-11-14): API and web tests green; the look still needs the owner's review against the canvas (Playwright baselines not added yet) |
+| A-9 | Sync & jobs + Email queue pages | Claude | Done (2026-11-14): API and web tests green; the look still needs the owner's review against the canvas (Playwright baselines not added yet) |
+| A-10 | Settings (contact email, digest time, quiet hours, link expiry default) | Claude | Done (2026-11-14): API and web tests green; the look still needs the owner's review against the canvas (Playwright baselines not added yet) |
+| A-11 | Viewer access & watch log: per viewer players accessible, plays, minutes, last seen, expiry, per-video detail | Claude | Done (2026-11-14): API and web tests green; the look still needs the owner's review against the canvas (Playwright baselines not added yet) |
 
 ## EPIC 8 — Archive migration
 | Key | Task | Assignee | Done when |

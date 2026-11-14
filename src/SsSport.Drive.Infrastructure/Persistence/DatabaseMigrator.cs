@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Npgsql;
+using SsSport.Drive.Application.Settings;
 using SsSport.Drive.Infrastructure.BackgroundJobs;
 
 namespace SsSport.Drive.Infrastructure.Persistence;
@@ -47,7 +48,8 @@ public static partial class DatabaseMigrator
 
         // Hangfire keeps its own versioned scripts in its own schema; installing is a no-op when it is current (T-6c).
         await HangfireStorage.InstallAsync(scope.ServiceProvider.GetRequiredService<NpgsqlDataSource>(), cancellationToken);
-        HangfireStorage.RegisterRecurringJobs(scope.ServiceProvider.GetRequiredService<JobStorage>());
+        var settings = await scope.ServiceProvider.GetRequiredService<IAppSettingsStore>().GetAsync(cancellationToken);
+        HangfireStorage.RegisterRecurringJobs(scope.ServiceProvider.GetRequiredService<JobStorage>(), settings.DigestAt);
         LogHangfireReady(logger, HangfireStorage.Schema);
 
         if (manageAppRole)

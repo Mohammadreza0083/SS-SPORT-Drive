@@ -109,7 +109,7 @@ public static class MiniAppPhotoEndpoints
     /// <param name="maxBytes">The most bytes allowed.</param>
     /// <param name="cancellationToken">Cancels the read.</param>
     /// <returns>The bytes, or <see langword="null"/> when the body is larger than <paramref name="maxBytes"/>.</returns>
-    private static async Task<byte[]?> ReadCappedAsync(Stream body, int maxBytes, CancellationToken cancellationToken)
+    internal static async Task<byte[]?> ReadCappedAsync(Stream body, int maxBytes, CancellationToken cancellationToken)
     {
         using var buffer = new MemoryStream();
         var chunk = new byte[81920];

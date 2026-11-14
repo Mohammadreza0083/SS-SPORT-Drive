@@ -53,7 +53,8 @@ public static class HangfireStorage
     /// the schema, so app instances never race to register them; safe to run on every deploy.
     /// </summary>
     /// <param name="storage">Hangfire's storage.</param>
-    public static void RegisterRecurringJobs(JobStorage storage)
+    /// <param name="digestAt">When the digest goes out, Tehran wall clock (settings, A-10).</param>
+    public static void RegisterRecurringJobs(JobStorage storage, TimeOnly digestAt)
     {
         var manager = new RecurringJobManager(storage);
         manager.AddOrUpdate<NoticeFlushJob>(
@@ -75,12 +76,24 @@ public static class HangfireStorage
             DailyDigestJob.RecurringJobId,
             BotNoticeJob.Queue,
             job => job.RunAsync(CancellationToken.None),
-            Cron.Daily(5, 30));
+            DigestCron(digestAt));
         manager.AddOrUpdate<IngestJob>(
             IngestJobs.FolderSyncRecurringJobId,
             IngestJobs.DriveQueue,
             job => job.ScheduleFolderSyncsAsync(CancellationToken.None),
             "*/10 * * * *");
+    }
+
+    /// <summary>The offset of Tehran from UTC (Iran has had no daylight saving since 2022).</summary>
+    private static readonly TimeSpan _tehranOffset = TimeSpan.FromMinutes(210);
+
+    /// <summary>Turns the digest's Tehran wall-clock time into a daily cron expression in UTC.</summary>
+    /// <param name="digestAt">The time in Tehran.</param>
+    /// <returns>The cron expression.</returns>
+    public static string DigestCron(TimeOnly digestAt)
+    {
+        var utcMinutes = (((int)digestAt.ToTimeSpan().TotalMinutes - (int)_tehranOffset.TotalMinutes) % 1440 + 1440) % 1440;
+        return Cron.Daily(utcMinutes / 60, utcMinutes % 60);
     }
 
     /// <summary>Installs or upgrades Hangfire's schema; safe to run on every deploy.</summary>

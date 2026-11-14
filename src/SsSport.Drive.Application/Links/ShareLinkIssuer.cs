@@ -1,4 +1,5 @@
 using SsSport.Drive.Application.Abstractions.Persistence;
+using SsSport.Drive.Application.Admin;
 using SsSport.Drive.Domain.Audit;
 using SsSport.Drive.Domain.Links;
 using SsSport.Drive.Domain.Players;
@@ -12,7 +13,8 @@ namespace SsSport.Drive.Application.Links;
 /// </summary>
 /// <param name="links">The links.</param>
 /// <param name="audit">The audit log.</param>
-public sealed class ShareLinkIssuer(IRepository<ShareLink, Guid> links, IRepository<AuditEntry, Guid> audit)
+/// <param name="viewers">Registers the recipient's emails as viewers, so the console can show them.</param>
+public sealed class ShareLinkIssuer(IRepository<ShareLink, Guid> links, IRepository<AuditEntry, Guid> audit, IViewerRegistry viewers)
 {
     /// <summary>How many fresh codes to try before giving up; a clash is already one in billions.</summary>
     private const int CodeAttempts = 5;
@@ -41,6 +43,7 @@ public sealed class ShareLinkIssuer(IRepository<ShareLink, Guid> links, IReposit
     {
         var link = ShareLink.Create(await UnusedCodeAsync(cancellationToken), recipient, players, note, expiresAt, settings, actorId, now);
         links.Add(link);
+        await viewers.EnsureAsync(recipient.Emails, now, cancellationToken);
         audit.Add(AuditEntry.Record(actorId, CreateShareLinkCommand.CreatedAction, ShareLinkRules.AuditTarget, link.Id.ToString(), null, now));
         return link;
     }

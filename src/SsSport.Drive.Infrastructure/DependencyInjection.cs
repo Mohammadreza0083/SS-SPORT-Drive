@@ -19,7 +19,9 @@ using SsSport.Drive.Application.Abstractions.Persistence;
 using SsSport.Drive.Application.Abstractions.Security;
 using SsSport.Drive.Application.Abstractions.Storage;
 using SsSport.Drive.Application.Abstractions.Web;
+using SsSport.Drive.Application.Admin;
 using SsSport.Drive.Application.Links;
+using SsSport.Drive.Application.Settings;
 using SsSport.Drive.Application.Telegram;
 using SsSport.Drive.Application.Telegram.Digest;
 using SsSport.Drive.Application.Telegram.Notices;
@@ -34,6 +36,7 @@ using SsSport.Drive.Infrastructure.Media;
 using SsSport.Drive.Infrastructure.Persistence;
 using SsSport.Drive.Infrastructure.Scouting;
 using SsSport.Drive.Infrastructure.Security;
+using SsSport.Drive.Infrastructure.Settings;
 using SsSport.Drive.Infrastructure.Storage;
 using SsSport.Drive.Infrastructure.Telegram;
 using SsSport.Drive.Infrastructure.Web;
@@ -101,6 +104,13 @@ public static class DependencyInjection
         services.AddScoped<IShareLinkListReader, ShareLinkListReader>();
         services.AddScoped<IAccessRequestListReader, AccessRequestListReader>();
         services.AddScoped<IViewingReader, ViewingReader>();
+        services.AddScoped<IDashboardReader, DashboardReader>();
+        services.AddScoped<IAdminPlayerReader, AdminPlayerReader>();
+        services.AddScoped<IWaitingReader, WaitingReader>();
+        services.AddScoped<IViewerReader, ViewerReader>();
+        services.AddScoped<IJobsReader, JobsReader>();
+        services.AddScoped<IAdminLookup, AdminLookup>();
+        services.AddScoped<IViewerRegistry, ViewerRegistry>();
 
         // Background jobs (T-6c): Hangfire on PostgreSQL, built lazily from the same data source, so a host without a
         // database still starts. The schema comes from `migrate`, never from start-up. Everything Hangfire needs is
@@ -203,7 +213,15 @@ public static class DependencyInjection
             .BindConfiguration(NotificationOptions.SectionName)
             .Validate(options => options.IsValid(), "Notifications__ThrottleMinutes must be 1-1440, Notifications__QuietHoursStart/End HH:mm and Notifications__TimeZone a known time zone (e.g. Asia/Tehran).")
             .ValidateOnStart();
-        services.AddSingleton<INotificationSettings, ConfiguredNotificationSettings>();
+        services.AddOptions<SettingsOptions>()
+            .BindConfiguration(SettingsOptions.SectionName)
+            .Validate(options => options.IsValid(), "Settings__ContactEmail must be an email address, Settings__DigestAt HH:mm and Settings__DefaultLinkExpiryDays 7, 30 or 90.")
+            .ValidateOnStart();
+        services.AddScoped<IAppSettingsStore, AppSettingsStore>();
+        services.AddSingleton<StoredNotificationSettings>();
+        services.AddSingleton<INotificationSettings>(provider => provider.GetRequiredService<StoredNotificationSettings>());
+        services.AddSingleton<IAppSettingsCache>(provider => provider.GetRequiredService<StoredNotificationSettings>());
+        services.AddSingleton<IDigestSchedule, HangfireDigestSchedule>();
 
         services.AddScoped<ITelegramUpdateInbox, TelegramUpdateInbox>();
         services.AddSingleton<IBotAdminSettings, TelegramBotAdminSettings>();

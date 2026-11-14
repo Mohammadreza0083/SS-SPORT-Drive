@@ -87,11 +87,12 @@ public sealed partial class BackendTestHost : IAsyncDisposable
 
     /// <summary>Starts PostgreSQL, boots the API and stores the team.</summary>
     /// <param name="settings">Extra configuration, or <see langword="null"/>.</param>
+    /// <param name="services">Extra test services that replace real ones (applied last), or <see langword="null"/>.</param>
     /// <returns>The host.</returns>
-    public static async Task<BackendTestHost> StartAsync(IReadOnlyDictionary<string, string?>? settings = null)
+    public static async Task<BackendTestHost> StartAsync(IReadOnlyDictionary<string, string?>? settings = null, Action<IServiceCollection>? services = null)
     {
         var host = new BackendTestHost();
-        await host.InitializeAsync(settings);
+        await host.InitializeAsync(settings, services);
         return host;
     }
 
@@ -265,8 +266,9 @@ public sealed partial class BackendTestHost : IAsyncDisposable
 
     /// <summary>Boots everything.</summary>
     /// <param name="settings">Extra configuration, or <see langword="null"/>.</param>
+    /// <param name="extraServices">Extra test services, or <see langword="null"/>.</param>
     /// <returns>A task that completes when the API is ready.</returns>
-    private async Task InitializeAsync(IReadOnlyDictionary<string, string?>? settings)
+    private async Task InitializeAsync(IReadOnlyDictionary<string, string?>? settings, Action<IServiceCollection>? extraServices)
     {
         await _postgres.StartAsync();
         var configuration = new Dictionary<string, string?>
@@ -298,6 +300,7 @@ public sealed partial class BackendTestHost : IAsyncDisposable
                 services.AddSingleton<IEmailTransport>(Resend);
                 services.AddSingleton<IEmailTransport>(Brevo);
                 services.AddSingleton<IEmailTransport>(GoogleSmtp);
+                extraServices?.Invoke(services);
             });
         });
         await DatabaseMigrator.MigrateAsync(Api.Services, TestContext.Current.CancellationToken);

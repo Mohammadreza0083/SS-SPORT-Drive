@@ -51,15 +51,23 @@ public sealed record NotificationOptions
         }
     }
 
-    /// <summary>Builds the rules.</summary>
+    /// <summary>Builds the rules from the configured quiet hours.</summary>
     /// <returns>The rules.</returns>
     /// <exception cref="FormatException">A time is not <c>HH:mm</c>.</exception>
     /// <exception cref="TimeZoneNotFoundException">The time zone is unknown.</exception>
     /// <exception cref="DomainException"><c>notice.rules_invalid</c> for a throttle out of range.</exception>
-    public NotificationRules ToRules() => NotificationRules.Create(
-        TimeSpan.FromMinutes(ThrottleMinutes),
+    public NotificationRules ToRules() => ToRules(
         TimeOnly.ParseExact(QuietHoursStart, "HH:mm", CultureInfo.InvariantCulture),
-        TimeOnly.ParseExact(QuietHoursEnd, "HH:mm", CultureInfo.InvariantCulture),
+        TimeOnly.ParseExact(QuietHoursEnd, "HH:mm", CultureInfo.InvariantCulture));
+
+    /// <summary>Builds the rules with the throttle and time zone from configuration and the given quiet hours (settings, A-10).</summary>
+    /// <param name="quietStart">The quiet hours start.</param>
+    /// <param name="quietEnd">The quiet hours end.</param>
+    /// <returns>The rules.</returns>
+    public NotificationRules ToRules(TimeOnly quietStart, TimeOnly quietEnd) => NotificationRules.Create(
+        TimeSpan.FromMinutes(ThrottleMinutes),
+        quietStart,
+        quietEnd,
         ResolveTimeZone(TimeZone));
 
     /// <summary>Finds a time zone by id, falling back to a fixed offset for known zones the host cannot map.</summary>
@@ -77,15 +85,4 @@ public sealed record NotificationOptions
             return TimeZoneInfo.CreateCustomTimeZone(id, offset, id, id);
         }
     }
-}
-
-/// <summary>Exposes the configured notification rules to the Application layer, built once.</summary>
-/// <param name="options">The settings, checked at start-up.</param>
-internal sealed class ConfiguredNotificationSettings(IOptions<NotificationOptions> options) : INotificationSettings
-{
-    /// <summary>The rules, built on first use.</summary>
-    private readonly Lazy<NotificationRules> _rules = new(() => options.Value.ToRules());
-
-    /// <summary>Gets the rules.</summary>
-    public NotificationRules Rules => _rules.Value;
 }
