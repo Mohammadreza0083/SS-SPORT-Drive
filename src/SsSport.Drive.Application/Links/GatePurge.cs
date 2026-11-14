@@ -108,34 +108,11 @@ public sealed class PurgeGateRowsCommandHandler(
     {
         ArgumentNullException.ThrowIfNull(request);
         var codeCutoff = request.Now - EmailChallenge.CodeLifetime - GateRetention.EmailCodes;
-        var emailCodes = await DeleteInBatchesAsync(challenges, new EmailChallengesRequestedBeforeSpec(codeCutoff), cancellationToken);
-        var expiredSessions = await DeleteInBatchesAsync(sessions, new ViewerSessionsEndedBeforeSpec(request.Now - GateRetention.Sessions), cancellationToken);
-        var expiredDevices = await DeleteInBatchesAsync(devices, new TrustedDevicesEndedBeforeSpec(request.Now - GateRetention.Devices), cancellationToken);
-        var expiredVisitorCodes = await DeleteInBatchesAsync(visitorCodes, new AccessCodesRequestedBeforeSpec(codeCutoff), cancellationToken);
-        var endedAccountSessions = await DeleteInBatchesAsync(accountSessions, new AccountSessionsEndedBeforeSpec(request.Now - GateRetention.Sessions), cancellationToken);
+        var emailCodes = await BatchDelete.InBatchesAsync(challenges, new EmailChallengesRequestedBeforeSpec(codeCutoff), cancellationToken);
+        var expiredSessions = await BatchDelete.InBatchesAsync(sessions, new ViewerSessionsEndedBeforeSpec(request.Now - GateRetention.Sessions), cancellationToken);
+        var expiredDevices = await BatchDelete.InBatchesAsync(devices, new TrustedDevicesEndedBeforeSpec(request.Now - GateRetention.Devices), cancellationToken);
+        var expiredVisitorCodes = await BatchDelete.InBatchesAsync(visitorCodes, new AccessCodesRequestedBeforeSpec(codeCutoff), cancellationToken);
+        var endedAccountSessions = await BatchDelete.InBatchesAsync(accountSessions, new AccountSessionsEndedBeforeSpec(request.Now - GateRetention.Sessions), cancellationToken);
         return new GatePurgeResult(emailCodes, expiredSessions, expiredDevices, expiredVisitorCodes, endedAccountSessions);
-    }
-
-    /// <summary>Deletes batch after batch until one comes back short, or the run's cap is reached.</summary>
-    /// <typeparam name="T">The row type.</typeparam>
-    /// <param name="rows">The repository.</param>
-    /// <param name="batch">One batch of rows to delete.</param>
-    /// <param name="cancellationToken">Cancels the deletes.</param>
-    /// <returns>How many rows went.</returns>
-    private static async Task<int> DeleteInBatchesAsync<T>(IRepository<T, Guid> rows, ISpecification<T> batch, CancellationToken cancellationToken)
-        where T : Domain.Primitives.AggregateRoot<Guid>
-    {
-        var total = 0;
-        for (var round = 0; round < GateRetention.MaxBatches; round++)
-        {
-            var deleted = await rows.DeleteAsync(batch, cancellationToken);
-            total += deleted;
-            if (deleted < GateRetention.BatchSize)
-            {
-                break;
-            }
-        }
-
-        return total;
     }
 }

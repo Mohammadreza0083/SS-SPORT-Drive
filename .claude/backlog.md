@@ -105,9 +105,9 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | L-4 | Email queue on Hangfire: Resend → Brevo failover for OTP, Google SMTP for the rest, retries, admin view | Claude | Failover test green |
 | L-5 | Tracking events + heartbeats + sessions | Claude | Tests green |
 | L-6 | Metrics: unique watched (range merge), watch time, plays, hotspots, completion | Claude | Unit test per metric |
-| L-7 | Admin bot alerts + daily digest 09:00 Tehran | Claude | Part done (2026-11-12): first-open alert and the digest with sessions, forwards and the waiting list; plays, minutes, top players and failed emails (7b) wait for L-4/L-5/L-6 |
-| W-2 | Player sends the watch start, a heartbeat every 10 s and play/pause/seek/ended to the tracking API (L-5 client part, in the V-3 player) | Claude | Tests green |
-| W-3 | Retention and clean-up for `outgoing_emails`, `tracking_events`, `sign_in_links` and `account_sessions` (owner to decide the periods) | Both | Tests green |
+| L-7 | Admin bot alerts + daily digest 09:00 Tehran | Claude | Done (2026-11-14): first-open alert and the digest with sessions, forwards, the waiting list, plays, minutes, top players and failed emails (7b) |
+| W-2 | Player sends the watch start, a heartbeat every 10 s and play/pause/seek/ended to the tracking API (L-5 client part, in the V-3 player) | Claude | Done (2026-11-14): same-origin watch routes with the CSRF check, a pure `WatchTracker`, and a player hook; the design preview tracks nothing |
+| W-3 | Retention and clean-up for `outgoing_emails`, `tracking_events`, `sign_in_links` and `account_sessions` | Both | Done (2026-11-14): daily `retention-purge` job; emails 30 days (failed 90), player events 1 year, sign-in links 1 day after expiry; `account_sessions` already by `gate-purge` |
 
 ## EPIC 6 — Public search & access requests
 | Key | Task | Assignee | Done when |
