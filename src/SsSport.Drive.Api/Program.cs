@@ -105,6 +105,7 @@ app.MapViewerMedia();
 app.MapTracking();
 app.MapSettings();
 app.MapDashboard();
+app.MapAdminPlayers();
 
 await app.RunAsync();
 

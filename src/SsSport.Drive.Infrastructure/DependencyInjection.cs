@@ -104,6 +104,8 @@ public static class DependencyInjection
         services.AddScoped<IShareLinkListReader, ShareLinkListReader>();
         services.AddScoped<IViewingReader, ViewingReader>();
         services.AddScoped<IDashboardReader, DashboardReader>();
+        services.AddScoped<IAdminPlayerReader, AdminPlayerReader>();
+        services.AddScoped<IWaitingReader, WaitingReader>();
         services.AddScoped<IAdminLookup, AdminLookup>();
         services.AddScoped<IViewerRegistry, ViewerRegistry>();
 
