@@ -4,6 +4,7 @@ import type { RosterData } from "@/components/viewer/roster/types";
 import { SESSION_COOKIE } from "./gate";
 import { clientAddress, readCookie } from "./gate-server";
 import { pagesPath, scoutPath, streamPath } from "./media-client";
+import { watchPath } from "./tracking-client";
 import type { PlayerScout } from "./scout";
 
 export { clientAddress };
@@ -191,6 +192,7 @@ function toPlayerPage(linkCode: string, content: LinkContent, player: LinkPlayer
       durationSeconds: video.durationSeconds,
       src: "",
       streamPath: streamPath(linkCode, player.id, video.id),
+      watchPath: watchPath(linkCode, player.id, video.id),
     })),
     documents: documents.items.map((document) => ({
       id: document.id,

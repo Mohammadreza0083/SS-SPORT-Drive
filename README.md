@@ -259,7 +259,7 @@ SS-SPORT Drive/
 | 2 | Telegram bot & Mini App | 17 / 17 | ✅ Done (ingest is in, so T-6b can now be demoed on real files) |
 | 3 | Ingest, transcode & sync | 9 / 9 | ✅ Done (sync, copy, HLS + watermark, thumbnails, PDF pages, QR, cut-out and the approved player card; I-9 still to be checked on a real link once deployed) |
 | 4 | Viewer site & media protection | 10 / 10 | ✅ Done |
-| 5 | Personal links, OTP & tracking | 8 / 11 | 🚧 In progress (L-7 digest numbers, W-2 player heartbeats, W-3 retention left) |
+| 5 | Personal links, OTP & tracking | 11 / 11 | ✅ Done (the digest now carries plays, minutes, top players and failed emails; the player reports heartbeats; a daily `retention-purge` job clears old emails, player events and sign-in links) |
 | 6 | Public search & access requests | 8 / 8 | ✅ Done (public home, locked page, request access, the admin inbox with bot buttons, and viewer and admin sign-in pages; the console page for the inbox is A-12) |
 | 7 | Admin console | 1 / 12 | 🚧 In progress (A-1 admin sign-in done; A-12 access-requests page added) |
 | 8 | Archive migration | 0 / 5 | ⏳ Planned |

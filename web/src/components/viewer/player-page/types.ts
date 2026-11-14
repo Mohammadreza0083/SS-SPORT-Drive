@@ -50,6 +50,8 @@ export type PlayerVideo = {
   src: string;
   /** The same-origin route that signs this video's stream for the viewer (V-5b); the player asks for it when the video is shown. */
   streamPath?: string;
+  /** The same-origin route the player reports this video's watching to (W-2); absent for sample videos, which track nothing. */
+  watchPath?: string;
   /** Thumbnail image; a tinted gradient is shown while missing. */
   thumbnailUrl?: string;
   /** Frame rate, for frame stepping. */
