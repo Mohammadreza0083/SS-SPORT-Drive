@@ -91,6 +91,38 @@ public static class BotTexts
     /// <summary>Gets the "OnlyAdminsForwards" text.</summary>
     public static string OnlyAdminsForwards => Get(nameof(OnlyAdminsForwards));
 
+    /// <summary>Gets the "AccessRequestApproveButton" text.</summary>
+    public static string AccessRequestApproveButton => Get(nameof(AccessRequestApproveButton));
+
+    /// <summary>Gets the "AccessRequestDeclineButton" text.</summary>
+    public static string AccessRequestDeclineButton => Get(nameof(AccessRequestDeclineButton));
+
+    /// <summary>Gets the "AccessRequestGone" text.</summary>
+    public static string AccessRequestGone => Get(nameof(AccessRequestGone));
+
+    /// <summary>Gets the "OnlyAdminsAccessRequests" text.</summary>
+    public static string OnlyAdminsAccessRequests => Get(nameof(OnlyAdminsAccessRequests));
+
+    /// <summary>Formats the "AccessRequestAlert" text: player, email, description.</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatAccessRequestAlert(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("AccessRequestAlert"), args);
+
+    /// <summary>Formats the "AccessRequestApproved" text: email, player, admin, link code.</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatAccessRequestApproved(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("AccessRequestApproved"), args);
+
+    /// <summary>Formats the "AccessRequestDeclined" text: email, player, admin.</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatAccessRequestDeclined(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("AccessRequestDeclined"), args);
+
+    /// <summary>Formats the "AccessRequestAlreadyDecided" text: email, player, approved or declined, admin.</summary>
+    /// <param name="args">The values for its placeholders.</param>
+    /// <returns>The text.</returns>
+    public static string FormatAccessRequestAlreadyDecided(params object[] args) => string.Format(CultureInfo.InvariantCulture, Get("AccessRequestAlreadyDecided"), args);
+
     /// <summary>Formats the "ForwardAlert" text: link code, recipient, players, email.</summary>
     /// <param name="args">The values for its placeholders.</param>
     /// <returns>The text.</returns>

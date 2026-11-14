@@ -113,5 +113,7 @@ __pycache__/
 gitleaks-report*.json
 vulnerable.txt
 
+# Implementation plans handed to other models (local only)
+.claude/plan-*.md
 # Epic 5 closing plan (local, not part of the repo)
 .claude/plan-epic5-l7b-w2-w3.md

@@ -115,11 +115,11 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | P-1 | Public home: player search + position filter | Claude | Matches canvas |
 | P-2 | Locked player page: blurred / locked media, no real media URLs sent | Claude | Security test green |
 | P-3 | Request-access flow: email + description, OTP, Turnstile, rate limits | Claude | Tests green |
-| P-4 | Admin access-request inbox (console + bot): approve → auto personal link + approval email | Claude | E2E green |
+| P-4 | Admin access-request inbox (console + bot): approve → auto personal link + approval email | Claude | Done (2026-11-14): bot alert with Approve / Decline, console API (list, approve with changes, decline), personal link made and emailed; the console page is A-12 |
 | P-5 | Viewer login by email magic link (1-day session) | Claude | Tests green |
-| P-7 | Home page login button; signed-in viewers request access without email/OTP | Claude | Tests green |
+| P-7 | Home page login button; signed-in viewers request access without email/OTP | Claude | Done (2026-11-14): Sign in leads to /sign-in and the session routes exist (W-1) |
 | P-8 | Backend half of P-1, P-2, P-3 and P-7: public player search + locked player API, request-access API (OTP, Turnstile, rate limits), `/api/public/*` and sign-out routes, real `/players/{slug}` page, real Turnstile widget + CSP. The front-end of all four is done on sample data (`/design/home`, `/design/locked`) | Claude | Tests green; the public pages run on real data |
-| W-1 | Web part of sign-in: `/admin/sign-in` and `/sign-in` pages, same-origin routes that set `__Host-ssd_as` / `__Host-ssd_va` and forward `X-Admin-Session` / `X-Viewer-Account`, home page Sign in / Sign out (A-1 and P-5 web part, needed by P-7) | Claude | Tests green |
+| W-1 | Web part of sign-in: `/admin/sign-in` and `/sign-in` pages, same-origin routes that set `__Host-ssd_as` / `__Host-ssd_va` and forward `X-Admin-Session` / `X-Viewer-Account`, home page Sign in / Sign out (A-1 and P-5 web part, needed by P-7) | Claude | Done (2026-11-14): /sign-in and /admin/sign-in with a Continue button, same-origin session and sign-out routes, `__Host-ssd_acct` / `__Host-ssd_as` cookies |
 
 ## EPIC 7 — Admin console
 | Key | Task | Assignee | Done when |
@@ -135,6 +135,7 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | A-9 | Sync & jobs + Email queue pages | Claude | Demo |
 | A-10 | Settings (contact email, digest time, quiet hours, link expiry default) | Claude | Demo |
 | A-11 | Viewer access & watch log: per viewer players accessible, plays, minutes, last seen, expiry, per-video detail | Claude | Matches canvas |
+| A-12 | Access-requests console page on the P-4 API: paged list with status filter, approve with changes (expiry, players, note), decline (found while planning P-4: the console shell does not exist yet) | Claude | Tests green |
 
 ## EPIC 8 — Archive migration
 | Key | Task | Assignee | Done when |

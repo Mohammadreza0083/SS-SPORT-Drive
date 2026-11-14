@@ -77,7 +77,7 @@ class ApiStatus extends Error {
  * @param path - The path, starting with a slash.
  * @returns The full address.
  */
-function apiUrl(apiBaseUrl: string, path: string): string {
+export function apiUrl(apiBaseUrl: string, path: string): string {
   return `${apiBaseUrl.replace(/\/+$/, "")}${path}`;
 }
 

@@ -8,6 +8,7 @@ using SsSport.Drive.Application.Accounts;
 using SsSport.Drive.Application.Behaviors;
 using SsSport.Drive.Application.Emails;
 using SsSport.Drive.Application.Events;
+using SsSport.Drive.Application.Links;
 using SsSport.Drive.Application.Paging;
 using SsSport.Drive.Application.Public;
 using SsSport.Drive.Application.Telegram.Notices;
@@ -44,6 +45,9 @@ public static class DependencyInjection
         services.AddScoped<IEmailComposer, GateCodeComposer>();
         services.AddScoped<IEmailComposer, AccessCodeComposer>();
         services.AddScoped<IEmailComposer, ForwardKeptComposer>();
+        services.AddScoped<IEmailComposer, AccessApprovedComposer>();
+        services.AddScoped<ShareLinkIssuer>();
+        services.AddScoped<AccessRequestDecider>();
         services.AddScoped<IEmailComposer>(provider => ActivatorUtilities.CreateInstance<SignInEmailComposer>(provider, SignInAudience.Admin));
         services.AddScoped<IEmailComposer>(provider => ActivatorUtilities.CreateInstance<SignInEmailComposer>(provider, SignInAudience.Viewer));
         services.TryAddScoped<IDomainEventDispatcher, DomainEventDispatcher>();

@@ -5,7 +5,7 @@ export const publicCopy = {
   howLink: "How access works",
   signIn: "Sign in",
   signOut: "Sign out",
-  signInHref: "/signin",
+  signInHref: "/sign-in",
   signOutAction: "/api/viewer/sign-out",
   eyebrow: "SS-SPORT DRIVE · PLAYER SEARCH",
   title: "Find your next player.",

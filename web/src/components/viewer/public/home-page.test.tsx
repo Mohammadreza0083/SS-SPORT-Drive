@@ -86,7 +86,7 @@ describe("HomePage (P-1, canvas Home)", () => {
   it("offers Sign in to a visitor who is signed out (P-7)", () => {
     render(<HomePage data={{ ...sampleHome, viewer: null }} />);
 
-    expect(screen.getByRole("link", { name: "Sign in" }).getAttribute("href")).toBe("/signin");
+    expect(screen.getByRole("link", { name: "Sign in" }).getAttribute("href")).toBe("/sign-in");
     expect(screen.queryByRole("button", { name: "Sign out" })).toBeNull();
   });
 
