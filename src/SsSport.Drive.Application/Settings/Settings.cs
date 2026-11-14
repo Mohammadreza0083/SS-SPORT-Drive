@@ -65,7 +65,7 @@ public sealed record SettingsDto
     public required int DefaultLinkExpiryDays { get; init; }
 
     /// <summary>Gets the days a share link may last.</summary>
-    public IReadOnlyList<int> LinkExpiryChoices { get; init; } = AppSettings.LinkExpiryChoices;
+    public required IReadOnlyList<int> LinkExpiryChoices { get; init; }
 
     /// <summary>Gets the time zone of the times above.</summary>
     public string TimeZone { get; init; } = SettingsRules.TimeZoneId;
@@ -113,12 +113,17 @@ public static partial class SettingsMapper
     [MapProperty(nameof(AppSettings.DigestAt), nameof(SettingsDto.DigestAt), Use = nameof(TimeText))]
     [MapProperty(nameof(AppSettings.QuietHoursStart), nameof(SettingsDto.QuietHoursStart), Use = nameof(TimeText))]
     [MapProperty(nameof(AppSettings.QuietHoursEnd), nameof(SettingsDto.QuietHoursEnd), Use = nameof(TimeText))]
+    [MapValue(nameof(SettingsDto.LinkExpiryChoices), Use = nameof(ExpiryChoices))]
     public static partial SettingsDto ToDto(this AppSettings settings);
 
     /// <summary>Writes the contact email in full: it is public on every player page.</summary>
     /// <param name="email">The address.</param>
     /// <returns>The address.</returns>
     private static string EmailText(EmailAddress email) => email.Value;
+
+    /// <summary>Gives the days a share link may last.</summary>
+    /// <returns>The choices.</returns>
+    private static IReadOnlyList<int> ExpiryChoices() => AppSettings.LinkExpiryChoices;
 
     /// <summary>Writes a time as <c>HH:mm</c>.</summary>
     /// <param name="time">The time.</param>

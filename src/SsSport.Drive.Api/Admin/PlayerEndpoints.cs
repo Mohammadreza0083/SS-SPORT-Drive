@@ -258,6 +258,17 @@ public static class PlayerEndpoints
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .AddOpenApiOperationTransformer(MiniAppEndpoints.Document("202", null));
 
+        app.MapGet("/admin/countries", CountriesAsync)
+            .WithTags(WaitingTag)
+            .WithName("ListAdminCountries")
+            .RequireAdmin()
+            .WithSummary("List the countries for the nationality picker")
+            .WithDescription("Admins only. The fixed catalogue of 245 countries with English names, returned whole because it is small and never grows. The waiting list's drawer uses it.")
+            .Produces<IReadOnlyList<CountryDto>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .AddOpenApiOperationTransformer(MiniAppEndpoints.Document("200", """[ { "code": "IR", "name": "Iran" }, { "code": "TR", "name": "Türkiye" } ]"""));
+
         app.MapGet("/admin/waiting", WaitingAsync)
             .WithTags(WaitingTag)
             .WithName("ListWaitingPlayers")
@@ -477,6 +488,13 @@ public static class PlayerEndpoints
         await sender.Send(new RetryFileCommand(id), cancellationToken);
         return TypedResults.Accepted((string?)null);
     }
+
+    /// <summary>Lists the countries.</summary>
+    /// <param name="sender">The MediatR sender.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>200 with the catalogue.</returns>
+    private static async Task<Ok<IReadOnlyList<CountryDto>>> CountriesAsync(ISender sender, CancellationToken cancellationToken) =>
+        TypedResults.Ok(await sender.Send(new ListCountriesQuery(), cancellationToken));
 
     /// <summary>Lists the waiting players.</summary>
     /// <param name="paging">The page.</param>
