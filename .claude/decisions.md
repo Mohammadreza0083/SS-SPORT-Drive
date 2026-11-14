@@ -962,3 +962,11 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
    - `Invite` (the approval email carrying the personal link)
 3. **Admin:** `Waiting` (waiting list with a complete-details drawer; Publish stays disabled until every field is valid).
 4. **Telegram Mini App (T-9):** `MiniHome`, `MiniNewPlayer`, `MiniPhoto`, `MiniPlayers`, `MiniPlayer` (with the edit-video sheet).
+
+## 12. Admin console (Epic 7: A-2 to A-11; owner, 2026-11-14)
+
+- **One task, one branch.** The ten open console tasks (A-2 to A-11) are built together on `feature/admin-console` from one plan, `.claude/plan-epic7-admin-console.md`. None needs another one finished first; they share the console shell, so the plan orders them in phases. Jira keeps the ten keys; each is closed when its phase is green.
+- **The admin half of W-1 is phase 0 of this work.** That is the `/admin/sign-in` page, the `__Host-ssd_as` cookie and the same-origin routes that send `X-Admin-Session`. The viewer half of W-1 stays in Epic 6.
+- **Sign-in link scanners:** the emailed link opens a page with a Continue button that POSTs the token. A mail scanner that opens the link cannot use up the single-use token.
+- **Settings live in the database (A-10).** One `app_settings` row holds the contact email, the daily digest time, the quiet hours and the default share-link expiry. Configuration (`Notifications__*`) only gives the first values on a fresh database. A change takes effect without a restart: the bot's quiet hours, the digest schedule and the contact email on the player page. Changes are audited as `settings.changed`, with field names only. Session lifetimes, email providers and media protection are shown read-only.
+- **Red tests first.** As with V-5b/V-8/L-7, Opus wrote the failing tests (API integration, domain, web logic and components) and the plan; the implementing model makes them green without weakening any. Values marked **(proposed)** in the plan are Opus's proposals and wait for the owner's review in the PR.

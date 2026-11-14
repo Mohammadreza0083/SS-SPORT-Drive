@@ -122,6 +122,9 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | W-1 | Web part of sign-in: `/admin/sign-in` and `/sign-in` pages, same-origin routes that set `__Host-ssd_as` / `__Host-ssd_va` and forward `X-Admin-Session` / `X-Viewer-Account`, home page Sign in / Sign out (A-1 and P-5 web part, needed by P-7) | Claude | Tests green |
 
 ## EPIC 7 — Admin console
+
+> **2026-11-14:** A-2 to A-11 are built together on `feature/admin-console` from one plan with the red tests already written: `.claude/plan-epic7-admin-console.md` (decisions §12). The admin half of W-1 is phase 0 of that plan.
+
 | Key | Task | Assignee | Done when |
 |---|---|---|---|
 | A-1 | Admin login by email magic link (7-day session) + CSRF | Claude | Tests green |
