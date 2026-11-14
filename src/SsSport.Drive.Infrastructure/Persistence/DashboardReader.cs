@@ -117,6 +117,24 @@ public sealed class AdminLookup(DbContext context) : IAdminLookup
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyDictionary<Guid, string>> UserNamesAsync(IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(userIds);
+        return await context.Set<Domain.Users.User>().AsNoTracking().Where(user => userIds.Contains(user.Id)).Select(user => new { user.Id, user.DisplayName }).ToDictionaryAsync(user => user.Id, user => user.DisplayName, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyDictionary<Guid, int>> PlayerCountsAsync(IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(userIds);
+        return await context.Set<Player>().AsNoTracking()
+            .Where(player => player.AnalystId != null && userIds.Contains(player.AnalystId.Value))
+            .GroupBy(player => player.AnalystId!.Value)
+            .Select(group => new { Id = group.Key, Count = group.Count() })
+            .ToDictionaryAsync(group => group.Id, group => group.Count, cancellationToken);
+    }
+
+    /// <inheritdoc />
     public async Task<IReadOnlyDictionary<string, ViewerFacts>> ViewersByEmailAsync(IReadOnlyCollection<string> emails, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(emails);

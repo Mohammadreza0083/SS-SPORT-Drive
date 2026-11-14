@@ -106,6 +106,8 @@ app.MapTracking();
 app.MapSettings();
 app.MapDashboard();
 app.MapAdminPlayers();
+app.MapAdminViewers();
+app.MapAdminTeam();
 
 await app.RunAsync();
 

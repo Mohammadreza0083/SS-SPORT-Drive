@@ -243,6 +243,18 @@ public interface IAdminLookup
     /// <returns>The titles by asset id.</returns>
     Task<IReadOnlyDictionary<Guid, string>> AssetTitlesAsync(IReadOnlyCollection<Guid> assetIds, CancellationToken cancellationToken = default);
 
+    /// <summary>Reads team members' display names.</summary>
+    /// <param name="userIds">The users.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <returns>The names by user id.</returns>
+    Task<IReadOnlyDictionary<Guid, string>> UserNamesAsync(IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken = default);
+
+    /// <summary>Counts the players each analyst is responsible for.</summary>
+    /// <param name="userIds">The users.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <returns>The counts by user id; users without players are left out.</returns>
+    Task<IReadOnlyDictionary<Guid, int>> PlayerCountsAsync(IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken = default);
+
     /// <summary>Reads each email's viewer id and the organisation of its newest recipient.</summary>
     /// <param name="emails">The addresses.</param>
     /// <param name="cancellationToken">Cancels the read.</param>
