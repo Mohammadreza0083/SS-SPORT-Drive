@@ -135,6 +135,7 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | A-9 | Sync & jobs + Email queue pages | Claude | Demo |
 | A-10 | Settings (contact email, digest time, quiet hours, link expiry default) | Claude | Demo |
 | A-11 | Viewer access & watch log: per viewer players accessible, plays, minutes, last seen, expiry, per-video detail | Claude | Matches canvas |
+| A-12 | Access-requests console page on the P-4 API: paged list with status filter, approve with changes (expiry, players, note), decline (found while planning P-4: the console shell does not exist yet) | Claude | Tests green |
 
 ## EPIC 8 — Archive migration
 | Key | Task | Assignee | Done when |

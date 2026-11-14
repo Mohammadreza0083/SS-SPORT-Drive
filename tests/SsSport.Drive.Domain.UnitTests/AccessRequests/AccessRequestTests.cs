@@ -77,4 +77,90 @@ public sealed class AccessRequestTests
         noPlayer.Should().Throw<ArgumentException>();
         noEmail.Should().Throw<ArgumentNullException>();
     }
+
+    // ---------------------------------------------------------------- P-4: the admin's decision
+
+    /// <summary>The admin who decides.</summary>
+    private static readonly Guid _adminId = Guid.Parse("0199f2a4-6c1e-7b3d-9a52-3f0e4d8c1b27");
+
+    /// <summary>The personal link an approval created.</summary>
+    private static readonly Guid _linkId = Guid.Parse("019a3e1c-5b2a-7f10-a4c3-8d9e0f1a2b3c");
+
+    /// <summary>Approving records who, when and which personal link was made for the requester (P-4).</summary>
+    [Fact]
+    public void Approving_records_the_admin_the_time_and_the_link()
+    {
+        var request = AccessRequest.Submit(_playerId, _email, "Scout.", AccessRequestSource.EmailCode, _now);
+
+        var decided = request.Approve(_adminId, _linkId, _now.AddHours(2));
+
+        decided.Should().BeTrue();
+        request.Status.Should().Be(AccessRequestStatus.Approved);
+        request.DecidedByUserId.Should().Be(_adminId);
+        request.DecidedAt.Should().Be(_now.AddHours(2));
+        request.ShareLinkId.Should().Be(_linkId);
+    }
+
+    /// <summary>Declining records who and when, and no link.</summary>
+    [Fact]
+    public void Declining_records_the_admin_and_the_time()
+    {
+        var request = AccessRequest.Submit(_playerId, _email, "Scout.", AccessRequestSource.EmailCode, _now);
+
+        var decided = request.Decline(_adminId, _now.AddHours(1));
+
+        decided.Should().BeTrue();
+        request.Status.Should().Be(AccessRequestStatus.Declined);
+        request.DecidedByUserId.Should().Be(_adminId);
+        request.DecidedAt.Should().Be(_now.AddHours(1));
+        request.ShareLinkId.Should().BeNull();
+    }
+
+    /// <summary>A new request has no decision yet.</summary>
+    [Fact]
+    public void A_new_request_has_no_decision()
+    {
+        var request = AccessRequest.Submit(_playerId, _email, "Scout.", AccessRequestSource.EmailCode, _now);
+
+        request.DecidedByUserId.Should().BeNull();
+        request.DecidedAt.Should().BeNull();
+        request.ShareLinkId.Should().BeNull();
+    }
+
+    /// <summary>The first decision is final: a second approve or decline returns false and changes nothing (two admins pressing at once).</summary>
+    [Fact]
+    public void The_first_decision_is_final()
+    {
+        var approved = AccessRequest.Submit(_playerId, _email, "Scout.", AccessRequestSource.EmailCode, _now);
+        approved.Approve(_adminId, _linkId, _now);
+
+        approved.Decline(Guid.NewGuid(), _now.AddMinutes(1)).Should().BeFalse();
+        approved.Approve(Guid.NewGuid(), Guid.NewGuid(), _now.AddMinutes(1)).Should().BeFalse();
+        approved.Status.Should().Be(AccessRequestStatus.Approved);
+        approved.DecidedByUserId.Should().Be(_adminId);
+        approved.ShareLinkId.Should().Be(_linkId);
+
+        var declined = AccessRequest.Submit(_playerId, _email, "Scout.", AccessRequestSource.EmailCode, _now);
+        declined.Decline(_adminId, _now);
+
+        declined.Approve(Guid.NewGuid(), _linkId, _now.AddMinutes(1)).Should().BeFalse();
+        declined.Status.Should().Be(AccessRequestStatus.Declined);
+        declined.ShareLinkId.Should().BeNull();
+    }
+
+    /// <summary>A decision needs an admin, and an approval needs its link.</summary>
+    [Fact]
+    public void A_decision_needs_an_admin_and_an_approval_needs_a_link()
+    {
+        var request = AccessRequest.Submit(_playerId, _email, "Scout.", AccessRequestSource.EmailCode, _now);
+
+        var noAdmin = () => request.Approve(Guid.Empty, _linkId, _now);
+        var noLink = () => request.Approve(_adminId, Guid.Empty, _now);
+        var noDecliner = () => request.Decline(Guid.Empty, _now);
+
+        noAdmin.Should().Throw<ArgumentException>();
+        noLink.Should().Throw<ArgumentException>();
+        noDecliner.Should().Throw<ArgumentException>();
+        request.Status.Should().Be(AccessRequestStatus.Pending);
+    }
 }

@@ -76,6 +76,9 @@ public sealed partial class BackendTestHost : IAsyncDisposable
     /// <summary>Gets the stand-in for Google SMTP.</summary>
     public RecordingEmailTransport GoogleSmtp { get; } = new("GoogleSmtp");
 
+    /// <summary>Gets what the bot sent (alerts, replies to button presses).</summary>
+    internal RecordingMessenger Bot { get; } = new();
+
     /// <summary>Gets the admin's user id.</summary>
     public Guid AdminId { get; private set; }
 
@@ -288,7 +291,7 @@ public sealed partial class BackendTestHost : IAsyncDisposable
             builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(configuration));
             builder.ConfigureTestServices(services =>
             {
-                services.Replace(ServiceDescriptor.Singleton<ITelegramMessenger>(new RecordingMessenger()));
+                services.Replace(ServiceDescriptor.Singleton<ITelegramMessenger>(Bot));
                 services.Replace(ServiceDescriptor.Singleton<IObjectStorage>(new InMemoryObjectStorage()));
                 services.UseInlineBotNotices();
                 services.RemoveAll<IEmailTransport>();
