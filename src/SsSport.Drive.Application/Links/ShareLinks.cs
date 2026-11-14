@@ -3,6 +3,7 @@ using SsSport.Drive.Application.Abstractions.Authentication;
 using SsSport.Drive.Application.Abstractions.Authorization;
 using SsSport.Drive.Application.Abstractions.Messaging;
 using SsSport.Drive.Application.Abstractions.Persistence;
+using SsSport.Drive.Application.Admin;
 using SsSport.Drive.Application.Exceptions;
 using SsSport.Drive.Application.MiniApp;
 using SsSport.Drive.Application.Paging;
@@ -213,6 +214,7 @@ public sealed class CreateShareLinkCommandValidator : AbstractValidator<CreateSh
 /// <param name="recipients">The recipients.</param>
 /// <param name="players">The players.</param>
 /// <param name="audit">The audit log.</param>
+/// <param name="viewers">Registers the recipient's emails as viewers.</param>
 /// <param name="currentUser">The caller.</param>
 /// <param name="timeProvider">The clock.</param>
 public sealed class CreateShareLinkCommandHandler(
@@ -220,6 +222,7 @@ public sealed class CreateShareLinkCommandHandler(
     IRepository<Recipient, Guid> recipients,
     IRepository<Player, Guid> players,
     IRepository<AuditEntry, Guid> audit,
+    IViewerRegistry viewers,
     ICurrentUser currentUser,
     TimeProvider timeProvider) : ICommandHandler<CreateShareLinkCommand, ShareLinkDto>
 {
@@ -263,6 +266,7 @@ public sealed class CreateShareLinkCommandHandler(
             now);
 
         links.Add(link);
+        await viewers.EnsureAsync(recipient.Emails, now, cancellationToken);
         audit.Add(AuditEntry.Record(actorId, CreateShareLinkCommand.CreatedAction, ShareLinkRules.AuditTarget, link.Id.ToString(), null, now));
         return link.ToDto(recipient, found, now);
     }

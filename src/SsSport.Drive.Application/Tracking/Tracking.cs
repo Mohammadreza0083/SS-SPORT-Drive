@@ -1,6 +1,7 @@
 using Ardalis.Specification;
 using FluentValidation;
 using SsSport.Drive.Application.Abstractions.Authorization;
+using SsSport.Drive.Application.Admin;
 using SsSport.Drive.Application.Abstractions.Messaging;
 using SsSport.Drive.Application.Abstractions.Persistence;
 using SsSport.Drive.Application.Abstractions.Security;
@@ -162,6 +163,7 @@ public sealed record StartWatchCommand(string Code, string? SessionToken, Guid P
 /// <param name="secrets">Hashes tokens.</param>
 /// <param name="assets">The assets.</param>
 /// <param name="watches">The watches.</param>
+/// <param name="viewers">Registers the viewer's email, so the console can show them.</param>
 /// <param name="timeProvider">The clock.</param>
 public sealed class StartWatchCommandHandler(
     IRepository<ShareLink, Guid> links,
@@ -169,6 +171,7 @@ public sealed class StartWatchCommandHandler(
     IViewerSecrets secrets,
     IRepository<Asset, Guid> assets,
     IRepository<WatchSession, Guid> watches,
+    IViewerRegistry viewers,
     TimeProvider timeProvider) : ICommandHandler<StartWatchCommand, WatchStartedDto>
 {
     /// <summary>Starts the watch, with one play.</summary>
@@ -193,6 +196,7 @@ public sealed class StartWatchCommandHandler(
 
         var watch = WatchSession.Start(session.Id, link.Id, request.PlayerId, video.Id, session.Email, video.DurationSeconds.Value, now);
         watches.Add(watch);
+        await viewers.EnsureAsync([session.Email], now, cancellationToken);
         return new WatchStartedDto { WatchId = watch.Id, HeartbeatSeconds = TrackingRules.HeartbeatSeconds };
     }
 }

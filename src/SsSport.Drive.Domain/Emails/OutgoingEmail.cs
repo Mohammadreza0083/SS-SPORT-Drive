@@ -159,6 +159,22 @@ public sealed partial class OutgoingEmail : AggregateRoot<Guid>
         }
     }
 
+    /// <summary>Puts a failed email back on the queue with a fresh set of attempts (an admin pressed Retry, A-9).</summary>
+    /// <param name="now">The current time (UTC).</param>
+    /// <exception cref="DomainException"><c>email.not_failed</c> when the email did not fail.</exception>
+    public void Retry(DateTimeOffset now)
+    {
+        if (Status != EmailStatus.Failed)
+        {
+            throw new DomainException("email.not_failed", "Only a failed email can be retried.");
+        }
+
+        Status = EmailStatus.Queued;
+        Attempts = 0;
+        LastAttemptAt = now;
+        RaiseDomainEvent(new EmailQueued(Id));
+    }
+
     /// <summary>Closes the email without sending it: there was nothing left to send.</summary>
     /// <param name="now">The current time (UTC).</param>
     /// <exception cref="DomainException"><c>email.not_queued</c> when the email is already closed.</exception>

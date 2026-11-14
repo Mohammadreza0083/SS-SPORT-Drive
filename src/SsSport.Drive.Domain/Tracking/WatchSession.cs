@@ -96,8 +96,11 @@ public sealed class WatchSession : AggregateRoot<Guid>
     /// <summary>Gets every second played.</summary>
     public double WatchSeconds => WatchMetrics.WatchSeconds(_ranges);
 
-    /// <summary>Gets the share of the video watched.</summary>
-    public double Completion => WatchMetrics.Completion(_ranges, DurationSeconds);
+    /// <summary>
+    /// Gets the share of the video watched (0 to 1). It is kept up to date on every heartbeat and stored, so the console's
+    /// dashboard averages it in SQL instead of reading every watch's ranges (A-2).
+    /// </summary>
+    public double Completion { get; private set; }
 
     /// <summary>Gets a value indicating whether the video was watched to the end.</summary>
     public bool IsComplete => WatchMetrics.IsComplete(_ranges, DurationSeconds);
@@ -149,6 +152,7 @@ public sealed class WatchSession : AggregateRoot<Guid>
             return false;
         }
 
+        Completion = WatchMetrics.Completion(_ranges, DurationSeconds);
         LastSeenAt = now;
         return true;
     }

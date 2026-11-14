@@ -8,6 +8,7 @@ using SsSport.Drive.Application.Abstractions.Storage;
 using SsSport.Drive.Application.Exceptions;
 using SsSport.Drive.Application.MiniApp;
 using SsSport.Drive.Application.Paging;
+using SsSport.Drive.Application.Settings;
 using SsSport.Drive.Application.Validation;
 using SsSport.Drive.Domain.Assets;
 using SsSport.Drive.Domain.Links;
@@ -105,12 +106,14 @@ public sealed record GetLinkContentQuery(string Code, string? SessionToken) : IQ
 /// <param name="recipients">The recipients.</param>
 /// <param name="sessions">The viewer sessions.</param>
 /// <param name="secrets">Hashes tokens.</param>
+/// <param name="settings">The console's settings (the contact email).</param>
 /// <param name="timeProvider">The clock.</param>
 public sealed class GetLinkContentQueryHandler(
     IRepository<ShareLink, Guid> links,
     IRepository<Recipient, Guid> recipients,
     IRepository<ViewerSession, Guid> sessions,
     IViewerSecrets secrets,
+    IAppSettingsStore settings,
     TimeProvider timeProvider) : IQueryHandler<GetLinkContentQuery, LinkContentDto>
 {
     /// <inheritdoc />
@@ -120,7 +123,7 @@ public sealed class GetLinkContentQueryHandler(
         var link = await links.OpenLinkAsync(request.Code, now, cancellationToken);
         var session = await sessions.RequireSessionAsync(secrets, link, request.SessionToken, now, cancellationToken);
         var recipient = await recipients.GetByIdAsync(link.RecipientId, cancellationToken) ?? throw new ShareLinkUnavailableException();
-        return link.ToContentDto(recipient, session);
+        return link.ToContentDto(recipient, session) with { ContactEmail = (await settings.GetAsync(cancellationToken)).ContactEmail.Value };
     }
 }
 

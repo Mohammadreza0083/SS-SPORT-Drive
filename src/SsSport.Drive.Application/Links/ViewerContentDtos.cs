@@ -19,6 +19,9 @@ public sealed record LinkContentDto
 
     /// <summary>Gets the email the viewer verified, laid faintly over the videos and documents.</summary>
     public string ViewerEmail { get; init; } = string.Empty;
+
+    /// <summary>Gets the contact email of the "Contact" button (the console's settings, A-10).</summary>
+    public string ContactEmail { get; init; } = string.Empty;
 }
 
 /// <summary>Who a link was prepared for, as the "Prepared for" ribbon shows it. Their emails are never sent.</summary>

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using SsSport.Drive.Api;
 using SsSport.Drive.Api.Accounts;
+using SsSport.Drive.Api.Admin;
 using SsSport.Drive.Api.Authentication;
 using SsSport.Drive.Api.Emails;
 using SsSport.Drive.Api.Endpoints;
@@ -12,6 +13,7 @@ using SsSport.Drive.Api.Links;
 using SsSport.Drive.Api.MiniApp;
 using SsSport.Drive.Api.Public;
 using SsSport.Drive.Api.Security;
+using SsSport.Drive.Api.Settings;
 using SsSport.Drive.Api.Telegram;
 using SsSport.Drive.Api.Tracking;
 using SsSport.Drive.Application;
@@ -101,6 +103,8 @@ app.MapPublicPlayers();
 app.MapPublicAccess();
 app.MapViewerMedia();
 app.MapTracking();
+app.MapSettings();
+app.MapDashboard();
 
 await app.RunAsync();
 
