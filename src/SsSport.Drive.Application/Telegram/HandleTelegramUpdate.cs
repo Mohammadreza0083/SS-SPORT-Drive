@@ -8,6 +8,7 @@ using SsSport.Drive.Application.Telegram.AccessRequests;
 using SsSport.Drive.Application.Telegram.Chat;
 using SsSport.Drive.Application.Telegram.Links;
 using SsSport.Drive.Application.Telegram.Photos;
+using SsSport.Drive.Application.Telegram.Progress;
 using AccessRequestDecisionOutcome = SsSport.Drive.Application.Public.AccessRequestDecisionOutcome;
 using DecideAccessRequestFromBotCommand = SsSport.Drive.Application.Public.DecideAccessRequestFromBotCommand;
 
@@ -261,6 +262,12 @@ public sealed partial class HandleTelegramUpdateCommandHandler(
             return;
         }
 
+        if (PlayerPublishCallbacks.TryParse(data, out var publishPlayerId))
+        {
+            await OnPublishButtonAsync(from, publishPlayerId, callbackId, cancellationToken);
+            return;
+        }
+
         if (AccessRequestCallbacks.TryParse(data, out var approveRequest, out var accessRequestId))
         {
             await OnAccessRequestButtonAsync(from, approveRequest, accessRequestId, callbackId, messageId, cancellationToken);
@@ -342,6 +349,27 @@ public sealed partial class HandleTelegramUpdateCommandHandler(
 
         await bot.AnswerCallbackAsync(callbackId, null, false, cancellationToken);
         await ReplyAsync(from, messageId, AccessRequestCallbacks.Describe(result), null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Handles the Publish button on an admin's progress message (T-11): publishes and answers the press. The progress
+    /// message itself turns published through <c>PlayerPublished</c>, like a publish from the console.
+    /// </summary>
+    /// <param name="from">The presser.</param>
+    /// <param name="playerId">The player.</param>
+    /// <param name="callbackId">The callback query to answer.</param>
+    /// <param name="cancellationToken">Cancels the work.</param>
+    /// <returns>A task that completes when the press is answered.</returns>
+    private async Task OnPublishButtonAsync(TelegramSender from, Guid playerId, string callbackId, CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(new PublishPlayerFromBotCommand(from.UserId, playerId), cancellationToken);
+        if (result.Outcome == BotPublishOutcome.NotAllowed)
+        {
+            LogPublishDenied(logger, from.UserId, playerId);
+        }
+
+        var (text, alert) = PlayerPublishCallbacks.Describe(result);
+        await bot.AnswerCallbackAsync(callbackId, text, alert, cancellationToken);
     }
 
     /// <summary>Tells what a message is for the new-player chat: <c>/new</c>, <c>/cancel</c> or typed text.</summary>
@@ -484,6 +512,13 @@ public sealed partial class HandleTelegramUpdateCommandHandler(
     /// <param name="ForwardId">The forward.</param>
     [LoggerMessage(Level = LogLevel.Warning, Message = "Forward decision denied: Telegram user {TelegramUserId} is not an admin (forward {ForwardId})")]
     private static partial void LogForwardDenied(ILogger logger, long TelegramUserId, Guid ForwardId);
+
+    /// <summary>Logs a Publish press by someone who is not an active admin (suspicious activity, decisions §1b).</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="TelegramUserId">Who pressed.</param>
+    /// <param name="PlayerId">The player.</param>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Publish denied: Telegram user {TelegramUserId} is not an admin (player {PlayerId})")]
+    private static partial void LogPublishDenied(ILogger logger, long TelegramUserId, Guid PlayerId);
 
     /// <summary>Logs an Approve or Decline press by someone who is not an active admin (suspicious activity, decisions §1b).</summary>
     /// <param name="logger">The logger.</param>

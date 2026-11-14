@@ -43,6 +43,27 @@ public sealed class PlayerProgressTextTests
             "⏳ Waiting for an admin to publish"));
     }
 
+    /// <summary>When the owner is an admin (T-11), a complete player is ready to publish from the button, not waiting for someone else.</summary>
+    [Fact]
+    public void Complete_player_of_an_admin_is_ready_to_publish()
+    {
+        var player = FilledPlayer();
+        player.ChangePhoto(PlayerPhoto.Create("players/p1/photo-1.webp"));
+
+        var text = PlayerProgressText.Render(player, folderCount: 1, ownerCanPublish: true);
+
+        text.Should().EndWith("\n⏳ Ready to publish: press Publish below");
+    }
+
+    /// <summary>An admin's incomplete player still waits for its details: there is nothing to publish yet.</summary>
+    [Fact]
+    public void Incomplete_player_of_an_admin_still_waits_for_details()
+    {
+        var text = PlayerProgressText.Render(FilledPlayer(), folderCount: 1, ownerCanPublish: true);
+
+        text.Should().EndWith("\n⬜ Waiting for the details above");
+    }
+
     /// <summary>Other missing details are listed by name, so the analyst knows what to fill in.</summary>
     [Fact]
     public void Lists_other_missing_details()

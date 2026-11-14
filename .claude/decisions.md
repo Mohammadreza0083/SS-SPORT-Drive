@@ -331,6 +331,7 @@ Standing rules for every feature. Each control gets tests, and nothing is commit
 
     - Once complete, the last line becomes **⏳ Waiting for an admin to publish**.
     - After Publish, the header turns ✅ and the last line is **✅ Published by an admin**.
+    - **Admin owner: Publish from the bot (T-11, owner, 2026-11-15).** When the owner of a complete, waiting player is an active admin (an admin added it in the bot or Mini App), the last line is **⏳ Ready to publish: press Publish below** and the message carries one **🚀 Publish** button (`pub:<id>`). Pressing it publishes with the console's rules (complete only; a second press says "Already published."), audits `player.published` with that admin as actor, and `PlayerPublished` starts ingest and turns the message published (the button goes). Only active admins may press it: anyone else gets "Only admins can publish players." and the denial is logged as a warning. An incomplete player answers with what is missing. Analyst-owned players are unchanged: they still wait for an admin in the console's Waiting list.
     - Details other than the photo that are still missing are listed by name. The copy lives in `BotTexts.resx`.
   - **When it is sent:** to the **owning analyst** only (archive players without an analyst get none, and neither do removed analysts). It goes out after every saved change the message shows: player created, details or photo changed, folder added, published.
   - **Edits:** the same message is edited **only when its text changes**, so a change the message does not show (e.g. the nationality) sends nothing.
@@ -625,7 +626,7 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
 - **Positions (6):** `S`, `OH`, `OPP`, `MB`, `L`, **`DS`** (Defensive Specialist, added). Max 2 per player; the first one is primary.
 - **Volleybox player ID stays required**, parsed from the URL. No scraping.
 - **Waiting list:** any player with incomplete details goes to an admin **waiting list**. "Incomplete" means a missing Volleybox link, photo, position, nationality or name. This covers both archive and analyst folders.
-  - Nothing is published and **no link can be created** until an admin fills every field and presses **Publish**.
+  - Nothing is published and **no link can be created** until an admin fills every field and presses **Publish** (in the console, or for an admin's own player also in the bot, T-11).
   - Publish starts transcoding with the watermark and notifies the analyst on Telegram.
   - Players without a Volleybox link are **never** published without one. The team adds them manually.
 - **Player aggregate (D-4, 2026-10-24):**

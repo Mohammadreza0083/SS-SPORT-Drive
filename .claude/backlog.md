@@ -66,6 +66,7 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | T-8 | Notification rules: grouping, 10-min throttle, quiet hours 23:00–08:00 Tehran | Claude | Tests green |
 | T-9 | Mini App UI: design every screen in the canvas (Telegram theme-aware, SS-SPORT accents), then style the screens without changing their logic (owner, 2026-10-31) | Both | Artboards approved; screens match; tests green |
 | T-10 | Bot works by chat (owner, 2026-11-06): add a player step by step and see My players (paged, inline buttons) in the chat; the Mini App stays optional, offered by an Open button and the bot's main Mini App button. Chat flow designed with the owner first | Claude | A player can be created and listed entirely in the chat; tests green |
+| T-11 | Publish from the bot for an admin's own player (owner, 2026-11-15): the progress message of an admin's complete, waiting player says it is ready and carries a 🚀 Publish button; console rules, audited, admins only | Claude | Done (2026-11-15): unit + integration tests green |
 
 ## EPIC 3 — Ingest, transcode & sync
 | Key | Task | Assignee | Done when |

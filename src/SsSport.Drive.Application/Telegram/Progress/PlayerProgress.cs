@@ -22,8 +22,9 @@ public static class PlayerProgressText
     /// <summary>Renders the progress of a player.</summary>
     /// <param name="player">The player.</param>
     /// <param name="folderCount">How many Drive folders are linked.</param>
+    /// <param name="ownerCanPublish">Whether the owner is an admin, who publishes from the message's button (T-11).</param>
     /// <returns>The message text.</returns>
-    public static string Render(Player player, int folderCount)
+    public static string Render(Player player, int folderCount, bool ownerCanPublish = false)
     {
         ArgumentNullException.ThrowIfNull(player);
         var name = player.Name?.Value ?? BotTexts.ProgressUnnamed;
@@ -51,7 +52,10 @@ public static class PlayerProgressText
             lines.Add(BotTexts.FormatProgressStillMissing(string.Join(", ", otherMissing)));
         }
 
-        lines.Add(player.IsPublished ? BotTexts.ProgressPublished : player.IsComplete ? BotTexts.ProgressWaitingAdmin : BotTexts.ProgressWaitingDetails);
+        lines.Add(player.IsPublished ? BotTexts.ProgressPublished
+            : !player.IsComplete ? BotTexts.ProgressWaitingDetails
+            : ownerCanPublish ? BotTexts.ProgressReadyToPublish
+            : BotTexts.ProgressWaitingAdmin);
         return string.Join('\n', lines);
     }
 
@@ -65,11 +69,12 @@ public static class PlayerProgressText
     /// <param name="build">The build of its files (<see cref="BuildProgress.None"/> without files).</param>
     /// <param name="remaining">The estimated time left, or <see langword="null"/> when unknown.</param>
     /// <param name="playerPage">The player's public page, or <see langword="null"/> when it cannot be built.</param>
+    /// <param name="ownerCanPublish">Whether the owner is an admin, who publishes from the message's button (T-11).</param>
     /// <returns>The message text.</returns>
-    public static string Render(Player player, int folderCount, BuildProgress build, TimeSpan? remaining, Uri? playerPage)
+    public static string Render(Player player, int folderCount, BuildProgress build, TimeSpan? remaining, Uri? playerPage, bool ownerCanPublish = false)
     {
         ArgumentNullException.ThrowIfNull(build);
-        var text = Render(player, folderCount);
+        var text = Render(player, folderCount, ownerCanPublish);
         if (build.Files == 0)
         {
             return text;
@@ -278,11 +283,12 @@ public sealed partial class PlayerProgressUpdater(
             var now = timeProvider.GetUtcNow();
             var message = await messages.FirstOrDefaultAsync(new ProgressMessageByPlayerSpec(playerId), cancellationToken);
             var buildStart = message?.BuildStartedAt ?? (build.IsBuilding ? now : null);
-            var text = PlayerProgressText.Render(player, folderCount, build, build.EstimateRemaining(buildStart, now), PublicPage(player));
+            var text = PlayerProgressText.Render(player, folderCount, build, build.EstimateRemaining(buildStart, now), PublicPage(player), owner.IsAdmin);
+            var keyboard = owner.IsAdmin && player.IsComplete && !player.IsPublished ? PlayerPublishCallbacks.Keyboard(player.Id) : null;
             var changed = false;
             if (message is null)
             {
-                var messageId = await bot.SendAsync(owner.TelegramId, text, null, cancellationToken);
+                var messageId = await bot.SendAsync(owner.TelegramId, text, keyboard, cancellationToken);
                 message = ProgressMessage.Start(playerId, owner.TelegramId, messageId, text, now);
                 message.TrackBuild(build.IsBuilding, now);
                 messages.Add(message);
@@ -293,7 +299,7 @@ public sealed partial class PlayerProgressUpdater(
                 changed = message.TrackBuild(build.IsBuilding, now);
                 if (!message.Shows(text))
                 {
-                    await EditOrResendAsync(message, owner.TelegramId, text, now, cancellationToken);
+                    await EditOrResendAsync(message, owner.TelegramId, text, keyboard, now, cancellationToken);
                     changed = true;
                 }
             }
@@ -318,20 +324,21 @@ public sealed partial class PlayerProgressUpdater(
     /// <param name="message">The progress message.</param>
     /// <param name="chatId">The owner chat.</param>
     /// <param name="text">The new text.</param>
+    /// <param name="keyboard">The Publish button for an admin owner (T-11), or <see langword="null"/>.</param>
     /// <param name="now">The current time.</param>
     /// <param name="cancellationToken">Cancels the calls.</param>
     /// <returns>A task that completes when Telegram shows the text.</returns>
-    private async Task EditOrResendAsync(ProgressMessage message, long chatId, string text, DateTimeOffset now, CancellationToken cancellationToken)
+    private async Task EditOrResendAsync(ProgressMessage message, long chatId, string text, BotKeyboard? keyboard, DateTimeOffset now, CancellationToken cancellationToken)
     {
         try
         {
-            await bot.EditAsync(message.ChatId, message.MessageId, text, null, cancellationToken);
+            await bot.EditAsync(message.ChatId, message.MessageId, text, keyboard, cancellationToken);
             message.Edited(text, now);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
             LogResending(logger, exception, message.PlayerId);
-            message.Resent(await bot.SendAsync(chatId, text, null, cancellationToken), text, now);
+            message.Resent(await bot.SendAsync(chatId, text, keyboard, cancellationToken), text, now);
         }
     }
 
