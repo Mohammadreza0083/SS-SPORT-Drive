@@ -160,6 +160,19 @@ public sealed class SignInInvalidException : Exception
     }
 }
 
+/// <summary>The request conflicts with how the record stands now (for example a decision already made); answered as 409 with its <see cref="Code"/>.</summary>
+public sealed class ConflictException : Exception
+{
+    /// <summary>Initializes the exception.</summary>
+    /// <param name="code">The stable code clients see, such as <c>access_request.already_decided</c>.</param>
+    /// <param name="message">What went wrong, in words for a person.</param>
+    public ConflictException(string code, string message)
+        : base(message) => Code = code;
+
+    /// <summary>Gets the stable code clients see.</summary>
+    public string Code { get; }
+}
+
 /// <summary>A request needs a live admin or viewer session and has none; answered as 401 <c>sign_in.required</c>.</summary>
 public sealed class SignInRequiredException : Exception
 {

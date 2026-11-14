@@ -27,6 +27,9 @@ public static class EmailTemplates
     /// <summary>The "your link is open" email of a kept forward (L-3b).</summary>
     public const string ForwardKept = "forward.kept";
 
+    /// <summary>The "your access is approved" email with the new personal link (P-4).</summary>
+    public const string AccessApproved = "access.approved";
+
     /// <summary>The admin console's sign-in link (A-1).</summary>
     public const string AdminSignIn = "auth.admin_sign_in";
 

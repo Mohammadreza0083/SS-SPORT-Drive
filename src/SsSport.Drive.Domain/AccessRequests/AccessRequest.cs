@@ -12,7 +12,7 @@ public enum AccessRequestSource
     SignedIn,
 }
 
-/// <summary>Where a request stands; P-4 adds the decisions.</summary>
+/// <summary>Where a request stands.</summary>
 public enum AccessRequestStatus
 {
     /// <summary>Waiting for an admin.</summary>
@@ -72,6 +72,65 @@ public sealed class AccessRequest : AggregateRoot<Guid>
 
     /// <summary>Gets when it was made (UTC).</summary>
     public DateTimeOffset CreatedAt { get; }
+
+    /// <summary>Gets the admin who approved or declined it, or <see langword="null"/> while pending.</summary>
+    public Guid? DecidedByUserId { get; private set; }
+
+    /// <summary>Gets when it was decided (UTC), or <see langword="null"/> while pending.</summary>
+    public DateTimeOffset? DecidedAt { get; private set; }
+
+    /// <summary>Gets the personal link an approval created, or <see langword="null"/> when pending or declined.</summary>
+    public Guid? ShareLinkId { get; private set; }
+
+    /// <summary>Approves the request; the first decision is final.</summary>
+    /// <param name="adminId">The admin who decided.</param>
+    /// <param name="shareLinkId">The personal link made for the requester.</param>
+    /// <param name="now">The current time (UTC).</param>
+    /// <returns><see langword="true"/> when the decision was made now; <see langword="false"/> when it was decided before.</returns>
+    /// <exception cref="ArgumentException">An empty admin or link id.</exception>
+    public bool Approve(Guid adminId, Guid shareLinkId, DateTimeOffset now)
+    {
+        if (adminId == Guid.Empty)
+        {
+            throw new ArgumentException("A decision needs an admin.", nameof(adminId));
+        }
+
+        if (shareLinkId == Guid.Empty)
+        {
+            throw new ArgumentException("An approval needs its link.", nameof(shareLinkId));
+        }
+
+        if (Status != AccessRequestStatus.Pending)
+        {
+            return false;
+        }
+
+        Status = AccessRequestStatus.Approved;
+        (DecidedByUserId, DecidedAt, ShareLinkId) = (adminId, now, shareLinkId);
+        return true;
+    }
+
+    /// <summary>Declines the request; the first decision is final.</summary>
+    /// <param name="adminId">The admin who decided.</param>
+    /// <param name="now">The current time (UTC).</param>
+    /// <returns><see langword="true"/> when the decision was made now; <see langword="false"/> when it was decided before.</returns>
+    /// <exception cref="ArgumentException">An empty admin id.</exception>
+    public bool Decline(Guid adminId, DateTimeOffset now)
+    {
+        if (adminId == Guid.Empty)
+        {
+            throw new ArgumentException("A decision needs an admin.", nameof(adminId));
+        }
+
+        if (Status != AccessRequestStatus.Pending)
+        {
+            return false;
+        }
+
+        Status = AccessRequestStatus.Declined;
+        (DecidedByUserId, DecidedAt) = (adminId, now);
+        return true;
+    }
 
     /// <summary>Makes a pending request and raises <see cref="AccessRequested"/>.</summary>
     /// <param name="playerId">The player asked for.</param>

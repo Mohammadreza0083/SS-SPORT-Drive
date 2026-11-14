@@ -180,6 +180,21 @@ It stays closed for this email until you keep it.</value></data>
   <data name="ForwardAlreadyDecided" xml:space="preserve"><value>ℹ️ {0} on link {1} was already {2} by {3}.</value></data>
   <data name="ForwardGone" xml:space="preserve"><value>ℹ️ This forward no longer exists.</value></data>
   <data name="OnlyAdminsForwards" xml:space="preserve"><value>Only admins can keep or block forwarded links.</value></data>
+  <data name="AccessRequestAlert" xml:space="preserve"><value>📩 Access request
+
+A visitor asked to see {0}.
+Email: {1}
+
+{2}
+
+Approve makes a personal link for 30 days and emails it.</value></data>
+  <data name="AccessRequestApproveButton" xml:space="preserve"><value>Approve (30 days)</value></data>
+  <data name="AccessRequestDeclineButton" xml:space="preserve"><value>Decline</value></data>
+  <data name="AccessRequestApproved" xml:space="preserve"><value>✅ {0} can watch {1}. Approved by {2}; link {3} was emailed.</value></data>
+  <data name="AccessRequestDeclined" xml:space="preserve"><value>⛔ The request from {0} for {1} was declined by {2}.</value></data>
+  <data name="AccessRequestAlreadyDecided" xml:space="preserve"><value>ℹ️ The request from {0} for {1} was already {2} by {3}.</value></data>
+  <data name="AccessRequestGone" xml:space="preserve"><value>ℹ️ This request no longer exists.</value></data>
+  <data name="OnlyAdminsAccessRequests" xml:space="preserve"><value>Only admins can approve or decline access requests.</value></data>
   <data name="MyPlayersHeader" xml:space="preserve"><value>👥 My players ({0})
 {1} · page {2} of {3}</value></data>
   <data name="MyPlayersSearching" xml:space="preserve"><value>🔍 Search: {0}</value></data>

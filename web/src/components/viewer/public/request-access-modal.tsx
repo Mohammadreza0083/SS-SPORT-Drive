@@ -200,7 +200,7 @@ export function RequestAccessModal({ player, viewer, client, onClose, getTurnsti
                     autoComplete="email"
                   />
                   <p className="pm-hint">
-                    {accessCopy.skipCode} <a href="/signin">{accessCopy.skipCodeLink}</a> {accessCopy.skipCodeEnd}
+                    {accessCopy.skipCode} <a href="/sign-in">{accessCopy.skipCodeLink}</a> {accessCopy.skipCodeEnd}
                   </p>
                 </div>
               )}

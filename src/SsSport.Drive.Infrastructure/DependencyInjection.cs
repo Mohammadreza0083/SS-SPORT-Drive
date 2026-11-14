@@ -99,6 +99,7 @@ public static class DependencyInjection
         services.AddScoped<IPublicPlayerReader, PublicPlayerReader>();
         services.AddScoped<IDigestFactsReader, DigestFactsReader>();
         services.AddScoped<IShareLinkListReader, ShareLinkListReader>();
+        services.AddScoped<IAccessRequestListReader, AccessRequestListReader>();
         services.AddScoped<IViewingReader, ViewingReader>();
 
         // Background jobs (T-6c): Hangfire on PostgreSQL, built lazily from the same data source, so a host without a

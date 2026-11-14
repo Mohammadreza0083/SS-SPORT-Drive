@@ -106,7 +106,7 @@ describe("requestSignInLink (POST /api/auth/{audience}/link)", () => {
 
     await requestSignInLink(browserRequest("/api/auth/admin/link", { body: JSON.stringify({ email: "owner@ss-sport.co" }) }), API, "admin", fetchImpl);
 
-    expect(fetchImpl.mock.calls[0]?.[0]).toBe("http://api:8080/auth/admin/link");
+    expect((fetchImpl.mock.calls[0] as unknown[])[0]).toBe("http://api:8080/auth/admin/link");
   });
 
   it("passes a rate-limit answer through with its Retry-After", async () => {
@@ -168,7 +168,7 @@ describe("startSession (POST /api/auth/{audience}/session)", () => {
 
     const response = await startSession(continueRequest("/api/auth/admin/session", "one-time-token"), API, "admin", fetchImpl);
 
-    expect(fetchImpl.mock.calls[0]?.[0]).toBe("http://api:8080/auth/admin/session");
+    expect((fetchImpl.mock.calls[0] as unknown[])[0]).toBe("http://api:8080/auth/admin/session");
     expect(response.status).toBe(303);
     expect(response.headers.get("Location")).toBe("/admin");
     const cookie = response.headers.get("Set-Cookie") ?? "";

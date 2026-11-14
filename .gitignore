@@ -112,3 +112,6 @@ __pycache__/
 # Security scans (O-10): local reports
 gitleaks-report*.json
 vulnerable.txt
+
+# Implementation plans handed to other models (local only)
+.claude/plan-*.md

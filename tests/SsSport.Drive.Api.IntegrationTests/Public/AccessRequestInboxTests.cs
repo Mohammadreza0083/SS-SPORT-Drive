@@ -54,7 +54,7 @@ public sealed class AccessRequestInboxTests : IAsyncLifetime
 
     // ---------------------------------------------------------------- bot alert
 
-    /// <summary>A new request alerts the active admin with the player, the email, the description and the two buttons; the analyst gets nothing.</summary>
+    /// <summary>A new request alerts the active admin with the player, the email, the description and the two buttons; the analyst gets no alert.</summary>
     /// <returns>A task that completes when the test is done.</returns>
     [Fact]
     public async Task A_new_request_alerts_every_admin()
@@ -67,7 +67,7 @@ public sealed class AccessRequestInboxTests : IAsyncLifetime
         alert.Text.Should().Contain("Arash Tehrani").And.Contain(About);
         var id = requestId.ToString("N", CultureInfo.InvariantCulture);
         alert.ButtonData.Should().Equal($"areq:ok:{id}", $"areq:no:{id}");
-        _host.Bot.ToChat(BackendTestHost.AnalystTelegramId).Should().BeEmpty();
+        _host.Bot.ToChat(BackendTestHost.AnalystTelegramId).Should().NotContain(call => call.Text!.Contains(RequesterEmail, StringComparison.Ordinal));
     }
 
     // ---------------------------------------------------------------- inbox

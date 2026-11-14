@@ -45,6 +45,12 @@ internal sealed class AccessRequestConfiguration : IEntityTypeConfiguration<Acce
         builder.Property(request => request.Source).HasConversion<string>().HasMaxLength(16);
         builder.Property(request => request.Status).HasConversion<string>().HasMaxLength(16);
         builder.Property(request => request.CreatedAt);
+        builder.Property(request => request.DecidedByUserId);
+        builder.Property(request => request.DecidedAt);
+        builder.Property(request => request.ShareLinkId);
+
+        // The inbox lists by status, newest first.
+        builder.HasIndex(request => new { request.Status, request.CreatedAt });
 
         // The per-email and per-player limits, and the pending check, count by these.
         builder.HasIndex(request => new { request.Email, request.CreatedAt });

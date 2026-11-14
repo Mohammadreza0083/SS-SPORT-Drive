@@ -93,6 +93,7 @@ app.MapHealthEndpoints();
 app.MapTelegramWebhook();
 app.MapMiniApp();
 app.MapShareLinks();
+app.MapAccessRequestInbox();
 app.MapEmailQueue();
 app.MapSignIn();
 app.MapViewerGate();
