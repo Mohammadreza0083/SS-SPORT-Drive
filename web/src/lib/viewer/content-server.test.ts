@@ -195,9 +195,26 @@ describe("loadPlayerPage", () => {
         note: { text: "Hi Jan, as discussed.", author: "SS-SPORT" },
         stats: { videos: 2, minutes: 110, documents: 1, matches: 1 },
         // V-5b: the stream and page URLs are signed per viewer when needed, from these same-origin routes.
+        // W-2: the player reports watching through each video's watch route.
         videos: [
-          { id: "v1", title: "Full match vs Paykan", tag: "Full match", durationSeconds: 6490, src: "", streamPath: `/api/links/Ab3xYz/players/${player.id}/videos/v1/stream` },
-          { id: "v2", title: "Highlights 2026", tag: "Highlight", durationSeconds: 84, src: "", streamPath: `/api/links/Ab3xYz/players/${player.id}/videos/v2/stream` },
+          {
+            id: "v1",
+            title: "Full match vs Paykan",
+            tag: "Full match",
+            durationSeconds: 6490,
+            src: "",
+            streamPath: `/api/links/Ab3xYz/players/${player.id}/videos/v1/stream`,
+            watchPath: `/api/links/Ab3xYz/players/${player.id}/videos/v1/watch`,
+          },
+          {
+            id: "v2",
+            title: "Highlights 2026",
+            tag: "Highlight",
+            durationSeconds: 84,
+            src: "",
+            streamPath: `/api/links/Ab3xYz/players/${player.id}/videos/v2/stream`,
+            watchPath: `/api/links/Ab3xYz/players/${player.id}/videos/v2/watch`,
+          },
         ],
         documents: [{ id: "d1", title: "Season stats 2026", pageCount: 2, pages: [], pagesPath: `/api/links/Ab3xYz/players/${player.id}/documents/d1/pages` }],
         // V-8: the player's scout files; a report is read when one is opened.

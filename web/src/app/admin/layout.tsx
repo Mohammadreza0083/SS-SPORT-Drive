@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "@/styles/tokens.css";
-import "@/styles/admin.css";
+import "@/styles/motion.css";
+import "@/styles/shell.css";
+import "@/styles/gate.css";
 
 export const metadata: Metadata = {
   title: { default: "Admin · SS-SPORT Drive", template: "%s · SS-SPORT Admin" },
@@ -8,12 +10,12 @@ export const metadata: Metadata = {
 };
 
 /**
- * Layout of every admin page (sign-in and the console): the dark brand shell with the console's styles. The Telegram
- * Mini App and the viewer site live outside it.
+ * Layout of the admin pages: the sign-in page keeps the viewer site's dark brand look (W-1); the console inside it adds
+ * its own styles (Epic 7).
  *
  * @param props - The layout props provided by Next.js.
  * @returns The admin shell.
  */
 export default function AdminLayout({ children }: LayoutProps<"/admin">) {
-  return <div className="admin">{children}</div>;
+  return <div className="viewer">{children}</div>;
 }

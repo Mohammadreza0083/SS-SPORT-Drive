@@ -210,25 +210,18 @@ public sealed class CreateShareLinkCommandValidator : AbstractValidator<CreateSh
 }
 
 /// <summary>Handles <see cref="CreateShareLinkCommand"/>.</summary>
-/// <param name="links">The links.</param>
+/// <param name="issuer">Draws the code, creates the link and audits it.</param>
 /// <param name="recipients">The recipients.</param>
 /// <param name="players">The players.</param>
-/// <param name="audit">The audit log.</param>
-/// <param name="viewers">Registers the recipient's emails as viewers.</param>
 /// <param name="currentUser">The caller.</param>
 /// <param name="timeProvider">The clock.</param>
 public sealed class CreateShareLinkCommandHandler(
-    IRepository<ShareLink, Guid> links,
+    ShareLinkIssuer issuer,
     IRepository<Recipient, Guid> recipients,
     IRepository<Player, Guid> players,
-    IRepository<AuditEntry, Guid> audit,
-    IViewerRegistry viewers,
     ICurrentUser currentUser,
     TimeProvider timeProvider) : ICommandHandler<CreateShareLinkCommand, ShareLinkDto>
 {
-    /// <summary>How many fresh codes to try before giving up; a clash is already one in billions.</summary>
-    private const int CodeAttempts = 5;
-
     /// <summary>Finds or creates the recipient, loads the players, draws an unused code, then creates and audits the link.</summary>
     /// <param name="request">The command.</param>
     /// <param name="cancellationToken">Cancels the work.</param>
@@ -254,20 +247,15 @@ public sealed class CreateShareLinkCommandHandler(
             request.AllowForwarding ?? defaults.AllowForwarding,
             scope,
             request.NotifyOnOpen ?? defaults.NotifyOnOpen);
-        var actorId = ShareLinkRules.ActorId(currentUser);
-        var link = ShareLink.Create(
-            await UnusedCodeAsync(cancellationToken),
+        var link = await issuer.IssueAsync(
             recipient,
             [.. ids.Select(id => byId[id])],
             request.Note,
             ShareLinkRules.ExpiryFrom(request.ExpiresInDays, now),
             settings,
-            actorId,
-            now);
-
-        links.Add(link);
-        await viewers.EnsureAsync(recipient.Emails, now, cancellationToken);
-        audit.Add(AuditEntry.Record(actorId, CreateShareLinkCommand.CreatedAction, ShareLinkRules.AuditTarget, link.Id.ToString(), null, now));
+            ShareLinkRules.ActorId(currentUser),
+            now,
+            cancellationToken);
         return link.ToDto(recipient, found, now);
     }
 
@@ -289,24 +277,6 @@ public sealed class CreateShareLinkCommandHandler(
         var recipient = Recipient.Create(form.Name, form.Organisation, country, (form.Emails ?? []).Select(EmailAddress.Create), now);
         recipients.Add(recipient);
         return recipient;
-    }
-
-    /// <summary>Draws codes until one is not used by any link.</summary>
-    /// <param name="cancellationToken">Cancels the queries.</param>
-    /// <returns>The unused code.</returns>
-    /// <exception cref="InvalidOperationException">Every attempt clashed.</exception>
-    private async Task<ShareLinkCode> UnusedCodeAsync(CancellationToken cancellationToken)
-    {
-        for (var attempt = 0; attempt < CodeAttempts; attempt++)
-        {
-            var code = ShareLinkCode.Generate();
-            if (!await links.AnyAsync(new ShareLinkByCodeSpec(code), cancellationToken))
-            {
-                return code;
-            }
-        }
-
-        throw new InvalidOperationException($"No unused link code after {CodeAttempts} attempts.");
     }
 }
 

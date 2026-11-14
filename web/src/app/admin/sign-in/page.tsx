@@ -1,63 +1,47 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { adminCopy } from "@/components/admin/copy";
-import { SignInForm } from "@/components/admin/shell/sign-in-form";
-import { BrandLogo } from "@/components/viewer/brand-logo";
-import { firstParam } from "@/lib/admin/server";
+import { createSignInClient } from "@/components/viewer/sign-in/sign-in-client";
+import { signInCopy } from "@/components/viewer/sign-in/copy";
+import { SignInPanel } from "@/components/viewer/sign-in/sign-in-panel";
+import { ADMIN_COOKIE, readAdmin } from "@/lib/auth/sign-in-server";
+import { apiBaseUrl } from "../../api/miniapp/api-base-url";
 
-export const metadata: Metadata = { title: adminCopy.signIn.title };
+export const metadata: Metadata = {
+  title: signInCopy.adminPageTitle,
+  robots: { index: false, follow: false },
+};
 
 /**
- * `/admin/sign-in`: the admin's email-link sign-in (W-1 admin half, canvas `AdminLogin`). Without a token it asks for
- * the email; with `?token=` (from the emailed link) it only shows a Continue button that posts the token, so a mail
- * scanner that opens the link cannot use it up. `?error=link` says the link did not work.
+ * `/admin/sign-in`: an admin asks for an email link, or finishes signing in from one (`?token=`), then opens the console
+ * (W-1, A-1). An admin who is already signed in goes straight to `/admin`. Request data is read inside `<Suspense>`.
  *
  * @param props - The page props with the search params.
  * @returns The page.
  */
-export default function AdminSignInPage({ searchParams }: PageProps<"/admin/sign-in">) {
+export default function AdminSignInRoute({ searchParams }: PageProps<"/admin/sign-in">) {
   return (
     <Suspense fallback={null}>
-      <SignIn searchParams={searchParams} />
+      <AdminSignIn searchParams={searchParams} />
     </Suspense>
   );
 }
 
 /**
- * Reads the search params and picks the step.
+ * Reads the token, the error and the session on the server.
  *
- * @param props - The props.
+ * @param props - The search params promise.
  * @param props.searchParams - The query string.
- * @returns The card.
+ * @returns The sign-in panel, or a redirect to the console.
  */
-async function SignIn({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+async function AdminSignIn({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const params = await searchParams;
-  const token = firstParam(params, "token");
-  const failed = firstParam(params, "error") === "link";
-  return (
-    <div className="adm-login">
-      <div className="adm-login-card">
-        <BrandLogo height={34} alt={adminCopy.brand} priority />
-        {token ? (
-          <form method="post" action="/api/admin/session">
-            <h1>{adminCopy.signIn.linkTitle}</h1>
-            <p className="adm-lead">{adminCopy.signIn.linkLead}</p>
-            <input type="hidden" name="token" value={token} />
-            <button type="submit" className="adm-btn adm-btn-red adm-btn-wide">
-              {adminCopy.signIn.continue}
-            </button>
-          </form>
-        ) : (
-          <>
-            {failed ? (
-              <p role="alert" className="adm-error">
-                {adminCopy.signIn.expired}
-              </p>
-            ) : null}
-            <SignInForm />
-          </>
-        )}
-      </div>
-    </div>
-  );
+  const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
+  const token = first(params.token);
+  if (!token && (await readAdmin(apiBaseUrl(), (await cookies()).get(ADMIN_COOKIE)?.value))) {
+    redirect("/admin");
+  }
+
+  return <SignInPanel audience="admin" token={token} error={first(params.error)} client={createSignInClient("admin")} />;
 }

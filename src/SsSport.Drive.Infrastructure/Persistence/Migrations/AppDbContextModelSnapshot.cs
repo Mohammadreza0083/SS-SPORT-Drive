@@ -90,6 +90,14 @@ namespace SsSport.Drive.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<DateTimeOffset?>("DecidedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("decided_at");
+
+                    b.Property<Guid?>("DecidedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("decided_by_user_id");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(254)
@@ -105,6 +113,10 @@ namespace SsSport.Drive.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("xid")
                         .HasColumnName("xmin");
+
+                    b.Property<Guid?>("ShareLinkId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("share_link_id");
 
                     b.Property<string>("Source")
                         .IsRequired()
@@ -126,6 +138,9 @@ namespace SsSport.Drive.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("PlayerId", "CreatedAt")
                         .HasDatabaseName("ix_access_requests_player_id_created_at");
+
+                    b.HasIndex("Status", "CreatedAt")
+                        .HasDatabaseName("ix_access_requests_status_created_at");
 
                     b.HasIndex("Email", "PlayerId", "Status")
                         .HasDatabaseName("ix_access_requests_email_player_id_status");

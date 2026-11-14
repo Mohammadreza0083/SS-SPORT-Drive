@@ -41,7 +41,7 @@ describe("RequestAccessModal (P-3 UI, canvas Locked modal), signed out", () => {
     expect(dialog.getAttribute("aria-modal")).toBe("true");
     expect(screen.getByText("ARASH TEHRANI · OPP")).toBeTruthy();
     expect(screen.getByLabelText("About you").getAttribute("placeholder")).toBe("Your club or agency, your role, and what you're looking for.");
-    expect(screen.getByRole("link", { name: "Sign in" }).getAttribute("href")).toBe("/signin");
+    expect(screen.getByRole("link", { name: "Sign in" }).getAttribute("href")).toBe("/sign-in");
   });
 
   it("refuses a bad email or an empty description without calling the server", () => {

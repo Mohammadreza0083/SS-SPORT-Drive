@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Npgsql;
 using SsSport.Drive.Application.Abstractions.Events;
 using SsSport.Drive.Application.Links;
+using SsSport.Drive.Application.Retention;
 using SsSport.Drive.Application.Telegram.Digest;
 using SsSport.Drive.Application.Telegram.Notices;
 using SsSport.Drive.Domain.Emails;
@@ -66,6 +67,11 @@ public static class HangfireStorage
             BotNoticeJob.Queue,
             job => job.RunAsync(CancellationToken.None),
             Cron.Daily(0, 0));
+        manager.AddOrUpdate<RetentionPurgeJob>(
+            RetentionPurgeJob.RecurringJobId,
+            BotNoticeJob.Queue,
+            job => job.RunAsync(CancellationToken.None),
+            Cron.Daily(0, 30));
         manager.AddOrUpdate<DailyDigestJob>(
             DailyDigestJob.RecurringJobId,
             BotNoticeJob.Queue,
@@ -436,6 +442,54 @@ public sealed partial class GatePurgeJob(ISender sender, TimeProvider timeProvid
     /// <param name="logger">The logger.</param>
     /// <param name="exception">The failure.</param>
     [LoggerMessage(Level = LogLevel.Warning, Message = "Gate clean-up failed; the next daily run tries again")]
+    private static partial void LogFailed(ILogger logger, Exception exception);
+}
+
+/// <summary>
+/// The daily Hangfire job that deletes old emails, raw player events and sign-in links (W-3) at 00:30 UTC, half an hour
+/// after <see cref="GatePurgeJob"/> so the two never overlap. It runs on the notices queue.
+/// </summary>
+/// <param name="sender">Sends the MediatR command.</param>
+/// <param name="timeProvider">The clock.</param>
+/// <param name="logger">The logger: Hangfire's own logging is not wired to ours.</param>
+public sealed partial class RetentionPurgeJob(ISender sender, TimeProvider timeProvider, ILogger<RetentionPurgeJob> logger)
+{
+    /// <summary>The recurring job's id.</summary>
+    public const string RecurringJobId = "retention-purge";
+
+    /// <summary>Deletes the rows past their retention. A failure is not retried: the next day's run picks them up.</summary>
+    /// <param name="cancellationToken">Cancelled when the server shuts down.</param>
+    /// <returns>A task that completes when the clean-up is done.</returns>
+    [Queue(BotNoticeJob.Queue)]
+    [AutomaticRetry(Attempts = 0)]
+    [DisableConcurrentExecution(timeoutInSeconds: 600)]
+    public async Task RunAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await sender.Send(new PurgeRetainedRowsCommand(timeProvider.GetUtcNow()), cancellationToken);
+            LogPurged(logger, result.SentEmails, result.FailedEmails, result.TrackingEvents, result.SignInLinks);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            LogFailed(logger, exception);
+            throw;
+        }
+    }
+
+    /// <summary>Logs what a run deleted.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="SentEmails">Sent and skipped emails deleted.</param>
+    /// <param name="FailedEmails">Failed emails deleted.</param>
+    /// <param name="TrackingEvents">Player events deleted.</param>
+    /// <param name="SignInLinks">Sign-in links deleted.</param>
+    [LoggerMessage(Level = LogLevel.Information, Message = "Retention clean-up deleted {SentEmails} sent emails, {FailedEmails} failed emails, {TrackingEvents} player events and {SignInLinks} sign-in links")]
+    private static partial void LogPurged(ILogger logger, int SentEmails, int FailedEmails, int TrackingEvents, int SignInLinks);
+
+    /// <summary>Logs a run that failed; the next one tries again.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="exception">The failure.</param>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Retention clean-up failed; the next daily run tries again")]
     private static partial void LogFailed(ILogger logger, Exception exception);
 }
 

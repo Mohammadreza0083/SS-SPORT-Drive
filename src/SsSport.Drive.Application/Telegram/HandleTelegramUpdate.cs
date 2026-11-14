@@ -4,9 +4,12 @@ using Microsoft.Extensions.Logging;
 using SsSport.Drive.Application.Abstractions.Messaging;
 using SsSport.Drive.Application.Links;
 using SsSport.Drive.Application.Telegram.Access;
+using SsSport.Drive.Application.Telegram.AccessRequests;
 using SsSport.Drive.Application.Telegram.Chat;
 using SsSport.Drive.Application.Telegram.Links;
 using SsSport.Drive.Application.Telegram.Photos;
+using AccessRequestDecisionOutcome = SsSport.Drive.Application.Public.AccessRequestDecisionOutcome;
+using DecideAccessRequestFromBotCommand = SsSport.Drive.Application.Public.DecideAccessRequestFromBotCommand;
 
 namespace SsSport.Drive.Application.Telegram;
 
@@ -258,6 +261,12 @@ public sealed partial class HandleTelegramUpdateCommandHandler(
             return;
         }
 
+        if (AccessRequestCallbacks.TryParse(data, out var approveRequest, out var accessRequestId))
+        {
+            await OnAccessRequestButtonAsync(from, approveRequest, accessRequestId, callbackId, messageId, cancellationToken);
+            return;
+        }
+
         if (!BotCallbacks.TryParseReview(data, out var decision, out var userId))
         {
             await bot.AnswerCallbackAsync(callbackId, null, false, cancellationToken);
@@ -308,6 +317,31 @@ public sealed partial class HandleTelegramUpdateCommandHandler(
 
         await bot.AnswerCallbackAsync(callbackId, null, false, cancellationToken);
         await ReplyAsync(from, messageId, ForwardCallbacks.Describe(result), null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Answers an Approve or Decline press on an access-request alert (P-4): only admins decide; the alert is replaced by
+    /// the outcome.
+    /// </summary>
+    /// <param name="from">The presser.</param>
+    /// <param name="approve"><see langword="true"/> for Approve.</param>
+    /// <param name="requestId">The access request.</param>
+    /// <param name="callbackId">The callback query to answer.</param>
+    /// <param name="messageId">The alert message.</param>
+    /// <param name="cancellationToken">Cancels the work.</param>
+    /// <returns>A task that completes when the press is answered.</returns>
+    private async Task OnAccessRequestButtonAsync(TelegramSender from, bool approve, Guid requestId, string callbackId, int? messageId, CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(new DecideAccessRequestFromBotCommand(from.UserId, requestId, approve), cancellationToken);
+        if (result.Outcome == AccessRequestDecisionOutcome.NotAllowed)
+        {
+            LogAccessRequestDenied(logger, from.UserId, requestId);
+            await bot.AnswerCallbackAsync(callbackId, BotTexts.OnlyAdminsAccessRequests, true, cancellationToken);
+            return;
+        }
+
+        await bot.AnswerCallbackAsync(callbackId, null, false, cancellationToken);
+        await ReplyAsync(from, messageId, AccessRequestCallbacks.Describe(result), null, cancellationToken);
     }
 
     /// <summary>Tells what a message is for the new-player chat: <c>/new</c>, <c>/cancel</c> or typed text.</summary>
@@ -450,4 +484,11 @@ public sealed partial class HandleTelegramUpdateCommandHandler(
     /// <param name="ForwardId">The forward.</param>
     [LoggerMessage(Level = LogLevel.Warning, Message = "Forward decision denied: Telegram user {TelegramUserId} is not an admin (forward {ForwardId})")]
     private static partial void LogForwardDenied(ILogger logger, long TelegramUserId, Guid ForwardId);
+
+    /// <summary>Logs an Approve or Decline press by someone who is not an active admin (suspicious activity, decisions §1b).</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="TelegramUserId">Who pressed.</param>
+    /// <param name="AccessRequestId">The access request.</param>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Access request decision denied: Telegram user {TelegramUserId} is not an admin (request {AccessRequestId})")]
+    private static partial void LogAccessRequestDenied(ILogger logger, long TelegramUserId, Guid AccessRequestId);
 }

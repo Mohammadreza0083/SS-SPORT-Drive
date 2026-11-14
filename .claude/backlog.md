@@ -105,9 +105,9 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | L-4 | Email queue on Hangfire: Resend → Brevo failover for OTP, Google SMTP for the rest, retries, admin view | Claude | Failover test green |
 | L-5 | Tracking events + heartbeats + sessions | Claude | Tests green |
 | L-6 | Metrics: unique watched (range merge), watch time, plays, hotspots, completion | Claude | Unit test per metric |
-| L-7 | Admin bot alerts + daily digest 09:00 Tehran | Claude | Part done (2026-11-12): first-open alert and the digest with sessions, forwards and the waiting list; plays, minutes, top players and failed emails (7b) wait for L-4/L-5/L-6 |
-| W-2 | Player sends the watch start, a heartbeat every 10 s and play/pause/seek/ended to the tracking API (L-5 client part, in the V-3 player) | Claude | Tests green |
-| W-3 | Retention and clean-up for `outgoing_emails`, `tracking_events`, `sign_in_links` and `account_sessions` (owner to decide the periods) | Both | Tests green |
+| L-7 | Admin bot alerts + daily digest 09:00 Tehran | Claude | Done (2026-11-14): first-open alert and the digest with sessions, forwards, the waiting list, plays, minutes, top players and failed emails (7b) |
+| W-2 | Player sends the watch start, a heartbeat every 10 s and play/pause/seek/ended to the tracking API (L-5 client part, in the V-3 player) | Claude | Done (2026-11-14): same-origin watch routes with the CSRF check, a pure `WatchTracker`, and a player hook; the design preview tracks nothing |
+| W-3 | Retention and clean-up for `outgoing_emails`, `tracking_events`, `sign_in_links` and `account_sessions` | Both | Done (2026-11-14): daily `retention-purge` job; emails 30 days (failed 90), player events 1 year, sign-in links 1 day after expiry; `account_sessions` already by `gate-purge` |
 
 ## EPIC 6 — Public search & access requests
 | Key | Task | Assignee | Done when |
@@ -115,15 +115,15 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | P-1 | Public home: player search + position filter | Claude | Matches canvas |
 | P-2 | Locked player page: blurred / locked media, no real media URLs sent | Claude | Security test green |
 | P-3 | Request-access flow: email + description, OTP, Turnstile, rate limits | Claude | Tests green |
-| P-4 | Admin access-request inbox (console + bot): approve → auto personal link + approval email | Claude | E2E green |
+| P-4 | Admin access-request inbox (console + bot): approve → auto personal link + approval email | Claude | Done (2026-11-14): bot alert with Approve / Decline, console API (list, approve with changes, decline), personal link made and emailed; the console page is A-12 |
 | P-5 | Viewer login by email magic link (1-day session) | Claude | Tests green |
-| P-7 | Home page login button; signed-in viewers request access without email/OTP | Claude | Tests green |
+| P-7 | Home page login button; signed-in viewers request access without email/OTP | Claude | Done (2026-11-14): Sign in leads to /sign-in and the session routes exist (W-1) |
 | P-8 | Backend half of P-1, P-2, P-3 and P-7: public player search + locked player API, request-access API (OTP, Turnstile, rate limits), `/api/public/*` and sign-out routes, real `/players/{slug}` page, real Turnstile widget + CSP. The front-end of all four is done on sample data (`/design/home`, `/design/locked`) | Claude | Tests green; the public pages run on real data |
-| W-1 | Web part of sign-in (admin half done 2026-11-14 with Epic 7: `/admin/sign-in`, the `__Host-ssd_as` cookie and the same-origin routes; the viewer half is still open): `/admin/sign-in` and `/sign-in` pages, same-origin routes that set `__Host-ssd_as` / `__Host-ssd_va` and forward `X-Admin-Session` / `X-Viewer-Account`, home page Sign in / Sign out (A-1 and P-5 web part, needed by P-7) | Claude | Tests green |
+| W-1 | Web part of sign-in: `/admin/sign-in` and `/sign-in` pages, same-origin routes that set `__Host-ssd_as` / `__Host-ssd_va` and forward `X-Admin-Session` / `X-Viewer-Account`, home page Sign in / Sign out (A-1 and P-5 web part, needed by P-7) | Claude | Done (2026-11-14): /sign-in and /admin/sign-in with a Continue button, same-origin session and sign-out routes, `__Host-ssd_acct` / `__Host-ssd_as` cookies |
 
 ## EPIC 7 — Admin console
 
-> **2026-11-14:** A-2 to A-11 were built together on `feature/admin-console` from one plan with the red tests already written: `.claude/plan-epic7-admin-console.md` (decisions §12). The admin half of W-1 is phase 0 of that plan.
+> **2026-11-14:** A-2 to A-11 were built together on `feature/admin-console` from one plan with the red tests already written: `.claude/plan-epic7-admin-console.md` (decisions §12). The admin half of W-1 had already landed on `main` (PR #71), so that phase was dropped.
 
 | Key | Task | Assignee | Done when |
 |---|---|---|---|

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import "@/styles/admin.css";
 import { Suspense } from "react";
 import { ConsoleNav } from "@/components/admin/shell/console-nav";
 import { requireAdmin, adminGet } from "@/lib/admin/server";
@@ -35,9 +36,9 @@ async function Console({ children }: { children: ReactNode }) {
     adminGet<DashboardData>(token, "/admin/dashboard?period=7d"),
   ]);
   return (
-    <>
+    <div className="admin">
       <ConsoleNav counts={{ waiting: waiting.waiting, accessRequests: dashboard.kpis.pendingAccessRequests }} admin={admin} nowIso={new Date().toISOString()} />
       <main className="adm-main">{children}</main>
-    </>
+    </div>
   );
 }

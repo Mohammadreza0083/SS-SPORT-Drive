@@ -3,8 +3,10 @@ using SsSport.Drive.Application.Abstractions.Email;
 using SsSport.Drive.Application.Abstractions.Persistence;
 using SsSport.Drive.Application.Abstractions.Security;
 using SsSport.Drive.Application.Abstractions.Web;
+using SsSport.Drive.Application.Links;
 using SsSport.Drive.Domain.Emails;
 using SsSport.Drive.Domain.Links;
+using SsSport.Drive.Domain.Players;
 
 namespace SsSport.Drive.Application.Emails;
 
@@ -38,6 +40,20 @@ public static class EmailContent
         $"Good news: the link you opened is now open for you.\n\nOpen it here:\n{link.AbsoluteUri}\n\n{SignOff}",
         "<div style=\"font-family:Arial,sans-serif;color:#111;max-width:480px\">" +
         "<p>Good news: the link you opened is now open for you.</p>" +
+        $"<p><a href=\"{WebUtility.HtmlEncode(link.AbsoluteUri)}\">Open the link</a></p>" +
+        $"<p style=\"color:#888\">{SignOff}</p></div>");
+
+    /// <summary>Builds the "your access is approved" email with the personal link (P-4).</summary>
+    /// <param name="to">The address.</param>
+    /// <param name="playerNames">The players the link shows, as text.</param>
+    /// <param name="link">The address of the personal link.</param>
+    /// <returns>The message.</returns>
+    public static EmailMessage AccessApproved(Domain.Primitives.EmailAddress to, string playerNames, Uri link) => new(
+        to,
+        "Your SS-SPORT Drive access is approved",
+        $"Your request was approved. You can now watch {playerNames}.\n\nOpen it here:\n{link.AbsoluteUri}\n\n{SignOff}",
+        "<div style=\"font-family:Arial,sans-serif;color:#111;max-width:480px\">" +
+        $"<p>Your request was approved. You can now watch {WebUtility.HtmlEncode(playerNames)}.</p>" +
         $"<p><a href=\"{WebUtility.HtmlEncode(link.AbsoluteUri)}\">Open the link</a></p>" +
         $"<p style=\"color:#888\">{SignOff}</p></div>");
 
@@ -105,5 +121,31 @@ public sealed class ForwardKeptComposer(IRepository<ShareLink, Guid> links, IWeb
         var linkId = EmailData.GuidOf(email, "shareLinkId");
         var link = linkId is { } id ? await links.GetByIdAsync(id, cancellationToken) : null;
         return link is null ? null : EmailContent.ForwardKept(email.To, webLinks.ViewerLink(link.Code.Value));
+    }
+}
+
+/// <summary>Composes the "your access is approved" email sent when an admin approves an access request (P-4).</summary>
+/// <param name="links">The links.</param>
+/// <param name="players">The players.</param>
+/// <param name="webLinks">Builds the address of the personal link.</param>
+public sealed class AccessApprovedComposer(IRepository<ShareLink, Guid> links, IRepository<Player, Guid> players, IWebLinks webLinks) : IEmailComposer
+{
+    /// <inheritdoc />
+    public string Template => EmailTemplates.AccessApproved;
+
+    /// <inheritdoc />
+    public async Task<EmailMessage?> ComposeAsync(OutgoingEmail email, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(email);
+        var linkId = EmailData.GuidOf(email, "shareLinkId");
+        var link = linkId is { } id ? await links.GetByIdAsync(id, cancellationToken) : null;
+        if (link is null)
+        {
+            return null;
+        }
+
+        var byId = (await players.ListAsync(new PlayersByIdsSpec(link.PlayerIds), cancellationToken)).ToDictionary(player => player.Id);
+        var names = string.Join(", ", link.PlayerIds.Where(byId.ContainsKey).Select(playerId => byId[playerId].Name?.Value ?? "a player"));
+        return EmailContent.AccessApproved(email.To, names, webLinks.ViewerLink(link.Code.Value));
     }
 }

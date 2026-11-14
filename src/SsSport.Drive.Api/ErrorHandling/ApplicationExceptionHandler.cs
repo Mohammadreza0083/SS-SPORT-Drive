@@ -68,6 +68,12 @@ public sealed class ApplicationExceptionHandler(IProblemDetailsService problemDe
                 Title = conflict.Message,
                 Extensions = { ["code"] = ConcurrencyConflictException.Code },
             },
+            ConflictException decided => new ProblemDetails
+            {
+                Status = StatusCodes.Status409Conflict,
+                Title = decided.Message,
+                Extensions = { ["code"] = decided.Code },
+            },
             ViewerVerificationRequiredException verification => new ProblemDetails
             {
                 Status = StatusCodes.Status401Unauthorized,

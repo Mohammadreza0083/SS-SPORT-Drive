@@ -123,7 +123,11 @@ Opening `/r/{code}` shows the gate card (the player's name, position and nationa
 
 `/` is the public home: visitors search published players by name and primary position, 24 to a page, searched and paged in SQL by the API (`GET /public/players`); the state lives in `?q=`, `?position=` and `?page=`, so the player QR code's `/?q=<name>` opens the search. A card leads to `/players/{slug}`, the locked page: the player's facts and the counts, with each video as a title, tag and length and each document as a title and page count. No media address, storage key or id is ever sent (a security test checks it). The photo is public (`/public/players/{slug}/photo`).
 
-Request access (`POST /public/access-code`, `POST /public/access-requests`): a visitor with any ordinary email gets a 6-digit code (the gate's rules: 10 minutes, 5 tries, 60 s between codes, 5 an hour), passes Cloudflare Turnstile (`Turnstile__SecretKey` on the API, `NEXT_PUBLIC_TURNSTILE_SITE_KEY` in the web build) and sends one pending request. Limits: 5 requests per email a day, 20 per player an hour, and small per-address budgets (`RateLimiting__PublicPermitsPerMinute`, `RateLimiting__AccessPermitsPerMinute`). A signed-in viewer (the P-5 account session, kept in the `__Host-ssd_acct` cookie and sent as `X-Viewer-Account`) asks in one click. The browser only calls same-origin `/api/public/*` routes and `POST /api/viewer/sign-out`. The admin inbox and the approval email come with P-4.
+Request access (`POST /public/access-code`, `POST /public/access-requests`): a visitor with any ordinary email gets a 6-digit code (the gate's rules: 10 minutes, 5 tries, 60 s between codes, 5 an hour), passes Cloudflare Turnstile (`Turnstile__SecretKey` on the API, `NEXT_PUBLIC_TURNSTILE_SITE_KEY` in the web build) and sends one pending request. Limits: 5 requests per email a day, 20 per player an hour, and small per-address budgets (`RateLimiting__PublicPermitsPerMinute`, `RateLimiting__AccessPermitsPerMinute`). A signed-in viewer (the P-5 account session, kept in the `__Host-ssd_acct` cookie and sent as `X-Viewer-Account`) asks in one click. The browser only calls same-origin `/api/public/*` routes and `POST /api/viewer/sign-out`.
+
+Access-request inbox (P-4): a new request alerts every active admin in the bot with **Approve (30 days)** / **Decline**. The console API lists them (`GET /admin/access-requests`, paged, `?status=pending|approved|declined`) and decides (`POST /admin/access-requests/{id}/approve`, optionally with another expiry of 7/30/90 days, other players and a note; `POST .../decline`). Approving makes a normal personal `/r/` link for the requester's email and emails it (Google SMTP); declining sends nothing. The first decision is final (409 `access_request.already_decided`) and both are audited. The console page for the inbox comes with Epic 7 (A-12).
+
+Sign-in (W-1, P-7): `/sign-in` (viewers) and `/admin/sign-in` (admins) email a one-time link. The link opens a page with a **Continue** button, which posts the token to `/api/auth/{viewer|admin}/session`; the session token is kept only in an `HttpOnly` `__Host-` cookie (`__Host-ssd_acct` 7 days for viewers, `__Host-ssd_as` 30 days for admins) and forwarded to the API as `X-Viewer-Account` / `X-Admin-Session`. The home page's **Sign in** button leads to `/sign-in`; `/admin` is a placeholder until the console exists.
 
 Forwards (L-3): an email that is not the recipient's is alerted to every admin in the bot with **Keep** / **Block**. The link stays closed for it ("Waiting for approval") until an admin keeps it; a block shuts the email out of that link. A daily job deletes expired codes, sessions and devices (L-2b).
 
@@ -260,14 +264,14 @@ SS-SPORT Drive/
 | 2 | Telegram bot & Mini App | 17 / 17 | ✅ Done (ingest is in, so T-6b can now be demoed on real files) |
 | 3 | Ingest, transcode & sync | 9 / 9 | ✅ Done (sync, copy, HLS + watermark, thumbnails, PDF pages, QR, cut-out and the approved player card; I-9 still to be checked on a real link once deployed) |
 | 4 | Viewer site & media protection | 10 / 10 | ✅ Done |
-| 5 | Personal links, OTP & tracking | 8 / 11 | 🚧 In progress (L-7 digest numbers, W-2 player heartbeats, W-3 retention left) |
-| 6 | Public search & access requests | 5 / 8 | 🚧 In progress (public home, locked page and request access live on real data; P-4 inbox, P-7 and W-1 sign-in pages left) |
-| 7 | Admin console | 11 / 11 | ✅ Done (dashboard, players with CSV, player page, waiting list, share links, viewers with the replay heatmap, users and audit log, jobs and email queue, settings; the access-request inbox is P-4) |
+| 5 | Personal links, OTP & tracking | 11 / 11 | ✅ Done (the digest now carries plays, minutes, top players and failed emails; the player reports heartbeats; a daily `retention-purge` job clears old emails, player events and sign-in links) |
+| 6 | Public search & access requests | 8 / 8 | ✅ Done (public home, locked page, request access, the admin inbox with bot buttons, and viewer and admin sign-in pages; the console page for the inbox is A-12) |
+| 7 | Admin console | 11 / 12 | 🚧 In progress (dashboard, players with CSV, player page, waiting list, share links, viewers with the replay heatmap, users and audit log, jobs and email queue and settings are done; A-12, the access-requests page, is left) |
 | 8 | Archive migration | 0 / 5 | ⏳ Planned |
 | 9 | Deploy & operations | 2 / 10 | 🚧 In progress (O-9 security baseline and O-10 pre-pentest hardening done; CI runs on every PR) |
 | 10 | Performance (k6) | 5 / 11 | 🚧 In progress (Mini App and viewer-link benchmarks done) |
 
-**Overall:** 87 of 123 tasks done (about 71 % by count). The open work is heavier than the done work (admin console, archive migration, deploy and the penetration test), so by effort the project is a little over half done.
+**Overall:** 102 of 125 tasks done (about 82 % by count). The open work is heavier than the done work (admin console, archive migration, deploy and the penetration test), so by effort the project is a little over half done.
 
 Work is tracked in Jira (project **SSD**); last synced 2026-11-14.
 
