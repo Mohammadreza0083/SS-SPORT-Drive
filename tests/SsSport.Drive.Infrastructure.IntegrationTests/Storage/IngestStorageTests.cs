@@ -135,6 +135,36 @@ public sealed class IngestStorageTests : IAsyncLifetime
         missing.Should().BeNull();
     }
 
+    /// <summary>
+    /// I-2c (found 2026-11-15): rclone uploads big files in parts, so their ETag is not the md5. rclone keeps the real md5
+    /// in the <c>md5chksum</c> metadata (base64), and the backup is searched by that too.
+    /// </summary>
+    /// <returns>A task that completes when the test is done.</returns>
+    [Fact]
+    public async Task A_multipart_backup_is_found_by_its_rclone_md5()
+    {
+        var bytes = Encoding.UTF8.GetBytes("a big highlight uploaded in parts");
+        const string backupKey = "Men Volleyball/SS-SPORT Vitaliy Papazov／ OPP/Highlights/HL.mp4";
+        await PutMultipartBackupAsync(backupKey, bytes, Convert.ToBase64String(MD5.HashData(bytes)));
+        var archive = new S3BackupArchive(Options.Create(_options));
+
+        var found = await archive.FindByMd5Async(Md5(bytes), TestContext.Current.CancellationToken);
+
+        found.Should().Be(backupKey);
+    }
+
+    /// <summary>A multipart object without rclone's md5 cannot be matched and is skipped.</summary>
+    /// <returns>A task that completes when the test is done.</returns>
+    [Fact]
+    public async Task A_multipart_backup_without_an_md5_is_skipped()
+    {
+        var bytes = Encoding.UTF8.GetBytes("uploaded in parts by someone else");
+        await PutMultipartBackupAsync("other/upload.mp4", bytes, md5Base64: null);
+        var archive = new S3BackupArchive(Options.Create(_options));
+
+        (await archive.FindByMd5Async(Md5(bytes), TestContext.Current.CancellationToken)).Should().BeNull();
+    }
+
     /// <summary>Copying from the backup fills the media bucket and leaves the backup untouched.</summary>
     /// <returns>A task that completes when the test is done.</returns>
     [Fact]
@@ -174,6 +204,28 @@ public sealed class IngestStorageTests : IAsyncLifetime
     /// <returns>A task that completes when the object is stored.</returns>
     private async Task PutBackupAsync(string key, byte[] bytes) =>
         await _admin.PutObjectAsync(new PutObjectRequest { BucketName = BackupBucket, Key = key, InputStream = new MemoryStream(bytes) }, TestContext.Current.CancellationToken);
+
+    /// <summary>Stores an object in the backup bucket with a multipart upload, as rclone does for big files.</summary>
+    /// <param name="key">The key.</param>
+    /// <param name="bytes">The bytes.</param>
+    /// <param name="md5Base64">rclone's <c>md5chksum</c> metadata, or <see langword="null"/> for none.</param>
+    /// <returns>A task that completes when the object is stored.</returns>
+    private async Task PutMultipartBackupAsync(string key, byte[] bytes, string? md5Base64)
+    {
+        var start = new InitiateMultipartUploadRequest { BucketName = BackupBucket, Key = key };
+        if (md5Base64 is not null)
+        {
+            start.Metadata.Add("md5chksum", md5Base64);
+        }
+
+        var upload = await _admin.InitiateMultipartUploadAsync(start, TestContext.Current.CancellationToken);
+        var part = await _admin.UploadPartAsync(
+            new UploadPartRequest { BucketName = BackupBucket, Key = key, UploadId = upload.UploadId, PartNumber = 1, InputStream = new MemoryStream(bytes) },
+            TestContext.Current.CancellationToken);
+        await _admin.CompleteMultipartUploadAsync(
+            new CompleteMultipartUploadRequest { BucketName = BackupBucket, Key = key, UploadId = upload.UploadId, PartETags = [new PartETag(1, part.ETag)] },
+            TestContext.Current.CancellationToken);
+    }
 
     /// <summary>Computes a lower-case md5.</summary>
     /// <param name="bytes">The bytes.</param>

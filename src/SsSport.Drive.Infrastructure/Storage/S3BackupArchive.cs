@@ -7,8 +7,8 @@ namespace SsSport.Drive.Infrastructure.Storage;
 
 /// <summary>
 /// <see cref="IBackupArchive"/> over the rclone backup bucket (decisions §4): the bucket is only read. Files are found by
-/// the md5 that S3 reports as the ETag of a single-part object, and copied into the media bucket inside storage, so no
-/// bytes travel through the app. The md5 index is rebuilt every 10 minutes. An empty <c>Storage__BackupBucket</c> turns it off.
+/// md5: the ETag of a single-part object, or, for an object rclone uploaded in parts, the base64 md5 it keeps in the
+/// <c>md5chksum</c> metadata (I-2c). Files are copied into the media bucket inside storage, so no bytes travel through the app. The md5 index is rebuilt every 10 minutes. An empty <c>Storage__BackupBucket</c> turns it off.
 /// </summary>
 public sealed class S3BackupArchive : IBackupArchive, IDisposable
 {
@@ -32,6 +32,9 @@ public sealed class S3BackupArchive : IBackupArchive, IDisposable
 
     /// <summary>The md5 → backup key index.</summary>
     private Dictionary<string, string> _index = [];
+
+    /// <summary>The md5 of each multipart object read from its metadata, by key and ETag, so it is read only once.</summary>
+    private Dictionary<(string Key, string ETag), string?> _multipartMd5 = [];
 
     /// <summary>When the index was built, or <see langword="null"/> before the first build.</summary>
     private DateTimeOffset? _builtAt;
@@ -145,6 +148,7 @@ public sealed class S3BackupArchive : IBackupArchive, IDisposable
             }
 
             var index = new Dictionary<string, string>(StringComparer.Ordinal);
+            var multipartMd5 = new Dictionary<(string Key, string ETag), string?>();
             var request = new ListObjectsV2Request { BucketName = _options.BackupBucket };
             ListObjectsV2Response page;
             do
@@ -153,11 +157,15 @@ public sealed class S3BackupArchive : IBackupArchive, IDisposable
                 foreach (var item in page.S3Objects ?? [])
                 {
                     var etag = item.ETag?.Trim('"').ToLowerInvariant();
-
-                    // Multipart objects have "{md5}-{parts}" ETags, which are not the file's md5.
                     if (etag is { Length: 32 } && !etag.Contains('-', StringComparison.Ordinal))
                     {
                         index.TryAdd(etag, item.Key);
+                    }
+                    else if (etag is not null && etag.Contains('-', StringComparison.Ordinal)
+                        && await MultipartMd5Async(item.Key, etag, multipartMd5, cancellationToken) is { } md5)
+                    {
+                        // Multipart objects have "{md5}-{parts}" ETags, which are not the file's md5.
+                        index.TryAdd(md5, item.Key);
                     }
                 }
 
@@ -166,6 +174,7 @@ public sealed class S3BackupArchive : IBackupArchive, IDisposable
             while (page.IsTruncated == true);
 
             _index = index;
+            _multipartMd5 = multipartMd5;
             _builtAt = DateTimeOffset.UtcNow;
             return index;
         }
@@ -173,5 +182,35 @@ public sealed class S3BackupArchive : IBackupArchive, IDisposable
         {
             _indexLock.Release();
         }
+    }
+
+    /// <summary>Reads the md5 rclone stored on a multipart object, reusing the last build's answer for the same ETag.</summary>
+    /// <param name="key">The object's key.</param>
+    /// <param name="etag">The object's multipart ETag.</param>
+    /// <param name="seen">The answers of this build, filled in.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <returns>The lower-case hex md5, or <see langword="null"/> when the object has none.</returns>
+    private async Task<string?> MultipartMd5Async(
+        string key, string etag, Dictionary<(string Key, string ETag), string?> seen, CancellationToken cancellationToken)
+    {
+        if (!_multipartMd5.TryGetValue((key, etag), out var md5))
+        {
+            var metadata = await _client.Value.GetObjectMetadataAsync(_options.BackupBucket, key, cancellationToken);
+            md5 = ParseRcloneMd5(metadata.Metadata["md5chksum"]);
+        }
+
+        seen[(key, etag)] = md5;
+        return md5;
+    }
+
+    /// <summary>Turns rclone's base64 <c>md5chksum</c> into a lower-case hex md5.</summary>
+    /// <param name="value">The metadata value, or <see langword="null"/>.</param>
+    /// <returns>The md5, or <see langword="null"/> when it is missing or not a 16-byte base64 value.</returns>
+    private static string? ParseRcloneMd5(string? value)
+    {
+        Span<byte> bytes = stackalloc byte[16];
+        return value is { Length: > 0 } && Convert.TryFromBase64String(value, bytes, out var written) && written == 16
+            ? Convert.ToHexStringLower(bytes)
+            : null;
     }
 }
