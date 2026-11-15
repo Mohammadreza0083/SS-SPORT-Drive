@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { createSignInClient } from "@/components/viewer/sign-in/sign-in-client";
 import { signInCopy } from "@/components/viewer/sign-in/copy";
 import { SignInPanel } from "@/components/viewer/sign-in/sign-in-panel";
 import { ACCOUNT_COOKIE } from "@/lib/viewer/public-server";
@@ -43,5 +42,5 @@ async function ViewerSignIn({ searchParams }: { searchParams: Promise<Record<str
     redirect("/");
   }
 
-  return <SignInPanel audience="viewer" token={token} error={first(params.error)} client={createSignInClient("viewer")} />;
+  return <SignInPanel audience="viewer" token={token} error={first(params.error)} />;
 }

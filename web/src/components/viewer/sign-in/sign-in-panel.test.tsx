@@ -121,3 +121,20 @@ describe("SignInPanel: opening the emailed link", () => {
     expect(container.querySelector("form")?.getAttribute("action")).toBe("/api/auth/admin/session");
   });
 });
+
+describe("SignInPanel (W-1): its own client", () => {
+  it("asks the site's own link route for its audience when no client is given", async () => {
+    const fetchStub = vi.fn().mockResolvedValue(new Response(null, { status: 202 }));
+    vi.stubGlobal("fetch", fetchStub);
+    try {
+      render(<SignInPanel audience="admin" />);
+
+      ask("owner@ss-sport.co");
+
+      expect(await screen.findByRole("heading", { name: "Check your email" })).toBeTruthy();
+      expect(fetchStub).toHaveBeenCalledWith("/api/auth/admin/link", expect.objectContaining({ method: "POST" }));
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
