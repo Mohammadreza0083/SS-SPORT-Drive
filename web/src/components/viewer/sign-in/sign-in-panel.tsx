@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import type { Audience } from "@/lib/auth/sign-in-server";
 import { BrandLogo } from "../brand-logo";
-import type { SignInClient } from "./sign-in-client";
+import { createSignInClient, type SignInClient } from "./sign-in-client";
 import { signInCopy } from "./copy";
 
 /** Props of {@link SignInPanel}. */
@@ -14,8 +14,11 @@ type SignInPanelProps = {
   token?: string;
   /** The `?error=` value of the address; only `expired` and `unavailable` have a message. */
   error?: string;
-  /** Asks the server for a link. */
-  client: SignInClient;
+  /**
+   * Asks the server for a link; tests pass a stub. Pages leave it out: a server component cannot hand functions to a
+   * client component, so the panel builds the real client in the browser.
+   */
+  client?: SignInClient;
 };
 
 /** A simple email shape check; the server validates for real. */
@@ -34,6 +37,7 @@ export function SignInPanel({ audience, token, error, client }: SignInPanelProps
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [linkClient] = useState(() => client ?? createSignInClient(audience));
   const title = audience === "admin" ? signInCopy.adminTitle : signInCopy.viewerTitle;
   const pageError = error ? signInCopy.errors[error] : undefined;
 
@@ -52,7 +56,7 @@ export function SignInPanel({ audience, token, error, client }: SignInPanelProps
     }
 
     setBusy(true);
-    const result = await client.requestLink(address);
+    const result = await linkClient.requestLink(address);
     setBusy(false);
     switch (result.kind) {
       case "sent":

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { createSignInClient } from "@/components/viewer/sign-in/sign-in-client";
 import { signInCopy } from "@/components/viewer/sign-in/copy";
 import { SignInPanel } from "@/components/viewer/sign-in/sign-in-panel";
 import { ADMIN_COOKIE, readAdmin } from "@/lib/auth/sign-in-server";
@@ -43,5 +42,5 @@ async function AdminSignIn({ searchParams }: { searchParams: Promise<Record<stri
     redirect("/admin");
   }
 
-  return <SignInPanel audience="admin" token={token} error={first(params.error)} client={createSignInClient("admin")} />;
+  return <SignInPanel audience="admin" token={token} error={first(params.error)} />;
 }

@@ -122,6 +122,7 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | P-7 | Home page login button; signed-in viewers request access without email/OTP | Claude | Done (2026-11-14): Sign in leads to /sign-in and the session routes exist (W-1) |
 | P-8 | Backend half of P-1, P-2, P-3 and P-7: public player search + locked player API, request-access API (OTP, Turnstile, rate limits), `/api/public/*` and sign-out routes, real `/players/{slug}` page, real Turnstile widget + CSP. The front-end of all four is done on sample data (`/design/home`, `/design/locked`) | Claude | Tests green; the public pages run on real data |
 | W-1 | Web part of sign-in: `/admin/sign-in` and `/sign-in` pages, same-origin routes that set `__Host-ssd_as` / `__Host-ssd_va` and forward `X-Admin-Session` / `X-Viewer-Account`, home page Sign in / Sign out (A-1 and P-5 web part, needed by P-7) | Claude | Done (2026-11-14): /sign-in and /admin/sign-in with a Continue button, same-origin session and sign-out routes, `__Host-ssd_acct` / `__Host-ssd_as` cookies |
+| W-1b | Fix the sign-in pages (found in the local full-flow test, 2026-11-15): the server pages passed a function `client` to the client `SignInPanel`, so the production render of `/admin/sign-in` and `/sign-in` failed; the panel now builds its own client | Claude | Done (2026-11-15): web tests, lint, typecheck and build green |
 
 ## EPIC 7 — Admin console
 
