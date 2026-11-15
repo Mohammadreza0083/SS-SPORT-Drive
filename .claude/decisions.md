@@ -520,6 +520,7 @@ Standing rules for every feature. Each control gets tests, and nothing is commit
   - `copy` never deletes, so files removed from Drive stay in the backup. This matches "never delete from R2".
   - Ingest (I-2) **reuses these backed-up originals** and only copies a file itself when the backup does not have it yet. The backup runs every 30 min and the app's poll every 10 min, so new files may not be there yet.
   - An `Asset` keeps the R2 key of its original. `Source = Archive` means it came from this backup.
+  - **Copying a file itself (I-2b fix, 2026-11-15):** the copy downloads the file's contents with `files.get?alt=media` (in the Shared Drive) and checks them against Drive's md5; the body is streamed after the headers, so the Drive client's 20-second timeout covers only the start of a large video. A 404 fails the asset ("no longer in Google Drive"); any other error status is an outage and the job is retried. The Workers image creates its scratch folder `/work` owned by the app user, because the jobs run as `$APP_UID` and an empty volume mounted there takes the folder's owner.
   - The app treats the backup bucket as **read-only** and never writes into it.
 
 - **Drive reader for ingest (I-1, owner-approved 2026-11-12):**
