@@ -22,5 +22,8 @@ FROM mcr.microsoft.com/dotnet/runtime:10.0 AS runtime
 RUN apt-get update     && apt-get install -y --no-install-recommends ffmpeg     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=build /app ./
+# Scratch space for ingest (Media__WorkPath). It must belong to the app user: an empty named volume mounted
+# here takes this folder's owner, and the jobs run as $APP_UID, not root.
+RUN mkdir -p /work && chown "$APP_UID:$APP_UID" /work
 USER $APP_UID
 ENTRYPOINT ["dotnet", "SsSport.Drive.Workers.dll"]

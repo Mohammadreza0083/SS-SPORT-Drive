@@ -25,6 +25,10 @@
     <PackageReference Include="Google.Apis.Drive.v3" />
   </ItemGroup>
   <ItemGroup>
+    <!-- The Drive client's test seam (an injected HTTP handler) is internal. -->
+    <InternalsVisibleTo Include="SsSport.Drive.Infrastructure.IntegrationTests" />
+  </ItemGroup>
+  <ItemGroup>
     <!-- Brand images and the watermark / card font, read at run time by the media adapters. -->
     <EmbeddedResource Include="Media\Assets\*" />
   </ItemGroup>
