@@ -264,3 +264,20 @@ export type SettingsData = {
   timeZone: string;
   updatedAt: string;
 };
+
+/** The personal link an approved access request made. */
+export type AccessRequestLink = { id: string; code: string; path: string; expiresAt: string | null };
+
+/** One access request of the inbox (`GET /admin/access-requests`, P-4). */
+export type AccessRequestRow = {
+  id: string;
+  player: { id: string; name: string | null; slug: string | null };
+  email: string;
+  about: string;
+  source: "EmailCode" | "SignedIn" | string;
+  status: "Pending" | "Approved" | "Declined" | string;
+  createdAt: string;
+  decidedAt: string | null;
+  decidedBy: string | null;
+  shareLink: AccessRequestLink | null;
+};

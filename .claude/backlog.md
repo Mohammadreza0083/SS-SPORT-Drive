@@ -126,10 +126,11 @@ Every Claude task follows the working agreement: explain → approve → tests �
 ## EPIC 7 — Admin console
 
 > **2026-11-14:** A-2 to A-11 were built together on `feature/admin-console` from one plan with the red tests already written: `.claude/plan-epic7-admin-console.md` (decisions §12). The admin half of W-1 had already landed on `main` (PR #71), so that phase was dropped.
+> **2026-11-15:** A-12, the access-requests page, finished the epic on `feature/admin-access-requests`.
 
 | Key | Task | Assignee | Done when |
 |---|---|---|---|
-| A-1 | Admin login by email magic link (7-day session) + CSRF | Claude | Tests green |
+| A-1 | Admin login by email magic link (7-day session) + CSRF | Claude | Done (2026-11-14): magic link, 30-day `__Host-ssd_as` session (owner changed 7 to 30 days on 2026-11-13) and the same-origin CSRF checks (W-1, PR #71) |
 | A-2 | Dashboard (KPIs, live activity, needs attention, top players) | Claude | Done (2026-11-14): API and web tests green; the look still needs the owner's review against the canvas (Playwright baselines not added yet) |
 | A-3 | Players list + search + filters in URL + CSV export | Claude | Done (2026-11-14): API and web tests green; the look still needs the owner's review against the canvas (Playwright baselines not added yet) |
 | A-4 | Player detail: files (order, hero, visibility, retry), folders, links | Claude | Done (2026-11-14): API and web tests green; the look still needs the owner's review against the canvas (Playwright baselines not added yet) |
@@ -140,6 +141,7 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | A-9 | Sync & jobs + Email queue pages | Claude | Done (2026-11-14): API and web tests green; the look still needs the owner's review against the canvas (Playwright baselines not added yet) |
 | A-10 | Settings (contact email, digest time, quiet hours, link expiry default) | Claude | Done (2026-11-14): API and web tests green; the look still needs the owner's review against the canvas (Playwright baselines not added yet) |
 | A-11 | Viewer access & watch log: per viewer players accessible, plays, minutes, last seen, expiry, per-video detail | Claude | Done (2026-11-14): API and web tests green; the look still needs the owner's review against the canvas (Playwright baselines not added yet) |
+| A-12 | Access-requests page in the console (canvas `AdminRequests`) on P-4's API: Pending / Approved / Declined tabs with counts, paged list, detail with the message, approve (players to grant, 7/30/90 days, note) or decline | Claude | Done (2026-11-15): web tests green; the look still needs the owner's review against the canvas (Playwright baselines not added yet) |
 
 ## EPIC 8 — Archive migration
 | Key | Task | Assignee | Done when |
