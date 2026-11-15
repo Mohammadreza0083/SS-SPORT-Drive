@@ -74,6 +74,7 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | I-1 | Drive reader: recursive listing of `SS-SPORT <Name>` folders and subfolders | Claude | Tests on fixtures |
 | I-2 | Copy originals to R2 (reuse by md5) | Claude | Tests green |
 | I-2b | Fix copying originals (found testing the whole flow, 2026-11-15): download contents with `alt=media`, not the metadata, streamed so big videos are not cut off; `/work` owned by the app user in the Workers image | Claude | Done (2026-11-15): tests green, fresh-volume check |
+| I-2c | Backup index finds big videos rclone uploaded in parts (found testing the whole flow, 2026-11-15): their ETag is not the md5, so the md5 is read from rclone's `md5chksum` metadata, once per key and ETag | Claude | Done (2026-11-15): tests green |
 | I-3 | ffmpeg HLS 360/720/1080, 6 s segments, burned-in watermark (logo top-left, slogan bottom-right) | Claude | Sample approved (S-11) |
 | I-4 | Thumbnails, sprite, poster; PDF page count + preview images | Claude | Tests green |
 | I-5 | Player card render (Barlow Condensed name, brand template) | Both | Card approved |
