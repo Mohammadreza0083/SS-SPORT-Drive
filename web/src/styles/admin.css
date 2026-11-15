@@ -182,6 +182,27 @@ textarea.adm-input { padding: 10px 14px; resize: vertical; }
 
 .admin .adm-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 
+/* Access requests (A-12, canvas AdminRequests): the list on the left, the open request on the right. */
+.adm-req-layout { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 22px; align-items: flex-start; }
+.adm-req-list { flex: 1 1 340px; padding: 0; overflow: hidden; }
+.admin a.adm-req-row { display: block; padding: 16px 18px; border-bottom: 1px solid #1A1D24; color: inherit; text-decoration: none; transition: background .2s; }
+.admin a.adm-req-row:hover { background: #12151c; color: inherit; }
+.admin a.adm-req-row[aria-current="true"] { background: rgba(204,0,0,.12); box-shadow: inset 3px 0 0 var(--ss-red); }
+.adm-req-row-top { display: flex; justify-content: space-between; gap: 10px; }
+.adm-req-row-email { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.adm-req-detail { flex: 999 1 520px; padding: 24px; animation: adm-req-in .45s cubic-bezier(.2,.9,.2,1) both; }
+@keyframes adm-req-in { from { opacity: 0; transform: translateX(26px); } to { opacity: 1; transform: none; } }
+.adm-req-who { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
+.adm-req-avatar { width: 64px; height: 64px; border-radius: 50%; background: #1a1d24; display: grid; place-items: center; font-weight: 700; font-size: 20px; color: #FF8A8A; flex: none; }
+.adm-req-email { font-size: 20px; font-weight: 700; letter-spacing: -.02em; overflow-wrap: anywhere; }
+.adm-req-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 20px; }
+.adm-req-fact { padding: 14px; border-radius: 14px; background: #0B0D12; border: 1px solid var(--ss-border); }
+.adm-req-message { margin: 8px 0 0; padding: 14px 16px; border-radius: 12px; background: #12151C; border-left: 3px solid var(--ss-red); font-size: 15px; line-height: 1.6; color: #E3E6EC; white-space: pre-wrap; overflow-wrap: anywhere; }
+.adm-req-outcome { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-top: 22px; padding: 16px; border-radius: 14px; font-size: 14px; line-height: 1.5; }
+.adm-req-outcome-ok { background: rgba(31,122,63,.12); border: 1px solid rgba(74,222,128,.3); }
+.adm-req-outcome-ok .adm-done-mark { width: 40px; height: 40px; margin: 0; font-size: 18px; flex: none; }
+.adm-req-outcome-no { background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.3); }
+
 @media (prefers-reduced-motion: reduce) {
   .admin *, .admin *::before, .admin *::after { animation: none !important; transition: none !important; }
 }
