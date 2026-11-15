@@ -86,6 +86,7 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | Key | Task | Assignee | Done when |
 |---|---|---|---|
 | V-1 | Next.js viewer app shell, fonts (Barlow Condensed / Geist / Geist Mono), brand tokens, motion system | Claude | Matches canvas |
+| V-1b | Web image ships `public/` (found testing the whole flow, 2026-11-15): the logo and sample images were 404 in every Docker run | Claude | Done (2026-11-15): image built, `/brand/*` and `/samples/*` answer 200 |
 | V-2 | Player page (desktop / tablet / mobile) per canvas | Claude | Playwright visual pass |
 | V-2b | Player page on real data: viewer API for a link's players, assets and PDFs behind the viewer session; `/r/{code}` renders it after the gate (found while planning L-2) | Claude | Tests green; the gate opens the link's real players |
 | V-3 | Media Chrome + hls-video-element player: speed, quality, frame step, no download, no context menu | Claude | Demo |
