@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using SsSport.Drive.Application.Abstractions.Email;
 using SsSport.Drive.Application.Abstractions.Persistence;
@@ -56,6 +57,35 @@ public static class EmailContent
         $"<p>Your request was approved. You can now watch {WebUtility.HtmlEncode(playerNames)}.</p>" +
         $"<p><a href=\"{WebUtility.HtmlEncode(link.AbsoluteUri)}\">Open the link</a></p>" +
         $"<p style=\"color:#888\">{SignOff}</p></div>");
+
+    /// <summary>Builds the email of a link made in the console (A-6b).</summary>
+    /// <param name="to">The address.</param>
+    /// <param name="recipientName">The recipient's name.</param>
+    /// <param name="playerNames">The players the link shows, as text.</param>
+    /// <param name="note">The admin's personal note, or <see langword="null"/>.</param>
+    /// <param name="link">The address of the personal link.</param>
+    /// <param name="expiresAt">When the link stops opening, or <see langword="null"/>.</param>
+    /// <returns>The message.</returns>
+    public static EmailMessage LinkShared(
+        Domain.Primitives.EmailAddress to, string recipientName, string playerNames, string? note, Uri link, DateTimeOffset? expiresAt)
+    {
+        var hasNote = !string.IsNullOrWhiteSpace(note);
+        var until = expiresAt is { } at ? at.UtcDateTime.ToString("d MMMM yyyy", CultureInfo.InvariantCulture) : null;
+        var text = $"Hello {recipientName},\n\nSS-SPORT shared {playerNames} with you on SS-SPORT Drive.\n\n"
+            + (hasNote ? $"{note!.Trim()}\n\n" : string.Empty)
+            + $"Open it here:\n{link.AbsoluteUri}\n\n"
+            + (until is null ? string.Empty : $"The link works until {until}. ")
+            + $"A new device confirms your email with a code first.\n\n{SignOff}";
+        var html = "<div style=\"font-family:Arial,sans-serif;color:#111;max-width:480px\">"
+            + $"<p>Hello {WebUtility.HtmlEncode(recipientName)},</p>"
+            + $"<p>SS-SPORT shared {WebUtility.HtmlEncode(playerNames)} with you on SS-SPORT Drive.</p>"
+            + (hasNote ? $"<blockquote style=\"margin:16px 0;padding-left:12px;border-left:3px solid #e10600\">{WebUtility.HtmlEncode(note!.Trim())}</blockquote>" : string.Empty)
+            + $"<p><a href=\"{WebUtility.HtmlEncode(link.AbsoluteUri)}\">Open the link</a></p>"
+            + (until is null ? string.Empty : $"<p>The link works until {WebUtility.HtmlEncode(until)}.</p>")
+            + "<p>A new device confirms your email with a code first.</p>"
+            + $"<p style=\"color:#888\">{SignOff}</p></div>";
+        return new EmailMessage(to, $"SS-SPORT shared {playerNames} with you", text, html);
+    }
 
     /// <summary>Builds a sign-in link email.</summary>
     /// <param name="to">The address.</param>
@@ -147,5 +177,37 @@ public sealed class AccessApprovedComposer(IRepository<ShareLink, Guid> links, I
         var byId = (await players.ListAsync(new PlayersByIdsSpec(link.PlayerIds), cancellationToken)).ToDictionary(player => player.Id);
         var names = string.Join(", ", link.PlayerIds.Where(byId.ContainsKey).Select(playerId => byId[playerId].Name?.Value ?? "a player"));
         return EmailContent.AccessApproved(email.To, names, webLinks.ViewerLink(link.Code.Value));
+    }
+}
+
+/// <summary>Composes the email of a link made in the console's New share link modal (A-6b).</summary>
+/// <param name="links">The links.</param>
+/// <param name="recipients">The recipients.</param>
+/// <param name="players">The players.</param>
+/// <param name="webLinks">Builds the address of the personal link.</param>
+public sealed class LinkSharedComposer(
+    IRepository<ShareLink, Guid> links,
+    IRepository<Recipient, Guid> recipients,
+    IRepository<Player, Guid> players,
+    IWebLinks webLinks) : IEmailComposer
+{
+    /// <inheritdoc />
+    public string Template => EmailTemplates.LinkShared;
+
+    /// <inheritdoc />
+    public async Task<EmailMessage?> ComposeAsync(OutgoingEmail email, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(email);
+        var linkId = EmailData.GuidOf(email, "shareLinkId");
+        var link = linkId is { } id ? await links.GetByIdAsync(id, cancellationToken) : null;
+        if (link is null)
+        {
+            return null;
+        }
+
+        var recipient = await recipients.GetByIdAsync(link.RecipientId, cancellationToken);
+        var byId = (await players.ListAsync(new PlayersByIdsSpec(link.PlayerIds), cancellationToken)).ToDictionary(player => player.Id);
+        var names = string.Join(", ", link.PlayerIds.Where(byId.ContainsKey).Select(playerId => byId[playerId].Name?.Value ?? "a player"));
+        return EmailContent.LinkShared(email.To, recipient?.Name ?? "there", names, link.Note, webLinks.ViewerLink(link.Code.Value), link.ExpiresAt);
     }
 }

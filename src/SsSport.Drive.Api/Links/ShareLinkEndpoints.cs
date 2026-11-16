@@ -131,7 +131,8 @@ public static class ShareLinkEndpoints
                 "`Personal` link, several a `Roster`. Send either `recipientId` (an existing recipient) or a new `recipient` (name, optional " +
                 "organisation and country, one to five emails). `expiresInDays` is 7, 30 or 90 and is required: every link expires. " +
                 "Switches default to verify new devices, allow forwarding to any email, no open notifications. The code is six random letters and " +
-                "digits without look-alikes. Audited as `share_link.created`. 400 for no or both recipients, no players, a missing or other expiry or an unknown " +
+                "digits without look-alikes. Audited as `share_link.created`. The link is emailed to every address of the recipient " +
+                "(template `link.shared`, through the email queue, with the players, the note and the expiry date). 400 for no or both recipients, no players, a missing or other expiry or an unknown " +
                 "scope; 404 for an unknown recipient or player; 422 `share_link.player_not_published`, `share_link.too_many_players`, " +
                 "`share_link.note_too_long`, `recipient.name_required`, `recipient.name_too_long`, `recipient.organisation_too_long`, " +
                 "`recipient.email_required`, `recipient.too_many_emails`, `email.invalid`, `player.nationality_invalid`.")

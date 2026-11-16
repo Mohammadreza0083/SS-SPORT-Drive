@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using SsSport.Drive.Api.IntegrationTests.Support;
+using SsSport.Drive.Application.Abstractions.Email;
 using SsSport.Drive.Domain.Emails;
 
 namespace SsSport.Drive.Api.IntegrationTests.Emails;
@@ -34,14 +35,14 @@ public sealed class EmailQueueEndpointTests : IAsyncLifetime
         using var response = await _host.SendAsync(HttpMethod.Post, $"/links/{code}/email-code", new { email = BackendTestHost.RecipientEmail });
 
         response.IsSuccessStatusCode.Should().BeTrue();
-        var mail = _host.Resend.Sent.Should().ContainSingle().Subject;
+        var mail = _host.Resend.Sent.Where(IsGateCode).Should().ContainSingle().Subject;
         mail.To.Value.Should().Be(BackendTestHost.RecipientEmail);
         var sentCode = RecordingEmailTransport.CodeIn(mail);
         sentCode.Should().MatchRegex(@"^\d{6}$");
-        _host.Brevo.Sent.Should().BeEmpty();
-        _host.GoogleSmtp.Sent.Should().BeEmpty();
+        _host.Brevo.Sent.Where(IsGateCode).Should().BeEmpty();
+        _host.GoogleSmtp.Sent.Where(IsGateCode).Should().BeEmpty();
 
-        var row = await _host.QueryAsync(db => db.Set<OutgoingEmail>().AsNoTracking().SingleAsync(TestContext.Current.CancellationToken));
+        var row = await _host.QueryAsync(db => db.Set<OutgoingEmail>().AsNoTracking().SingleAsync(email => email.Template == "gate.code", TestContext.Current.CancellationToken));
         row.Kind.Should().Be(EmailKind.Code);
         row.Template.Should().Be("gate.code");
         row.Status.Should().Be(EmailStatus.Sent);
@@ -61,8 +62,8 @@ public sealed class EmailQueueEndpointTests : IAsyncLifetime
         using var response = await _host.SendAsync(HttpMethod.Post, $"/links/{code}/email-code", new { email = BackendTestHost.RecipientEmail });
 
         response.IsSuccessStatusCode.Should().BeTrue();
-        _host.Brevo.Sent.Should().ContainSingle();
-        var row = await _host.QueryAsync(db => db.Set<OutgoingEmail>().AsNoTracking().SingleAsync(TestContext.Current.CancellationToken));
+        _host.Brevo.Sent.Where(IsGateCode).Should().ContainSingle();
+        var row = await _host.QueryAsync(db => db.Set<OutgoingEmail>().AsNoTracking().SingleAsync(email => email.Template == "gate.code", TestContext.Current.CancellationToken));
         row.Status.Should().Be(EmailStatus.Sent);
         row.Provider.Should().Be("Brevo");
     }
@@ -77,7 +78,7 @@ public sealed class EmailQueueEndpointTests : IAsyncLifetime
         {
         }
 
-        var sentCode = RecordingEmailTransport.CodeIn(_host.Resend.Sent.Single());
+        var sentCode = RecordingEmailTransport.CodeIn(_host.Resend.Sent.Single(IsGateCode));
         using var verify = await _host.SendAsync(HttpMethod.Post, $"/links/{code}/verify", new { email = BackendTestHost.RecipientEmail, code = sentCode });
 
         verify.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -167,4 +168,9 @@ public sealed class EmailQueueEndpointTests : IAsyncLifetime
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
+
+    /// <summary>Tells the gate code email from others, such as the email of the new link itself (A-6b).</summary>
+    /// <param name="mail">The email.</param>
+    /// <returns><see langword="true"/> for a gate code email.</returns>
+    private static bool IsGateCode(EmailMessage mail) => mail.Subject == "Your SS-SPORT Drive code";
 }

@@ -30,6 +30,9 @@ public static class EmailTemplates
     /// <summary>The "your access is approved" email with the new personal link (P-4).</summary>
     public const string AccessApproved = "access.approved";
 
+    /// <summary>A link made in the console's New share link modal, sent to the recipient (A-6b).</summary>
+    public const string LinkShared = "link.shared";
+
     /// <summary>The admin console's sign-in link (A-1).</summary>
     public const string AdminSignIn = "auth.admin_sign_in";
 
