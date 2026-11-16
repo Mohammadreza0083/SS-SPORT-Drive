@@ -14,7 +14,7 @@ Labels: `owner-owner` = the owner's task, `owner-claude` = Claude's, `owner-both
 | 4 Viewer site & media protection | SSD-5 | V-1 SSD-50 · V-2 SSD-56 · V-2b SSD-125 · V-3 SSD-51 · V-4 SSD-57 · V-5a SSD-52 · V-5b SSD-118 · V-6 SSD-53 · V-7 SSD-54 · V-8 SSD-101 |
 | 5 Personal links, OTP & tracking | SSD-6 | L-1 SSD-55 · L-2 SSD-58 · L-2b SSD-127 · L-3 SSD-59 · L-3b SSD-130 · L-4 SSD-60 · L-5 SSD-61 · L-6 SSD-62 · L-7 SSD-63 · W-2 SSD-134 · W-3 SSD-135 |
 | 6 Public search & access requests | SSD-7 | P-1 SSD-64 · P-2 SSD-65 · P-3 SSD-66 · P-4 SSD-67 · P-5 SSD-96 · P-7 SSD-99 · P-8 SSD-131 · W-1 SSD-133 · W-1b SSD-140 · ~~P-6 SSD-97~~ (dropped: CEO decided no viewer dashboard) |
-| 7 Admin console | SSD-8 | A-1 SSD-68 · A-2 SSD-69 · A-3 SSD-70 · A-4 SSD-71 · A-5 SSD-72 · A-6 SSD-73 · A-7 SSD-74 · A-8 SSD-75 · A-9 SSD-76 · A-10 SSD-77 · A-11 SSD-98 · A-12 SSD-137 |
+| 7 Admin console | SSD-8 | A-1 SSD-68 · A-2 SSD-69 · A-3 SSD-70 · A-4 SSD-71 · A-5 SSD-72 · A-6 SSD-73 · A-6b SSD-142 · A-7 SSD-74 · A-8 SSD-75 · A-9 SSD-76 · A-10 SSD-77 · A-11 SSD-98 · A-12 SSD-137 |
 | 8 Archive migration | SSD-9 | M-1 SSD-78 · M-2 SSD-79 · M-3 SSD-80 · M-4 SSD-87 · M-5 SSD-81 |
 | 9 Deploy & operations | SSD-10 | O-1 SSD-82 · O-2 SSD-83 · O-3 SSD-84 · O-4 SSD-85 · O-5 SSD-86 · O-6 SSD-88 · O-7 SSD-89 · O-8 SSD-105 · O-9 SSD-123 · O-10 SSD-136 |
 | 10 Performance (k6) | SSD-11 | K-1 SSD-90 · K-2 SSD-91 · K-3 SSD-92 · K-4 SSD-93 · K-5 SSD-94 · K-6 SSD-111 · K-7 SSD-112 · K-8 SSD-114 · K-9 SSD-119 · K-10 SSD-128 · K-11 SSD-129 |

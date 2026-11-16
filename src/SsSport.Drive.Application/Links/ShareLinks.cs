@@ -1,3 +1,4 @@
+using System.Globalization;
 using FluentValidation;
 using SsSport.Drive.Application.Abstractions.Authentication;
 using SsSport.Drive.Application.Abstractions.Authorization;
@@ -8,7 +9,9 @@ using SsSport.Drive.Application.Exceptions;
 using SsSport.Drive.Application.MiniApp;
 using SsSport.Drive.Application.Paging;
 using SsSport.Drive.Application.Validation;
+using SsSport.Drive.Application.Emails;
 using SsSport.Drive.Domain.Audit;
+using SsSport.Drive.Domain.Emails;
 using SsSport.Drive.Domain.Links;
 using SsSport.Drive.Domain.Players;
 using SsSport.Drive.Domain.Primitives;
@@ -213,16 +216,18 @@ public sealed class CreateShareLinkCommandValidator : AbstractValidator<CreateSh
 /// <param name="issuer">Draws the code, creates the link and audits it.</param>
 /// <param name="recipients">The recipients.</param>
 /// <param name="players">The players.</param>
+/// <param name="emails">The email queue: the new link is emailed to every address of the recipient (A-6b).</param>
 /// <param name="currentUser">The caller.</param>
 /// <param name="timeProvider">The clock.</param>
 public sealed class CreateShareLinkCommandHandler(
     ShareLinkIssuer issuer,
     IRepository<Recipient, Guid> recipients,
     IRepository<Player, Guid> players,
+    IRepository<OutgoingEmail, Guid> emails,
     ICurrentUser currentUser,
     TimeProvider timeProvider) : ICommandHandler<CreateShareLinkCommand, ShareLinkDto>
 {
-    /// <summary>Finds or creates the recipient, loads the players, draws an unused code, then creates and audits the link.</summary>
+    /// <summary>Finds or creates the recipient, loads the players, draws an unused code, creates and audits the link, and queues its email.</summary>
     /// <param name="request">The command.</param>
     /// <param name="cancellationToken">Cancels the work.</param>
     /// <returns>The new link.</returns>
@@ -256,6 +261,12 @@ public sealed class CreateShareLinkCommandHandler(
             ShareLinkRules.ActorId(currentUser),
             now,
             cancellationToken);
+        var data = string.Create(CultureInfo.InvariantCulture, $$"""{"shareLinkId":"{{link.Id:D}}"}""");
+        foreach (var address in recipient.Emails)
+        {
+            emails.Add(OutgoingEmail.Queue(EmailKind.General, EmailTemplates.LinkShared, address, data, now));
+        }
+
         return link.ToDto(recipient, found, now);
     }
 

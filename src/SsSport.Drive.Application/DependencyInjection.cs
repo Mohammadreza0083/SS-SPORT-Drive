@@ -46,6 +46,7 @@ public static class DependencyInjection
         services.AddScoped<IEmailComposer, AccessCodeComposer>();
         services.AddScoped<IEmailComposer, ForwardKeptComposer>();
         services.AddScoped<IEmailComposer, AccessApprovedComposer>();
+        services.AddScoped<IEmailComposer, LinkSharedComposer>();
         services.AddScoped<ShareLinkIssuer>();
         services.AddScoped<AccessRequestDecider>();
         services.AddScoped<IEmailComposer>(provider => ActivatorUtilities.CreateInstance<SignInEmailComposer>(provider, SignInAudience.Admin));
