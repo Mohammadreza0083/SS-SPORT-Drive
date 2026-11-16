@@ -22,6 +22,16 @@ public enum PlayerStatus
     Published,
 }
 
+/// <summary>Where a player came from; archive players are processed after the team's new uploads (M-4).</summary>
+public enum PlayerOrigin
+{
+    /// <summary>Added by the team (the bot, the Mini App or the console).</summary>
+    Team,
+
+    /// <summary>Imported from the Shared Drive archive (M-2), without an analyst.</summary>
+    Archive,
+}
+
 /// <summary>A detail a player needs before it can be published.</summary>
 public enum PlayerDetail
 {
@@ -98,6 +108,9 @@ public sealed class Player : AggregateRoot<Guid>
     /// <summary>Gets the photo, or <see langword="null"/> while missing.</summary>
     public PlayerPhoto? Photo { get; private set; }
 
+    /// <summary>Gets where the player came from.</summary>
+    public PlayerOrigin Origin { get; private set; } = PlayerOrigin.Team;
+
     /// <summary>Gets the analyst (team user) responsible for the player, or <see langword="null"/> for archive players.</summary>
     public Guid? AnalystId { get; private set; }
 
@@ -134,6 +147,20 @@ public sealed class Player : AggregateRoot<Guid>
         EnsureDefined(category);
         var player = new Player(Guid.CreateVersion7(createdAt), category, createdAt);
         player.RaiseDomainEvent(new PlayerCreated(player.Id));
+        return player;
+    }
+
+    /// <summary>
+    /// Creates a player imported from the archive (M-2): only its category, no analyst, on the waiting list. Raises
+    /// <see cref="PlayerCreated"/>.
+    /// </summary>
+    /// <param name="category">Men or women, from the archive's category folder.</param>
+    /// <param name="createdAt">The current time (UTC); also seeds the time-ordered id.</param>
+    /// <returns>The new player.</returns>
+    public static Player CreateFromArchive(PlayerCategory category, DateTimeOffset createdAt)
+    {
+        var player = Create(category, createdAt);
+        player.Origin = PlayerOrigin.Archive;
         return player;
     }
 

@@ -1001,3 +1001,23 @@ About 200 files in total. Ingest (EPIC 3) must handle all of the following.
   - **Dropped from the canvas:** the requester's country and device (not collected, privacy) and the History card (the API has no per-requester history; this is a follow-up if the owner wants it).
   - **After a decision** the outcome shows in place. "Next request" reloads the pending tab, so the counts and the navigation badge follow.
   - The requester's message is shown as plain text (React escapes it), keeping its line breaks.
+
+## 13. Archive migration (Epic 8: M-1 to M-4; owner, 2026-11-16)
+
+- **One branch.** The owner asked for every Epic 8 task together (2026-11-15) and approved the plan on 2026-11-16 ("start and finish Epic 8"). M-1 to M-4 are built on `feature/archive-migration`, cut from `main` after I-2c (backup md5 for multipart uploads), which M-1's backup match depends on. M-5 (filling in Volleybox links and photos) is the owner's.
+- **The plan's proposed values, approved with the plan:** import is by hand (a scan only suggests); one archive media worker; the CSV columns below; the scan is started by an admin from the console, never on a timer (the 10-minute poll, I-6, keeps linked folders in step).
+- **Scan (M-1):**
+  - An admin starts it (`POST /admin/archive/scans`, audited `archive.scan_started`); a background job (`ScanArchive` on the `ingest` queue) walks the Shared Drive's root. Only `Men Volleyball` and `Women Volleyball` (any case) are category folders; every folder inside one is a player folder, listed with the I-1 lister (same limits). Loose files at the root and in category folders are counted as left out.
+  - Each usable file's md5 is looked up in the R2 backup (`IBackupArchive`); a file Drive gives no md5 for counts as not in the backup.
+  - **Read-only:** nothing is written to Drive or the backup. One scan runs at a time (409 `archive.scan_running`); a scan running for over two hours counts as crashed. A Drive outage fails the scan with its reason and keeps no rows.
+  - A scan keeps its totals (`archive_scans`) and a row per player folder (`archive_folders`): path, category, files by kind, size, in/not in the backup, left out, cut at the listing limit, and whether the folder is `New`, `Linked` (already linked to a player before the scan) or `Imported`. The console shows the newest completed scan.
+- **Suggestions and import (M-2):**
+  - The folder name gives a name and up to two positions (§4a spellings: `SS-SPORT `, `SS-SPORT - `, `SS-Sport `, `SS-SPRT `; a full-width or plain slash; `Setter` and `Libero`; `OH-OPP` with the first one primary). A name the player rules refuse (another script, digits) is not suggested.
+  - `POST /admin/archive/import` takes 1 to 100 rows. Each new folder becomes a **waiting archive player** (`players.origin = Archive`, no analyst) with its category and the suggestions, and its Drive folder is linked, so the normal sync lists its files. Audited `archive.imported` per player. Refused one by one: `archive.folder_not_found`, `archive.folder_not_new`, `drive_folder.taken`. Nothing is published or transcoded until an admin publishes (§5).
+- **CSV round trip (M-3):**
+  - `GET /admin/archive/waiting.csv`: every waiting archive player, oldest first, streamed page by page: `Id, Folder, Category, Name, Nationality, Positions, Volleybox` (positions as codes joined by `/`). Formula-looking cells get a leading apostrophe.
+  - `POST /admin/archive/waiting.csv` takes the edited file as JSON text (`csv`, at most 1 MB and 2000 rows, columns found by header name, `Id` required), so the console's CSRF rule (JSON bodies only) holds. Each row is checked on its own with the player rules and changes nothing if refused; good rows are saved; an empty cell leaves a detail as it is. Only waiting archive players change; nothing is published; photos never come by CSV. One `archive.csv_imported` audit entry with the counts.
+- **Throttled transcode lane (M-4):**
+  - An archive player's copy and processing run on their own queues: `ingest-archive` (one worker) and `media-archive` (`Media__ArchiveWorkers`, default 1, 0 to 2; 0 pauses the archive). The QR code and the card stay on `media`.
+  - **New uploads first:** before an archive media job starts, it checks the `media` queue; while team files wait, it puts itself back a minute later. A transcode already running is not stopped.
+- **Console:** a new **Archive** page after the waiting list (not on the canvas; built in the console's style, waits for the owner's review): the scan status and totals, the report with state filters, checkboxes to import new folders, and the CSV download and upload.

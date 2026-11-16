@@ -23,6 +23,12 @@ public sealed record MediaOptions
     /// <summary>Gets how many media jobs (ffmpeg, PDF, images) run at once (<c>Media__Workers</c>), 1 or 2.</summary>
     public int Workers { get; init; } = 1;
 
+    /// <summary>
+    /// Gets how many archive players' media jobs run at once (<c>Media__ArchiveWorkers</c>, M-4), 0 to 2. They start only while
+    /// no team file waits; 0 pauses the archive.
+    /// </summary>
+    public int ArchiveWorkers { get; init; } = 1;
+
     /// <summary>Gets the path of the person-segmentation ONNX model (<c>Media__CutoutModelPath</c>); empty turns background removal off.</summary>
     public string CutoutModelPath { get; init; } = string.Empty;
 }

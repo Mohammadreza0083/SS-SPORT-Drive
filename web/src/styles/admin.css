@@ -216,3 +216,20 @@ textarea.adm-input { padding: 10px 14px; resize: vertical; }
 }
 
 .adm-actions-top { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+/* Archive (Epic 8): scan status, the report with its import checkboxes, and the CSV round trip */
+.adm-archive-action { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.adm-archive-action p { margin: 0; font-size: 12px; }
+.adm-archive-scan { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 22px; }
+.adm-archive-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--ss-divider); }
+.adm-archive-import > p { margin: 0; padding: 8px 20px; }
+.adm-archive-row { grid-template-columns: 36px 2.4fr 1.6fr 1.4fr .8fr 1.2fr 1.1fr; }
+.adm-pick { display: inline-flex; align-items: center; gap: 10px; font-size: 13px; color: var(--ss-text-dim); cursor: pointer; }
+.adm-pick input { width: 18px; height: 18px; accent-color: var(--ss-red); }
+.adm-archive-csv-card { margin-top: 18px; }
+.adm-archive-csv-card .adm-archive-toolbar { padding: 12px 0 0; border-bottom: 0; }
+.adm-archive-csv { display: flex; flex-direction: column; gap: 6px; }
+.adm-archive-csv p { margin: 0; }
+.admin .adm-file { position: relative; overflow: hidden; }
+.adm-file input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.adm-archive-errors { margin: 4px 0 0; padding-left: 18px; font-size: 13px; color: var(--ss-red-soft); }

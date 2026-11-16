@@ -21,6 +21,7 @@ internal sealed class PlayerConfiguration : IEntityTypeConfiguration<Player>
         builder.Property(player => player.CreatedAt);
 
         builder.Property(player => player.Category).HasConversion<string>().HasMaxLength(10);
+        builder.Property(player => player.Origin).HasConversion<string>().HasMaxLength(10).HasDefaultValue(PlayerOrigin.Team).HasSentinel(PlayerOrigin.Team);
         builder.Property(player => player.Name).HasColumnName("full_name").HasConversion(ValueConverters.FullName).HasMaxLength(100);
         builder.Property(player => player.Slug).HasConversion(ValueConverters.Slug).HasMaxLength(120);
         builder.Property(player => player.Nationality).HasConversion(ValueConverters.Nationality).HasMaxLength(2);

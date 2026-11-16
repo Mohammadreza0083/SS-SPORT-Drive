@@ -94,7 +94,19 @@ public sealed class CopyOriginalTests : IDisposable
         _storage.Writes.Should().BeEmpty();
         await _backup.DidNotReceiveWithAnyArgs().FindByMd5Async(default!, TestContext.Current.CancellationToken);
         await _drive.DidNotReceiveWithAnyArgs().OpenAsync(default!, TestContext.Current.CancellationToken);
-        await _scheduler.Received(1).EnqueueAsync(IngestStep.ProcessAsset, _asset.Id, Arg.Any<CancellationToken>());
+        await _scheduler.Received(1).EnqueueAssetAsync(IngestStep.ProcessAsset, _asset.Id, IngestLane.Live, Arg.Any<CancellationToken>());
+    }
+
+    /// <summary>M-4: a copy that ran on the archive lane queues the processing on the archive lane too.</summary>
+    /// <returns>A task that completes when the test is done.</returns>
+    [Fact]
+    public async Task The_archive_lane_carries_on_to_the_processing()
+    {
+        _storage.Seed(_key, _content, "video/mp4");
+
+        await Handler().Handle(new CopyOriginalCommand(_asset.Id, IngestLane.Archive), TestContext.Current.CancellationToken);
+
+        await _scheduler.Received(1).EnqueueAssetAsync(IngestStep.ProcessAsset, _asset.Id, IngestLane.Archive, Arg.Any<CancellationToken>());
     }
 
     /// <summary>An original the rclone backup holds is copied inside R2, never downloaded from Drive.</summary>
@@ -111,7 +123,7 @@ public sealed class CopyOriginalTests : IDisposable
         await _drive.DidNotReceiveWithAnyArgs().OpenAsync(default!, TestContext.Current.CancellationToken);
         _asset.OriginalKey!.Value.Should().Be(_key);
         _asset.State.Should().Be(ProcessingState.Processing);
-        await _scheduler.Received(1).EnqueueAsync(IngestStep.ProcessAsset, _asset.Id, Arg.Any<CancellationToken>());
+        await _scheduler.Received(1).EnqueueAssetAsync(IngestStep.ProcessAsset, _asset.Id, IngestLane.Live, Arg.Any<CancellationToken>());
     }
 
     /// <summary>Otherwise the file is downloaded from Drive, checked and uploaded with its MIME type; the work folder is cleaned up.</summary>
@@ -128,7 +140,7 @@ public sealed class CopyOriginalTests : IDisposable
         _asset.OriginalKey!.Value.Should().Be(_key);
         _asset.State.Should().Be(ProcessingState.Processing);
         _workspace.AllCleanedUp.Should().BeTrue();
-        await _scheduler.Received(1).EnqueueAsync(IngestStep.ProcessAsset, _asset.Id, Arg.Any<CancellationToken>());
+        await _scheduler.Received(1).EnqueueAssetAsync(IngestStep.ProcessAsset, _asset.Id, IngestLane.Live, Arg.Any<CancellationToken>());
     }
 
     /// <summary>Content that does not match the md5 Drive listed is never stored; the asset fails with a reason.</summary>
@@ -144,7 +156,7 @@ public sealed class CopyOriginalTests : IDisposable
         _asset.State.Should().Be(ProcessingState.Failed);
         _asset.FailureReason.Should().Contain("md5");
         _workspace.AllCleanedUp.Should().BeTrue();
-        await _scheduler.DidNotReceiveWithAnyArgs().EnqueueAsync(default, default, TestContext.Current.CancellationToken);
+        await _scheduler.DidNotReceiveWithAnyArgs().EnqueueAssetAsync(default, default, default, TestContext.Current.CancellationToken);
     }
 
     /// <summary>A file deleted from Drive before it was copied fails the asset; the next sync will hide it.</summary>
@@ -158,7 +170,7 @@ public sealed class CopyOriginalTests : IDisposable
 
         _asset.State.Should().Be(ProcessingState.Failed);
         _asset.FailureReason.Should().Contain("Drive");
-        await _scheduler.DidNotReceiveWithAnyArgs().EnqueueAsync(default, default, TestContext.Current.CancellationToken);
+        await _scheduler.DidNotReceiveWithAnyArgs().EnqueueAssetAsync(default, default, default, TestContext.Current.CancellationToken);
     }
 
     /// <summary>An archive import without a Drive id that is in neither bucket cannot be found anywhere.</summary>
@@ -185,7 +197,7 @@ public sealed class CopyOriginalTests : IDisposable
         await Copy();
 
         _storage.Writes.Should().BeEmpty();
-        await _scheduler.DidNotReceiveWithAnyArgs().EnqueueAsync(default, default, TestContext.Current.CancellationToken);
+        await _scheduler.DidNotReceiveWithAnyArgs().EnqueueAssetAsync(default, default, default, TestContext.Current.CancellationToken);
     }
 
     /// <summary>An asset deleted in the meantime is skipped.</summary>
@@ -195,7 +207,7 @@ public sealed class CopyOriginalTests : IDisposable
     {
         await Handler().Handle(new CopyOriginalCommand(Guid.CreateVersion7(IngestData.Now)), TestContext.Current.CancellationToken);
 
-        await _scheduler.DidNotReceiveWithAnyArgs().EnqueueAsync(default, default, TestContext.Current.CancellationToken);
+        await _scheduler.DidNotReceiveWithAnyArgs().EnqueueAssetAsync(default, default, default, TestContext.Current.CancellationToken);
     }
 
     /// <summary>A Drive outage fails the job so Hangfire retries it later; nothing is stored or queued.</summary>
@@ -211,7 +223,7 @@ public sealed class CopyOriginalTests : IDisposable
         await act.Should().ThrowAsync<ServiceUnavailableException>();
         _storage.Keys.Should().BeEmpty();
         _workspace.AllCleanedUp.Should().BeTrue();
-        await _scheduler.DidNotReceiveWithAnyArgs().EnqueueAsync(default, default, TestContext.Current.CancellationToken);
+        await _scheduler.DidNotReceiveWithAnyArgs().EnqueueAssetAsync(default, default, default, TestContext.Current.CancellationToken);
     }
 
     /// <summary>Deletes the work folders.</summary>

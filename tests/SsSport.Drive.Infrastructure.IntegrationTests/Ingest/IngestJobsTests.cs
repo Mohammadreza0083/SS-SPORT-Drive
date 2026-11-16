@@ -1,9 +1,15 @@
+using Hangfire;
+using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
+using NSubstitute;
 using SsSport.Drive.Application;
 using SsSport.Drive.Application.Abstractions.Ingest;
+using SsSport.Drive.Application.Ingest;
 using SsSport.Drive.Infrastructure.BackgroundJobs;
+using SsSport.Drive.Infrastructure.Media;
 using SsSport.Drive.Infrastructure.Persistence;
 using Testcontainers.PostgreSql;
 
@@ -75,20 +81,113 @@ public sealed class IngestJobsTests : IAsyncLifetime
     [InlineData(IngestStep.RenderQrCode, "media")]
     [InlineData(IngestStep.CutOutPhoto, "media")]
     [InlineData(IngestStep.RenderCard, "media")]
+    [InlineData(IngestStep.ScanArchive, "ingest")]
     public async Task Each_step_goes_to_its_queue(IngestStep step, string queue)
     {
         var target = Guid.NewGuid();
         await _provider.GetRequiredService<IIngestScheduler>().EnqueueAsync(step, target, TestContext.Current.CancellationToken);
 
+        IngestJobs.QueueFor(step).Should().Be(queue);
+        (await QueueOfAsync(target)).Should().Be(queue);
+    }
+
+    /// <summary>
+    /// M-4: an archive player's copy and processing go to their own queues (<c>ingest-archive</c>, <c>media-archive</c>), served
+    /// by their own throttled workers; the team's files stay on <c>ingest</c> and <c>media</c>.
+    /// </summary>
+    /// <param name="step">The step.</param>
+    /// <param name="lane">The lane.</param>
+    /// <param name="queue">The expected queue.</param>
+    /// <returns>A task that completes when the test is done.</returns>
+    [Theory]
+    [InlineData(IngestStep.CopyOriginal, IngestLane.Live, "ingest")]
+    [InlineData(IngestStep.ProcessAsset, IngestLane.Live, "media")]
+    [InlineData(IngestStep.CopyOriginal, IngestLane.Archive, "ingest-archive")]
+    [InlineData(IngestStep.ProcessAsset, IngestLane.Archive, "media-archive")]
+    public async Task Asset_steps_go_to_their_lane(IngestStep step, IngestLane lane, string queue)
+    {
+        var target = Guid.NewGuid();
+        await _provider.GetRequiredService<IIngestScheduler>().EnqueueAssetAsync(step, target, lane, TestContext.Current.CancellationToken);
+
+        (await QueueOfAsync(target)).Should().Be(queue);
+    }
+
+    /// <summary>
+    /// M-4, new uploads first: while a team file waits on the <c>media</c> queue, an archive media job does not run; it puts
+    /// itself back a minute later, so the free worker takes the team's file.
+    /// </summary>
+    /// <returns>A task that completes when the test is done.</returns>
+    [Fact]
+    public async Task An_archive_job_yields_while_team_files_wait()
+    {
+        await _provider.GetRequiredService<IIngestScheduler>().EnqueueAssetAsync(IngestStep.ProcessAsset, Guid.NewGuid(), IngestLane.Live, TestContext.Current.CancellationToken);
+        var sender = Substitute.For<ISender>();
+        var archive = Guid.NewGuid();
+
+        await Job(sender).RunArchiveMediaStepAsync(IngestStep.ProcessAsset, archive, TestContext.Current.CancellationToken);
+
+        sender.ReceivedCalls().Should().BeEmpty();
+        (await StateOfAsync(archive)).Should().Be("Scheduled");
+    }
+
+    /// <summary>With no team file waiting, an archive media job runs its step.</summary>
+    /// <returns>A task that completes when the test is done.</returns>
+    [Fact]
+    public async Task An_archive_job_runs_when_no_team_file_waits()
+    {
+        var sender = Substitute.For<ISender>();
+        var archive = Guid.NewGuid();
+
+        await Job(sender).RunArchiveMediaStepAsync(IngestStep.ProcessAsset, archive, TestContext.Current.CancellationToken);
+
+        await sender.Received(1).Send(new ProcessAssetCommand(archive), Arg.Any<CancellationToken>());
+    }
+
+    /// <summary>An archive copy job tells the copy it runs on the archive lane, so the processing follows it there.</summary>
+    /// <returns>A task that completes when the test is done.</returns>
+    [Fact]
+    public async Task An_archive_copy_keeps_its_lane()
+    {
+        var sender = Substitute.For<ISender>();
+        var archive = Guid.NewGuid();
+
+        await Job(sender).RunArchiveDriveStepAsync(IngestStep.CopyOriginal, archive, TestContext.Current.CancellationToken);
+
+        await sender.Received(1).Send(new CopyOriginalCommand(archive, IngestLane.Archive), Arg.Any<CancellationToken>());
+    }
+
+    /// <summary>The archive lane's media workers (<c>Media__ArchiveWorkers</c>) default to 1.</summary>
+    [Fact]
+    public void Archive_workers_default_to_one() => new MediaOptions().ArchiveWorkers.Should().Be(1);
+
+    /// <summary>Builds the job over the real Hangfire storage, without the commit grace.</summary>
+    /// <param name="sender">The MediatR sender.</param>
+    /// <returns>The job.</returns>
+    private IngestJob Job(ISender sender) =>
+        new(sender, _provider.GetRequiredService<IBackgroundJobClient>(), _provider.GetRequiredService<JobStorage>(), NullLogger<IngestJob>.Instance) { CommitGrace = TimeSpan.Zero };
+
+    /// <summary>Reads the queue of the job whose arguments name a target.</summary>
+    /// <param name="target">The target id.</param>
+    /// <returns>The queue, or <see langword="null"/>.</returns>
+    private async Task<string?> QueueOfAsync(Guid target)
+    {
         await using var connection = new NpgsqlConnection(_postgres.GetConnectionString());
         await connection.OpenAsync(TestContext.Current.CancellationToken);
         await using var command = new NpgsqlCommand(
             "SELECT q.queue FROM hangfire.jobqueue q JOIN hangfire.job j ON j.id = q.jobid WHERE j.arguments::text LIKE '%' || @target || '%'", connection);
         command.Parameters.AddWithValue("target", target.ToString());
+        return (string?)await command.ExecuteScalarAsync(TestContext.Current.CancellationToken);
+    }
 
-        var found = (string?)await command.ExecuteScalarAsync(TestContext.Current.CancellationToken);
-
-        IngestJobs.QueueFor(step).Should().Be(queue);
-        found.Should().Be(queue);
+    /// <summary>Reads the state of the job whose arguments name a target.</summary>
+    /// <param name="target">The target id.</param>
+    /// <returns>The state name, or <see langword="null"/>.</returns>
+    private async Task<string?> StateOfAsync(Guid target)
+    {
+        await using var connection = new NpgsqlConnection(_postgres.GetConnectionString());
+        await connection.OpenAsync(TestContext.Current.CancellationToken);
+        await using var command = new NpgsqlCommand("SELECT statename FROM hangfire.job WHERE arguments::text LIKE '%' || @target || '%'", connection);
+        command.Parameters.AddWithValue("target", target.ToString());
+        return (string?)await command.ExecuteScalarAsync(TestContext.Current.CancellationToken);
     }
 }

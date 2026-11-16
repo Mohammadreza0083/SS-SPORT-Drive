@@ -129,17 +129,20 @@ public sealed class QueueAssetIngest(IRepository<Player, Guid> players, IIngestS
     /// <returns>A task that completes when the copy is queued, or nothing needed queueing.</returns>
     private async Task QueueAsync(Guid playerId, Guid assetId, CancellationToken cancellationToken)
     {
-        if (await players.FirstOrDefaultAsync(new PlayerByIdReadOnlySpec(playerId), cancellationToken) is { IsPublished: true })
+        if (await players.FirstOrDefaultAsync(new PlayerByIdReadOnlySpec(playerId), cancellationToken) is { IsPublished: true } player)
         {
-            await scheduler.EnqueueAsync(IngestStep.CopyOriginal, assetId, cancellationToken);
+            await scheduler.EnqueueAssetAsync(IngestStep.CopyOriginal, assetId, IngestLanes.For(player), cancellationToken);
         }
     }
 }
 
-/// <summary>Publishing starts ingest: it queues the copy of every waiting file, the QR code and the card.</summary>
+/// <summary>
+/// Publishing starts ingest: it queues the copy of every waiting file on the player's lane (M-4), the QR code and the card.
+/// </summary>
+/// <param name="players">The players, for the lane.</param>
 /// <param name="assets">The assets.</param>
 /// <param name="scheduler">Queues the steps.</param>
-public sealed class IngestPublishedPlayer(IRepository<Asset, Guid> assets, IIngestScheduler scheduler) : IBackgroundEventHandler<PlayerPublished>
+public sealed class IngestPublishedPlayer(IRepository<Player, Guid> players, IRepository<Asset, Guid> assets, IIngestScheduler scheduler) : IBackgroundEventHandler<PlayerPublished>
 {
     /// <summary>Queues the player's ingest.</summary>
     /// <param name="domainEvent">The event.</param>
@@ -149,9 +152,11 @@ public sealed class IngestPublishedPlayer(IRepository<Asset, Guid> assets, IInge
     public async Task HandleAsync(PlayerPublished domainEvent, EventContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(domainEvent);
+        var player = await players.FirstOrDefaultAsync(new PlayerByIdReadOnlySpec(domainEvent.PlayerId), cancellationToken);
+        var lane = player is null ? IngestLane.Live : IngestLanes.For(player);
         foreach (var asset in await assets.ListAsync(new QueuedAssetsOfPlayerSpec(domainEvent.PlayerId), cancellationToken))
         {
-            await scheduler.EnqueueAsync(IngestStep.CopyOriginal, asset.Id, cancellationToken);
+            await scheduler.EnqueueAssetAsync(IngestStep.CopyOriginal, asset.Id, lane, cancellationToken);
         }
 
         await scheduler.EnqueueAsync(IngestStep.RenderQrCode, domainEvent.PlayerId, cancellationToken);

@@ -297,6 +297,196 @@ namespace SsSport.Drive.Infrastructure.Persistence.Migrations
                     b.ToTable("viewer_accounts", (string)null);
                 });
 
+            modelBuilder.Entity("SsSport.Drive.Domain.Archive.ArchiveFolder", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("category");
+
+                    b.Property<string>("DriveFolderId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("drive_folder_id");
+
+                    b.Property<string>("FolderName")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("folder_name");
+
+                    b.Property<DateTimeOffset>("FoundAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("found_at");
+
+                    b.Property<DateTimeOffset?>("ImportedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("imported_at");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(1100)
+                        .HasColumnType("character varying(1100)")
+                        .HasColumnName("path");
+
+                    b.Property<Guid?>("PlayerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("player_id");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<Guid>("ScanId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("scan_id");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("state");
+
+                    b.Property<string>("SuggestedName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("suggested_name");
+
+                    b.Property<string[]>("SuggestedPositions")
+                        .HasColumnType("text[]")
+                        .HasColumnName("suggested_positions");
+
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "Counts", "SsSport.Drive.Domain.Archive.ArchiveFolder.Counts#ArchiveFolderCounts", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<long>("Bytes")
+                                .HasColumnType("bigint")
+                                .HasColumnName("bytes");
+
+                            b1.Property<int>("Documents")
+                                .HasColumnType("integer")
+                                .HasColumnName("documents");
+
+                            b1.Property<int>("InBackup")
+                                .HasColumnType("integer")
+                                .HasColumnName("in_backup");
+
+                            b1.Property<bool>("IsTruncated")
+                                .HasColumnType("boolean")
+                                .HasColumnName("is_truncated");
+
+                            b1.Property<int>("MissingFromBackup")
+                                .HasColumnType("integer")
+                                .HasColumnName("missing_from_backup");
+
+                            b1.Property<int>("Scouts")
+                                .HasColumnType("integer")
+                                .HasColumnName("scouts");
+
+                            b1.Property<int>("Skipped")
+                                .HasColumnType("integer")
+                                .HasColumnName("skipped");
+
+                            b1.Property<int>("Videos")
+                                .HasColumnType("integer")
+                                .HasColumnName("videos");
+                        });
+
+                    b.HasKey("Id")
+                        .HasName("pk_archive_folders");
+
+                    b.HasIndex("ScanId", "DriveFolderId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_archive_folders_scan_id_drive_folder_id");
+
+                    b.HasIndex("ScanId", "State", "Path")
+                        .HasDatabaseName("ix_archive_folders_scan_id_state_path");
+
+                    b.ToTable("archive_folders", (string)null);
+                });
+
+            modelBuilder.Entity("SsSport.Drive.Domain.Archive.ArchiveScan", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("FailureReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("failure_reason");
+
+                    b.Property<DateTimeOffset?>("FinishedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("finished_at");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<Guid>("StartedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("started_by");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("status");
+
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "Totals", "SsSport.Drive.Domain.Archive.ArchiveScan.Totals#ArchiveScanTotals", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<long>("Bytes")
+                                .HasColumnType("bigint")
+                                .HasColumnName("bytes");
+
+                            b1.Property<int>("Files")
+                                .HasColumnType("integer")
+                                .HasColumnName("files");
+
+                            b1.Property<int>("Folders")
+                                .HasColumnType("integer")
+                                .HasColumnName("folders");
+
+                            b1.Property<int>("InBackup")
+                                .HasColumnType("integer")
+                                .HasColumnName("in_backup");
+
+                            b1.Property<int>("MissingFromBackup")
+                                .HasColumnType("integer")
+                                .HasColumnName("missing_from_backup");
+
+                            b1.Property<int>("Skipped")
+                                .HasColumnType("integer")
+                                .HasColumnName("skipped");
+                        });
+
+                    b.HasKey("Id")
+                        .HasName("pk_archive_scans");
+
+                    b.HasIndex("StartedAt")
+                        .HasDatabaseName("ix_archive_scans_started_at");
+
+                    b.ToTable("archive_scans", (string)null);
+                });
+
             modelBuilder.Entity("SsSport.Drive.Domain.Assets.Asset", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2524,6 +2714,14 @@ namespace SsSport.Drive.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(2)")
                         .HasColumnName("nationality");
 
+                    b.Property<string>("Origin")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("Team")
+                        .HasColumnName("origin");
+
                     b.Property<string>("Photo")
                         .HasMaxLength(512)
                         .HasColumnType("character varying(512)")
@@ -2875,6 +3073,16 @@ namespace SsSport.Drive.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_telegram_updates_received_at");
 
                     b.ToTable("telegram_updates", (string)null);
+                });
+
+            modelBuilder.Entity("SsSport.Drive.Domain.Archive.ArchiveFolder", b =>
+                {
+                    b.HasOne("SsSport.Drive.Domain.Archive.ArchiveScan", null)
+                        .WithMany()
+                        .HasForeignKey("ScanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_archive_folders_archive_scans_scan_id");
                 });
 
             modelBuilder.Entity("SsSport.Drive.Domain.Assets.Asset", b =>

@@ -14,8 +14,9 @@ namespace SsSport.Drive.Application.Ingest;
 /// the md5 Drive listed.
 /// </summary>
 /// <param name="AssetId">The asset.</param>
+/// <param name="Lane">The lane the copy ran on; the processing is queued on the same one (M-4).</param>
 [InternalRequest("Sent only by the copy job, with the id of an asset.")]
-public sealed record CopyOriginalCommand(Guid AssetId) : ICommand;
+public sealed record CopyOriginalCommand(Guid AssetId, IngestLane Lane = IngestLane.Live) : ICommand;
 
 /// <summary>Handles <see cref="CopyOriginalCommand"/>.</summary>
 /// <param name="assets">The assets.</param>
@@ -48,12 +49,12 @@ public sealed class CopyOriginalCommandHandler(
         var key = OriginalKeys.For(asset.File);
         if (await storage.ExistsAsync(key, cancellationToken))
         {
-            await AttachAsync(asset, key, cancellationToken);
+            await AttachAsync(asset, key, request.Lane, cancellationToken);
         }
         else if (await backup.FindByMd5Async(asset.File.Md5, cancellationToken) is { } backupKey)
         {
             await backup.CopyToMediaAsync(backupKey, key, cancellationToken);
-            await AttachAsync(asset, key, cancellationToken);
+            await AttachAsync(asset, key, request.Lane, cancellationToken);
         }
         else if (asset.DriveFileId is null)
         {
@@ -62,16 +63,17 @@ public sealed class CopyOriginalCommandHandler(
         else
         {
             asset.StartCopying();
-            await DownloadAsync(asset, key, cancellationToken);
+            await DownloadAsync(asset, key, request.Lane, cancellationToken);
         }
     }
 
     /// <summary>Downloads the file from Drive, checks its md5 and stores it.</summary>
     /// <param name="asset">The asset, copying.</param>
     /// <param name="key">The key of the original.</param>
+    /// <param name="lane">The lane of the processing.</param>
     /// <param name="cancellationToken">Cancels the download.</param>
     /// <returns>A task that completes when the asset is processing or failed.</returns>
-    private async Task DownloadAsync(Asset asset, string key, CancellationToken cancellationToken)
+    private async Task DownloadAsync(Asset asset, string key, IngestLane lane, CancellationToken cancellationToken)
     {
         using var folder = workspace.Create();
         var path = Path.Combine(folder.Path, "original");
@@ -94,7 +96,7 @@ public sealed class CopyOriginalCommandHandler(
         }
 
         await storage.UploadFileAsync(path, key, OriginalKeys.ContentType(asset.File.OriginalName), cancellationToken);
-        await AttachAsync(asset, key, cancellationToken);
+        await AttachAsync(asset, key, lane, cancellationToken);
     }
 
     /// <summary>Writes a stream to a file and computes its md5 on the way.</summary>
@@ -120,11 +122,12 @@ public sealed class CopyOriginalCommandHandler(
     /// <summary>Records the stored original and queues the processing.</summary>
     /// <param name="asset">The asset.</param>
     /// <param name="key">The key of the original.</param>
+    /// <param name="lane">The lane of the processing.</param>
     /// <param name="cancellationToken">Cancels the enqueueing.</param>
     /// <returns>A task that completes when the processing is queued.</returns>
-    private async Task AttachAsync(Asset asset, string key, CancellationToken cancellationToken)
+    private async Task AttachAsync(Asset asset, string key, IngestLane lane, CancellationToken cancellationToken)
     {
         asset.AttachOriginal(StorageKey.Create(key));
-        await scheduler.EnqueueAsync(IngestStep.ProcessAsset, asset.Id, cancellationToken);
+        await scheduler.EnqueueAssetAsync(IngestStep.ProcessAsset, asset.Id, lane, cancellationToken);
     }
 }

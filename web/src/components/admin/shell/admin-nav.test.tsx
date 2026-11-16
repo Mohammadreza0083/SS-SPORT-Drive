@@ -22,6 +22,7 @@ describe("AdminNav", () => {
       ["Dashboard", "/admin"],
       ["Players", "/admin/players"],
       ["Waiting list", "/admin/waiting"],
+      ["Archive", "/admin/archive"],
       ["Access requests", "/admin/requests"],
       ["Share links", "/admin/links"],
       ["Viewers", "/admin/viewers"],
