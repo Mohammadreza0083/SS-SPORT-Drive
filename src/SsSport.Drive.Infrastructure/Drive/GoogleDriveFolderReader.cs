@@ -15,8 +15,11 @@ namespace SsSport.Drive.Infrastructure.Drive;
 /// the same way (a non-trashed folder inside the Shared Drive) and share one breadth-first walk, which stops at
 /// <see cref="MaxItems"/> files or <see cref="MaxDepth"/> levels and says so.
 /// </summary>
-public sealed partial class GoogleDriveFolderReader : IDriveFolderReader, IDriveFolderLister
+public sealed partial class GoogleDriveFolderReader : IDriveFolderReader, IDriveFolderLister, IDriveArchiveBrowser
 {
+    /// <summary>The most children one folder listing reads for the archive scan (M-1); the archive has about a hundred player folders.</summary>
+    public const int MaxChildren = 5000;
+
     /// <summary>The most files read before the walk stops (a player folder holds a few dozen).</summary>
     public const int MaxItems = 2000;
 
@@ -51,6 +54,64 @@ public sealed partial class GoogleDriveFolderReader : IDriveFolderReader, IDrive
     /// <inheritdoc/>
     public Task<DriveFolderListing> ListAsync(string folderId, CancellationToken cancellationToken = default) =>
         WithFolderAsync(folderId, DriveFolderListing.Missing, CollectAsync, cancellationToken);
+
+    /// <inheritdoc/>
+    public Task<DriveChildren> ListRootAsync(CancellationToken cancellationToken = default) => ChildrenAsync(null, cancellationToken);
+
+    /// <inheritdoc/>
+    public Task<DriveChildren> ListFolderAsync(string folderId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(folderId);
+        return ChildrenAsync(folderId, cancellationToken);
+    }
+
+    /// <summary>
+    /// Lists a folder's direct children, every page, up to <see cref="MaxChildren"/>. The Shared Drive's id is also the id of
+    /// its root folder. Trashed items are left out; any outage is <c>drive.unavailable</c>.
+    /// </summary>
+    /// <param name="folderId">The folder, or <see langword="null"/> for the Shared Drive's root.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <returns>The child folders and the number of loose files.</returns>
+    private async Task<DriveChildren> ChildrenAsync(string? folderId, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(_options.SharedDriveId))
+        {
+            LogNotConfigured(_logger);
+            throw Unavailable();
+        }
+
+        try
+        {
+            var folders = new List<DriveSubfolder>();
+            var files = 0;
+            string? pageToken = null;
+            do
+            {
+                var page = await _api.ListChildrenAsync(folderId ?? _options.SharedDriveId, pageToken, cancellationToken);
+                foreach (var item in page.Items.Where(item => !item.Trashed))
+                {
+                    if (item.IsFolder)
+                    {
+                        folders.Add(new DriveSubfolder(item.Id, item.Name));
+                    }
+                    else
+                    {
+                        files++;
+                    }
+                }
+
+                pageToken = folders.Count + files >= MaxChildren ? null : page.NextPageToken;
+            }
+            while (pageToken is not null);
+
+            return new DriveChildren(folders, files);
+        }
+        catch (Exception exception) when (IsOutage(exception, cancellationToken))
+        {
+            LogUnreachable(_logger, exception, exception.GetType().Name);
+            throw Unavailable();
+        }
+    }
 
     /// <summary>
     /// Checks that the id is a non-trashed folder in the agency's Shared Drive and, if so, reads it. Any Drive outage on

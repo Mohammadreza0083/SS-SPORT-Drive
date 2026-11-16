@@ -8,6 +8,7 @@ import { AdminNav, type AdminCounts, type AdminSection } from "./admin-nav";
 const SECTIONS: [string, AdminSection][] = [
   ["/admin/players", "players"],
   ["/admin/waiting", "waiting"],
+  ["/admin/archive", "archive"],
   ["/admin/requests", "requests"],
   ["/admin/links", "links"],
   ["/admin/viewers", "viewers"],

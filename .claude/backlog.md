@@ -148,12 +148,15 @@ Every Claude task follows the working agreement: explain → approve → tests �
 | A-12 | Access-requests page in the console (canvas `AdminRequests`) on P-4's API: Pending / Approved / Declined tabs with counts, paged list, detail with the message, approve (players to grant, 7/30/90 days, note) or decline | Claude | Done (2026-11-15): web tests green; the look still needs the owner's review against the canvas (Playwright baselines not added yet) |
 
 ## EPIC 8 — Archive migration
+
+> **2026-11-16:** M-1 to M-4 were built together on `feature/archive-migration` (decisions §13). M-5 is the owner's: fill in the archive players' Volleybox links and photos.
+
 | Key | Task | Assignee | Done when |
 |---|---|---|---|
-| M-1 | Scan the Shared Drive (~100 GB), match to the R2 backup by md5 | Claude | Report generated |
-| M-2 | Suggestions from folder names (`SS-SPORT <Name>`) and subfolders; incomplete players go to the waiting list | Claude | Tests green |
-| M-3 | CSV export/import round-trip | Claude | Demo |
-| M-4 | Throttled transcode queue (new uploads first) | Claude | Demo |
+| M-1 | Scan the Shared Drive (~100 GB), match to the R2 backup by md5 | Claude | Done (2026-11-16): read-only scan job started from the console, a report row per player folder with files by kind, size and backup match (decisions §13) |
+| M-2 | Suggestions from folder names (`SS-SPORT <Name>`) and subfolders; incomplete players go to the waiting list | Claude | Done (2026-11-16): name and positions parsed from every archive spelling; an admin imports folders as waiting archive players with the folder linked |
+| M-3 | CSV export/import round-trip | Claude | Done (2026-11-16): export of the waiting archive players, import checked row by row with the player rules; tests green, demo on real data after the first scan |
+| M-4 | Throttled transcode queue (new uploads first) | Claude | Done (2026-11-16): `ingest-archive` / `media-archive` queues, `Media__ArchiveWorkers` (1), archive media jobs wait while team files do; tests green, demo when the archive is published |
 | M-5 | Fill in missing Volleybox links / photos for the archive | Owner | Waiting list empty |
 
 ## EPIC 9 — Deploy & operations

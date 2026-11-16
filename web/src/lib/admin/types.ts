@@ -281,3 +281,42 @@ export type AccessRequestRow = {
   decidedBy: string | null;
   shareLink: AccessRequestLink | null;
 };
+
+/** A scan of the Shared Drive (`GET /admin/archive`, M-1). */
+export type ArchiveScan = {
+  id: string;
+  status: "Running" | "Completed" | "Failed" | string;
+  startedAt: string;
+  finishedAt: string | null;
+  failureReason: string | null;
+  folders: number;
+  files: number;
+  bytes: number;
+  inBackup: number;
+  missingFromBackup: number;
+  skipped: number;
+};
+
+/** The archive page's header. */
+export type ArchiveSummary = { latestScan: ArchiveScan | null; report: ArchiveScan | null; new: number; linked: number; imported: number };
+
+/** One player folder of the report (`GET /admin/archive/folders`, M-1/M-2). */
+export type ArchiveFolderRow = {
+  id: string;
+  path: string;
+  folderName: string;
+  category: string;
+  suggestedName: string | null;
+  suggestedPositions: string[];
+  videos: number;
+  documents: number;
+  scouts: number;
+  files: number;
+  bytes: number;
+  inBackup: number;
+  missingFromBackup: number;
+  skipped: number;
+  isTruncated: boolean;
+  state: "New" | "Linked" | "Imported" | string;
+  playerId: string | null;
+};

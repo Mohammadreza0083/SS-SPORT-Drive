@@ -5,7 +5,7 @@ import type { SignedInAdmin } from "@/lib/admin/session";
 import { adminCopy } from "../copy";
 
 /** The sections of the console, in the order of the canvas's side navigation. */
-export type AdminSection = "dashboard" | "players" | "waiting" | "requests" | "links" | "viewers" | "jobs" | "users" | "settings";
+export type AdminSection = "dashboard" | "players" | "waiting" | "archive" | "requests" | "links" | "viewers" | "jobs" | "users" | "settings";
 
 /** The counts the red badges show. */
 export type AdminCounts = { waiting: number; accessRequests: number };
@@ -25,11 +25,12 @@ type AdminNavProps = {
 /** One entry of the navigation. */
 type NavEntry = { id: AdminSection; label: string; href: string; badge?: keyof AdminCounts };
 
-/** The navigation, in the canvas's order. */
+/** The navigation, in the canvas's order; Archive (Epic 8) is not on the canvas and sits after the waiting list it feeds. */
 const ENTRIES: NavEntry[] = [
   { id: "dashboard", label: adminCopy.nav.dashboard, href: "/admin" },
   { id: "players", label: adminCopy.nav.players, href: "/admin/players" },
   { id: "waiting", label: adminCopy.nav.waiting, href: "/admin/waiting", badge: "waiting" },
+  { id: "archive", label: adminCopy.nav.archive, href: "/admin/archive" },
   { id: "requests", label: adminCopy.nav.requests, href: "/admin/requests", badge: "accessRequests" },
   { id: "links", label: adminCopy.nav.links, href: "/admin/links" },
   { id: "viewers", label: adminCopy.nav.viewers, href: "/admin/viewers" },

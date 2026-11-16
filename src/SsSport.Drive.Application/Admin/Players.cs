@@ -517,11 +517,12 @@ public sealed class RetryFileCommandValidator : AbstractValidator<RetryFileComma
 
 /// <summary>Handles <see cref="RetryFileCommand"/>.</summary>
 /// <param name="assets">The files.</param>
+/// <param name="players">The players, for the file's lane (M-4).</param>
 /// <param name="scheduler">Queues the ingest steps.</param>
 /// <param name="audit">The audit log.</param>
 /// <param name="currentUser">The caller.</param>
 /// <param name="timeProvider">The clock.</param>
-public sealed class RetryFileCommandHandler(IRepository<Asset, Guid> assets, IIngestScheduler scheduler, IRepository<AuditEntry, Guid> audit, ICurrentUser currentUser, TimeProvider timeProvider) : ICommandHandler<RetryFileCommand>
+public sealed class RetryFileCommandHandler(IRepository<Asset, Guid> assets, IRepository<Player, Guid> players, IIngestScheduler scheduler, IRepository<AuditEntry, Guid> audit, ICurrentUser currentUser, TimeProvider timeProvider) : ICommandHandler<RetryFileCommand>
 {
     /// <summary>Resets the file and queues the copy again.</summary>
     /// <param name="request">The command.</param>
@@ -535,7 +536,8 @@ public sealed class RetryFileCommandHandler(IRepository<Asset, Guid> assets, IIn
         var asset = await assets.GetByIdAsync(request.FileId, cancellationToken) ?? throw new NotFoundException("File");
         asset.Retry();
         audit.Add(AuditEntry.Record(ShareLinkRules.ActorId(currentUser), AdminPlayerStatus.RetriedAction, nameof(Asset), asset.Id.ToString(), null, timeProvider.GetUtcNow()));
-        await scheduler.EnqueueAsync(IngestStep.CopyOriginal, asset.Id, cancellationToken);
+        var player = await players.FirstOrDefaultAsync(new PlayerByIdReadOnlySpec(asset.PlayerId), cancellationToken);
+        await scheduler.EnqueueAssetAsync(IngestStep.CopyOriginal, asset.Id, player is null ? IngestLane.Live : IngestLanes.For(player), cancellationToken);
     }
 }
 

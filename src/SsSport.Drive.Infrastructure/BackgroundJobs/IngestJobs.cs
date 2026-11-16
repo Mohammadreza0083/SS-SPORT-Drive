@@ -8,19 +8,32 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SsSport.Drive.Application.Abstractions.Ingest;
+using SsSport.Drive.Application.Archive;
 using SsSport.Drive.Application.Ingest;
 using SsSport.Drive.Infrastructure.Media;
 
 namespace SsSport.Drive.Infrastructure.BackgroundJobs;
 
-/// <summary>The ingest queues and recurring job (Epic 3). Light Drive work and heavy media work have their own queues.</summary>
+/// <summary>
+/// The ingest queues and recurring job (Epic 3). Light Drive work and heavy media work have their own queues, and archive
+/// players' files have their own throttled pair (M-4).
+/// </summary>
 public static class IngestJobs
 {
-    /// <summary>The queue of folder syncs and copies from Drive; I/O bound, several workers.</summary>
+    /// <summary>The queue of folder syncs, archive scans and copies from Drive; I/O bound, several workers.</summary>
     public const string DriveQueue = "ingest";
 
     /// <summary>The queue of ffmpeg, PDF and image work; CPU bound, one or two workers.</summary>
     public const string MediaQueue = "media";
+
+    /// <summary>The queue of archive players' copies (M-4): one worker, so the archive never crowds out syncs and team copies.</summary>
+    public const string DriveArchiveQueue = "ingest-archive";
+
+    /// <summary>The queue of archive players' processing (M-4): <c>Media__ArchiveWorkers</c> workers that wait while team files do.</summary>
+    public const string MediaArchiveQueue = "media-archive";
+
+    /// <summary>How long an archive media job waits before it looks again when team files are waiting.</summary>
+    public static readonly TimeSpan ArchiveYieldDelay = TimeSpan.FromMinutes(1);
 
     /// <summary>The recurring round that queues a sync of every linked folder.</summary>
     public const string FolderSyncRecurringJobId = "ingest-folder-sync";
@@ -28,7 +41,7 @@ public static class IngestJobs
     /// <summary>Gets the queue a step runs on.</summary>
     /// <param name="step">The step.</param>
     /// <returns>The queue's name.</returns>
-    public static string QueueFor(IngestStep step) => step is IngestStep.SyncFolder or IngestStep.CopyOriginal ? DriveQueue : MediaQueue;
+    public static string QueueFor(IngestStep step) => step is IngestStep.SyncFolder or IngestStep.CopyOriginal or IngestStep.ScanArchive ? DriveQueue : MediaQueue;
 }
 
 /// <summary>Queues each ingest step as a Hangfire job on its queue.</summary>
@@ -49,15 +62,45 @@ internal sealed class HangfireIngestScheduler(IBackgroundJobClient jobs) : IInge
         jobs.Create(job, queue);
         return Task.CompletedTask;
     }
+
+    /// <summary>Stores an asset step on its lane: the team's lane is the normal queue, the archive's its own (M-4).</summary>
+    /// <param name="step">The step.</param>
+    /// <param name="assetId">The asset.</param>
+    /// <param name="lane">The lane.</param>
+    /// <param name="cancellationToken">Unused: Hangfire's client is synchronous.</param>
+    /// <returns>A completed task once the job is stored.</returns>
+    public Task EnqueueAssetAsync(IngestStep step, Guid assetId, IngestLane lane, CancellationToken cancellationToken)
+    {
+        if (lane != IngestLane.Archive || step is not (IngestStep.CopyOriginal or IngestStep.ProcessAsset))
+        {
+            return EnqueueAsync(step, assetId, cancellationToken);
+        }
+
+        if (step == IngestStep.CopyOriginal)
+        {
+            jobs.Create(Job.FromExpression<IngestJob>(worker => worker.RunArchiveDriveStepAsync(step, assetId, CancellationToken.None)), new EnqueuedState(IngestJobs.DriveArchiveQueue));
+        }
+        else
+        {
+            jobs.Create(Job.FromExpression<IngestJob>(worker => worker.RunArchiveMediaStepAsync(step, assetId, CancellationToken.None)), new EnqueuedState(IngestJobs.MediaArchiveQueue));
+        }
+
+        return Task.CompletedTask;
+    }
 }
 
 /// <summary>The Hangfire jobs of ingest. Each runs one MediatR command in its own scope and logs how it went.</summary>
 /// <param name="sender">Sends the commands.</param>
+/// <param name="jobs">Puts a yielding archive job back on the queue.</param>
+/// <param name="storage">Hangfire's storage, to see whether team files wait.</param>
 /// <param name="logger">The logger: Hangfire's own logging is not wired to ours, so failures are logged here.</param>
-public sealed partial class IngestJob(ISender sender, ILogger<IngestJob> logger)
+public sealed partial class IngestJob(ISender sender, IBackgroundJobClient jobs, JobStorage storage, ILogger<IngestJob> logger)
 {
-    /// <summary>How long a media step waits so the change that queued it is saved first: steps queued from inside a handler run before its transaction commits.</summary>
-    private static readonly TimeSpan _commitGrace = TimeSpan.FromSeconds(3);
+    /// <summary>
+    /// Gets how long a media step (and an archive scan) waits so the change that queued it is saved first: steps queued from
+    /// inside a handler run before its transaction commits. Tests set it to zero.
+    /// </summary>
+    public TimeSpan CommitGrace { get; init; } = TimeSpan.FromSeconds(3);
 
     /// <summary>Runs the recurring round that queues a sync of every linked folder. A failure is not retried: the next round runs in 10 minutes.</summary>
     /// <param name="cancellationToken">Cancelled when the server shuts down.</param>
@@ -78,7 +121,48 @@ public sealed partial class IngestJob(ISender sender, ILogger<IngestJob> logger)
     /// <returns>A task that completes when the step is done.</returns>
     [Queue(IngestJobs.DriveQueue)]
     [AutomaticRetry(Attempts = 5, DelaysInSeconds = [60, 300, 900, 1800, 3600])]
-    public Task RunDriveStepAsync(IngestStep step, Guid targetId, CancellationToken cancellationToken) => RunAsync(step, targetId, cancellationToken);
+    public async Task RunDriveStepAsync(IngestStep step, Guid targetId, CancellationToken cancellationToken)
+    {
+        if (step == IngestStep.ScanArchive)
+        {
+            await Task.Delay(CommitGrace, cancellationToken);
+        }
+
+        await RunAsync(step, targetId, IngestLane.Live, cancellationToken);
+    }
+
+    /// <summary>Runs an archive player's copy on its own queue (M-4); the processing it queues stays on the archive lane.</summary>
+    /// <param name="step">The step (a copy).</param>
+    /// <param name="targetId">The asset.</param>
+    /// <param name="cancellationToken">Cancelled when the server shuts down.</param>
+    /// <returns>A task that completes when the step is done.</returns>
+    [Queue(IngestJobs.DriveArchiveQueue)]
+    [AutomaticRetry(Attempts = 5, DelaysInSeconds = [60, 300, 900, 1800, 3600])]
+    public Task RunArchiveDriveStepAsync(IngestStep step, Guid targetId, CancellationToken cancellationToken) => RunAsync(step, targetId, IngestLane.Archive, cancellationToken);
+
+    /// <summary>
+    /// Runs an archive player's processing on its own queue (M-4). New uploads first: while team files wait on the media
+    /// queue, the job does not start; it puts itself back <see cref="IngestJobs.ArchiveYieldDelay"/> later.
+    /// </summary>
+    /// <param name="step">The step (a processing).</param>
+    /// <param name="targetId">The asset.</param>
+    /// <param name="cancellationToken">Cancelled when the server shuts down.</param>
+    /// <returns>A task that completes when the step is done or put back.</returns>
+    [Queue(IngestJobs.MediaArchiveQueue)]
+    [AutomaticRetry(Attempts = 2, DelaysInSeconds = [120, 600])]
+    public async Task RunArchiveMediaStepAsync(IngestStep step, Guid targetId, CancellationToken cancellationToken)
+    {
+        await Task.Delay(CommitGrace, cancellationToken);
+        var waiting = storage.GetMonitoringApi().EnqueuedCount(IngestJobs.MediaQueue);
+        if (waiting > 0)
+        {
+            jobs.Schedule<IngestJob>(worker => worker.RunArchiveMediaStepAsync(step, targetId, CancellationToken.None), IngestJobs.ArchiveYieldDelay);
+            LogYielded(logger, targetId, waiting);
+            return;
+        }
+
+        await RunAsync(step, targetId, IngestLane.Archive, cancellationToken);
+    }
 
     /// <summary>Runs a media step. Media errors fail the asset itself, so a retry only covers a crash.</summary>
     /// <param name="step">The step.</param>
@@ -89,16 +173,17 @@ public sealed partial class IngestJob(ISender sender, ILogger<IngestJob> logger)
     [AutomaticRetry(Attempts = 2, DelaysInSeconds = [120, 600])]
     public async Task RunMediaStepAsync(IngestStep step, Guid targetId, CancellationToken cancellationToken)
     {
-        await Task.Delay(_commitGrace, cancellationToken);
-        await RunAsync(step, targetId, cancellationToken);
+        await Task.Delay(CommitGrace, cancellationToken);
+        await RunAsync(step, targetId, IngestLane.Live, cancellationToken);
     }
 
     /// <summary>Sends the command of a step.</summary>
     /// <param name="step">The step.</param>
-    /// <param name="targetId">The folder, asset or player.</param>
+    /// <param name="targetId">The folder, asset, player or scan.</param>
+    /// <param name="lane">The lane the job runs on.</param>
     /// <param name="cancellationToken">Cancels the work.</param>
     /// <returns>A task that completes when the command is done.</returns>
-    private async Task RunAsync(IngestStep step, Guid targetId, CancellationToken cancellationToken)
+    private async Task RunAsync(IngestStep step, Guid targetId, IngestLane lane, CancellationToken cancellationToken)
     {
         try
         {
@@ -109,7 +194,7 @@ public sealed partial class IngestJob(ISender sender, ILogger<IngestJob> logger)
                     LogSynced(logger, targetId, result.Outcome, result.Added, result.Renamed, result.Replaced, result.Removed, result.Returned, result.Skipped);
                     break;
                 case IngestStep.CopyOriginal:
-                    await sender.Send(new CopyOriginalCommand(targetId), cancellationToken);
+                    await sender.Send(new CopyOriginalCommand(targetId, lane), cancellationToken);
                     break;
                 case IngestStep.ProcessAsset:
                     await sender.Send(new ProcessAssetCommand(targetId), cancellationToken);
@@ -122,6 +207,9 @@ public sealed partial class IngestJob(ISender sender, ILogger<IngestJob> logger)
                     break;
                 case IngestStep.RenderCard:
                     await sender.Send(new RenderPlayerCardCommand(targetId), cancellationToken);
+                    break;
+                case IngestStep.ScanArchive:
+                    await sender.Send(new RunArchiveScanCommand(targetId), cancellationToken);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(step), step, "Unknown ingest step.");
@@ -153,6 +241,13 @@ public sealed partial class IngestJob(ISender sender, ILogger<IngestJob> logger)
     [LoggerMessage(Level = LogLevel.Information, Message = "Folder {FolderId} synced: {Outcome}, {Added} added, {Renamed} renamed, {Replaced} replaced, {Removed} removed, {Returned} returned, {Skipped} skipped")]
     private static partial void LogSynced(ILogger logger, Guid FolderId, FolderSyncOutcome Outcome, int Added, int Renamed, int Replaced, int Removed, int Returned, int Skipped);
 
+    /// <summary>Logs an archive job that waited for team files (M-4).</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="AssetId">The archive asset.</param>
+    /// <param name="Waiting">How many team media jobs were waiting.</param>
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Archive asset {AssetId} waits: {Waiting} team media jobs go first")]
+    private static partial void LogYielded(ILogger logger, Guid AssetId, long Waiting);
+
     /// <summary>Logs a step that failed; Hangfire retries it.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="exception">The failure.</param>
@@ -163,9 +258,11 @@ public sealed partial class IngestJob(ISender sender, ILogger<IngestJob> logger)
 }
 
 /// <summary>
-/// The Hangfire servers of ingest, inside the Workers host: the <c>ingest</c> queue with two workers (Drive is I/O bound)
-/// and the <c>media</c> queue with <c>Media__Workers</c> workers (1 or 2; ffmpeg is CPU bound). Like the notices server it does
-/// not start without a database, or when <c>BackgroundJobs__RunServer</c> is <c>false</c>.
+/// The Hangfire servers of ingest, inside the Workers host: the <c>ingest</c> queue with two workers (Drive is I/O bound),
+/// the <c>media</c> queue with <c>Media__Workers</c> workers (1 or 2; ffmpeg is CPU bound), and the archive lane (M-4): the
+/// <c>ingest-archive</c> queue with one worker and the <c>media-archive</c> queue with <c>Media__ArchiveWorkers</c> workers (0
+/// pauses the archive). Like the notices server it does not start without a database, or when
+/// <c>BackgroundJobs__RunServer</c> is <c>false</c>.
 /// </summary>
 /// <param name="services">The root service provider.</param>
 /// <param name="configuration">The configuration.</param>
@@ -190,6 +287,12 @@ internal sealed partial class IngestServer(IServiceProvider services, IConfigura
 
         Start(IngestJobs.DriveQueue, 2);
         Start(IngestJobs.MediaQueue, Math.Clamp(options.Value.Workers, 1, 2));
+        if (options.Value.ArchiveWorkers > 0)
+        {
+            Start(IngestJobs.DriveArchiveQueue, 1);
+            Start(IngestJobs.MediaArchiveQueue, Math.Clamp(options.Value.ArchiveWorkers, 1, 2));
+        }
+
         return Task.CompletedTask;
     }
 

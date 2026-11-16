@@ -85,7 +85,7 @@ public sealed class IngestTriggersTests
 
         await new QueueAssetIngest(_players, _scheduler).HandleAsync(new AssetAdded(assetId, player.Id), _system, TestContext.Current.CancellationToken);
 
-        await _scheduler.Received(1).EnqueueAsync(IngestStep.CopyOriginal, assetId, Arg.Any<CancellationToken>());
+        await _scheduler.Received(1).EnqueueAssetAsync(IngestStep.CopyOriginal, assetId, IngestLane.Live, Arg.Any<CancellationToken>());
     }
 
     /// <summary>A replaced file of a published player is copied again.</summary>
@@ -98,7 +98,7 @@ public sealed class IngestTriggersTests
 
         await new QueueAssetIngest(_players, _scheduler).HandleAsync(new AssetReplaced(assetId, player.Id, 2), _system, TestContext.Current.CancellationToken);
 
-        await _scheduler.Received(1).EnqueueAsync(IngestStep.CopyOriginal, assetId, Arg.Any<CancellationToken>());
+        await _scheduler.Received(1).EnqueueAssetAsync(IngestStep.CopyOriginal, assetId, IngestLane.Live, Arg.Any<CancellationToken>());
     }
 
     /// <summary>Nothing is copied for a player still on the waiting list; publishing will queue it.</summary>
@@ -111,6 +111,7 @@ public sealed class IngestTriggersTests
         await new QueueAssetIngest(_players, _scheduler).HandleAsync(new AssetAdded(Guid.CreateVersion7(IngestData.Now), player.Id), _system, TestContext.Current.CancellationToken);
 
         await _scheduler.DidNotReceiveWithAnyArgs().EnqueueAsync(default, default, TestContext.Current.CancellationToken);
+        await _scheduler.DidNotReceiveWithAnyArgs().EnqueueAssetAsync(default, default, default, TestContext.Current.CancellationToken);
     }
 
     /// <summary>Publishing queues the copy of every waiting file, the QR code and the card.</summary>
@@ -118,7 +119,7 @@ public sealed class IngestTriggersTests
     [Fact]
     public async Task Publishing_queues_the_files_the_qr_code_and_the_card()
     {
-        var player = IngestData.PublishedPlayer();
+        var player = Stored(IngestData.PublishedPlayer());
         var waiting = new[]
         {
             IngestData.QueuedAsset(player.Id, null, "a.mp4", "d-1"),
@@ -126,10 +127,10 @@ public sealed class IngestTriggersTests
         };
         _assets.ListAsync(Arg.Any<ISpecification<Asset>>(), Arg.Any<CancellationToken>()).Returns(waiting);
 
-        await new IngestPublishedPlayer(_assets, _scheduler).HandleAsync(new PlayerPublished(player.Id), _system, TestContext.Current.CancellationToken);
+        await new IngestPublishedPlayer(_players, _assets, _scheduler).HandleAsync(new PlayerPublished(player.Id), _system, TestContext.Current.CancellationToken);
 
-        await _scheduler.Received(1).EnqueueAsync(IngestStep.CopyOriginal, waiting[0].Id, Arg.Any<CancellationToken>());
-        await _scheduler.Received(1).EnqueueAsync(IngestStep.CopyOriginal, waiting[1].Id, Arg.Any<CancellationToken>());
+        await _scheduler.Received(1).EnqueueAssetAsync(IngestStep.CopyOriginal, waiting[0].Id, IngestLane.Live, Arg.Any<CancellationToken>());
+        await _scheduler.Received(1).EnqueueAssetAsync(IngestStep.CopyOriginal, waiting[1].Id, IngestLane.Live, Arg.Any<CancellationToken>());
         await _scheduler.Received(1).EnqueueAsync(IngestStep.RenderQrCode, player.Id, Arg.Any<CancellationToken>());
         await _scheduler.Received(1).EnqueueAsync(IngestStep.RenderCard, player.Id, Arg.Any<CancellationToken>());
     }
@@ -169,6 +170,37 @@ public sealed class IngestTriggersTests
         await new CutOutNewPhoto(_scheduler).HandleAsync(new PlayerPhotoChanged(playerId), _system, TestContext.Current.CancellationToken);
 
         await _scheduler.Received(1).EnqueueAsync(IngestStep.CutOutPhoto, playerId, Arg.Any<CancellationToken>());
+    }
+
+    /// <summary>
+    /// M-4: the files of an archive player are copied and processed on the archive lane, which yields to the team's new
+    /// uploads; the QR code and the card stay on the normal queue.
+    /// </summary>
+    /// <returns>A task that completes when the test is done.</returns>
+    [Fact]
+    public async Task Publishing_an_archive_player_queues_its_files_on_the_archive_lane()
+    {
+        var player = Stored(IngestData.PublishedArchivePlayer());
+        var waiting = IngestData.QueuedAsset(player.Id, null, "a.mp4", "d-1");
+        _assets.ListAsync(Arg.Any<ISpecification<Asset>>(), Arg.Any<CancellationToken>()).Returns([waiting]);
+
+        await new IngestPublishedPlayer(_players, _assets, _scheduler).HandleAsync(new PlayerPublished(player.Id), _system, TestContext.Current.CancellationToken);
+
+        await _scheduler.Received(1).EnqueueAssetAsync(IngestStep.CopyOriginal, waiting.Id, IngestLane.Archive, Arg.Any<CancellationToken>());
+        await _scheduler.Received(1).EnqueueAsync(IngestStep.RenderQrCode, player.Id, Arg.Any<CancellationToken>());
+    }
+
+    /// <summary>M-4: a new file of a published archive player goes on the archive lane too.</summary>
+    /// <returns>A task that completes when the test is done.</returns>
+    [Fact]
+    public async Task A_new_file_of_an_archive_player_goes_on_the_archive_lane()
+    {
+        var player = Stored(IngestData.PublishedArchivePlayer());
+        var assetId = Guid.CreateVersion7(IngestData.Now);
+
+        await new QueueAssetIngest(_players, _scheduler).HandleAsync(new AssetAdded(assetId, player.Id), _system, TestContext.Current.CancellationToken);
+
+        await _scheduler.Received(1).EnqueueAssetAsync(IngestStep.CopyOriginal, assetId, IngestLane.Archive, Arg.Any<CancellationToken>());
     }
 
     /// <summary>Makes the players repository answer a player however the handler reads it.</summary>

@@ -138,6 +138,7 @@ public static class DependencyInjection
         services.AddSingleton<GoogleDriveFolderReader>();
         services.AddSingleton<IDriveFolderReader>(provider => provider.GetRequiredService<GoogleDriveFolderReader>());
         services.AddSingleton<IDriveFolderLister>(provider => provider.GetRequiredService<GoogleDriveFolderReader>());
+        services.AddSingleton<IDriveArchiveBrowser>(provider => provider.GetRequiredService<GoogleDriveFolderReader>());
 
         services.AddOptions<EdgeOptions>()
             .BindConfiguration(EdgeOptions.SectionName)
@@ -251,6 +252,7 @@ public static class DependencyInjection
         services.AddOptions<MediaOptions>()
             .BindConfiguration(MediaOptions.SectionName)
             .Validate(options => options.Workers is >= 1 and <= 2, "Media__Workers must be 1 or 2.")
+            .Validate(options => options.ArchiveWorkers is >= 0 and <= 2, "Media__ArchiveWorkers must be 0, 1 or 2.")
             .ValidateOnStart();
         services.AddSingleton<IBackupArchive, S3BackupArchive>();
         services.AddSingleton<IDriveFileDownloader, GoogleDriveFileDownloader>();

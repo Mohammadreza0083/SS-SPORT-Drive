@@ -147,6 +147,21 @@ internal static class IngestData
         return player;
     }
 
+    /// <summary>Builds a published player imported from the archive (M-4).</summary>
+    /// <returns>The player.</returns>
+    public static Player PublishedArchivePlayer()
+    {
+        var player = Player.CreateFromArchive(PlayerCategory.Men, Now);
+        var name = FullName.Create("Ivan Valeev");
+        player.Rename(name, Slug.FromName(name));
+        player.ChangeNationality(Nationality.Create("RU"));
+        player.ChangePositions(PlayerPositions.Create([Position.OutsideHitter]));
+        player.ChangePhoto(PlayerPhoto.Create("photos/ivan.jpg"));
+        player.LinkVolleybox(VolleyboxProfile.Create("https://volleybox.net/ivan-valeev-p81002"));
+        player.Publish(Now);
+        return player;
+    }
+
     /// <summary>Builds a player with everything but the Volleybox link, so it waits for an admin.</summary>
     /// <param name="name">The name.</param>
     /// <returns>The player.</returns>

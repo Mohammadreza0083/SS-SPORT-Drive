@@ -22,6 +22,35 @@ public enum IngestStep
 
     /// <summary>Makes a player's card image (I-5).</summary>
     RenderCard,
+
+    /// <summary>Scans the Shared Drive's archive and matches it to the backup (M-1).</summary>
+    ScanArchive,
+}
+
+/// <summary>
+/// Which lane an asset's copy and processing run on (M-4). Archive players are processed on their own lane, which runs a
+/// limited number of jobs and lets the team's new uploads go first.
+/// </summary>
+public enum IngestLane
+{
+    /// <summary>The team's players: processed as soon as a worker is free.</summary>
+    Live,
+
+    /// <summary>Players imported from the archive: throttled and behind the live lane.</summary>
+    Archive,
+}
+
+/// <summary>Picks a player's ingest lane.</summary>
+public static class IngestLanes
+{
+    /// <summary>Gets the lane of a player's files.</summary>
+    /// <param name="player">The player.</param>
+    /// <returns><see cref="IngestLane.Archive"/> for archive players, otherwise <see cref="IngestLane.Live"/>.</returns>
+    public static IngestLane For(Domain.Players.Player player)
+    {
+        ArgumentNullException.ThrowIfNull(player);
+        return player.Origin == Domain.Players.PlayerOrigin.Archive ? IngestLane.Archive : IngestLane.Live;
+    }
 }
 
 /// <summary>Queues ingest steps as background jobs; Infrastructure implements it with Hangfire.</summary>
@@ -33,6 +62,14 @@ public interface IIngestScheduler
     /// <param name="cancellationToken">Cancels the enqueueing.</param>
     /// <returns>A task that completes when the step is queued.</returns>
     Task EnqueueAsync(IngestStep step, Guid targetId, CancellationToken cancellationToken);
+
+    /// <summary>Queues an asset's copy or processing on its lane (M-4).</summary>
+    /// <param name="step">The step: <see cref="IngestStep.CopyOriginal"/> or <see cref="IngestStep.ProcessAsset"/>.</param>
+    /// <param name="assetId">The asset.</param>
+    /// <param name="lane">The lane of the asset's player.</param>
+    /// <param name="cancellationToken">Cancels the enqueueing.</param>
+    /// <returns>A task that completes when the step is queued.</returns>
+    Task EnqueueAssetAsync(IngestStep step, Guid assetId, IngestLane lane, CancellationToken cancellationToken);
 }
 
 /// <summary>Downloads a file's bytes from Google Drive (I-2).</summary>

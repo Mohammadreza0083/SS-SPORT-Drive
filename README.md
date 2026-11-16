@@ -39,6 +39,7 @@ SS-SPORT analysts drop a player's footage into a Google Drive folder named `SS-S
 | 🔎 **Public search** | Anyone can search players. Media stays blurred and locked until an admin approves an access request. |
 | 🤖 **Telegram** | Analysts add players by chatting with the bot or in its Mini App; admins get approvals, alerts and a daily digest from the bot. |
 | 🧭 **Admin console** | Dashboard, waiting list, players, links, viewers, access requests, sync jobs and the email queue. |
+| 🗄️ **Archive migration** | A read-only scan of the Shared Drive matched to the R2 backup, folders imported as waiting players, a CSV round trip for their details, and a throttled transcode lane that lets new uploads go first. |
 
 ## Architecture
 
@@ -267,13 +268,13 @@ SS-SPORT Drive/
 | 5 | Personal links, OTP & tracking | 11 / 11 | ✅ Done (the digest now carries plays, minutes, top players and failed emails; the player reports heartbeats; a daily `retention-purge` job clears old emails, player events and sign-in links) |
 | 6 | Public search & access requests | 8 / 8 | ✅ Done (public home, locked page, request access, the admin inbox with bot buttons and its console page, and viewer and admin sign-in pages) |
 | 7 | Admin console | 12 / 12 | ✅ Done (dashboard, players with CSV, player page, waiting list, share links, viewers with the replay heatmap, users and audit log, jobs and email queue, access requests and settings; the look still waits for the owner's review against the canvas) |
-| 8 | Archive migration | 0 / 5 | ⏳ Planned |
+| 8 | Archive migration | 4 / 5 | 🚧 In progress (scan and report, folder-name suggestions and import, CSV round trip and the throttled archive lane are done; M-5, filling in Volleybox links and photos, is the owner's) |
 | 9 | Deploy & operations | 2 / 10 | 🚧 In progress (O-9 security baseline and O-10 pre-pentest hardening done; CI runs on every PR) |
 | 10 | Performance (k6) | 5 / 11 | 🚧 In progress (Mini App and viewer-link benchmarks done) |
 
-**Overall:** 103 of 125 tasks done (about 82 % by count). The open work is heavier than the done work (archive migration, deploy and the penetration test), so by effort the project is a little over half done.
+**Overall:** 107 of 125 tasks done (about 86 % by count). The open work is heavier than the done work (deploy, the penetration test and filling in the archive), so by effort the project is about two thirds done.
 
-Work is tracked in Jira (project **SSD**); last synced 2026-11-14.
+Work is tracked in Jira (project **SSD**); last synced 2026-11-16.
 
 ---
 
